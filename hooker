@@ -1,0 +1,39 @@
+#!/bin/bash
+
+while :
+do
+	frida-ps -U
+	echo "Enter need to attach package."
+    read -p ": " package
+    if [[ $package = ex ]] || [[ $package = exit ]] || [[ $package = quit ]] || [[ $package = q ]]; then
+		break
+	fi
+	echo "It's $package that you want to attach app." >> log 
+	python hooker.py -p $package -g true
+	echo "------------------------"
+	while :
+	do
+		echo "Please enter e, s, j, c or ex command."
+		echo "e: Determines whether a class exists. eg:'e android.app.Application'"
+		echo "s: Discovering classes in the specified path. eg1:'s com.example.myapplication' In regex eg2:'s com.example.net.*'"
+		echo "j: Generating hooked js. eg1:'j okhttp3.Request\$Builder:build' To specific Multiple methods eg2:'j okhttp3.Request\$Builder:url'"
+		#echo "k: Generating hooked js with the specified subclasses. eg:'k com.tencent.xweb.WebView:loadUrl'"
+		echo "c: Generating hooked js of all the onclick event. eg:'c'"
+		echo "ex: Exit to the upper layer. eg:'ex'"
+		read -p ": " op
+		if [[ $op = ex ]] || [[ $op = exit ]]; then
+			break 
+		fi
+		if [[ $op =~ ^s ]] || [[ $op =~ ^e ]] || [[ $op =~ ^j ]] || [[ $op =~ ^k ]] ;then
+			echo "python hooker.py -p $package -$op" >> log
+			python hooker.py -p $package -$op
+			continue
+		fi
+		if [[ $op = c ]] ;then
+			echo "python hooker.py -p $package -$op" >> log
+			python hooker.py -p $package -c true
+			continue
+		fi
+		echo "Wronging command!"
+	done
+done

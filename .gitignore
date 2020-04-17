@@ -1,0 +1,16 @@
+.iml
+log
+.*source/.*
+com.example.myapplication/
+__handlers__/
+build/
+__pycache__
+*.jar
+.idea/
+.classpath
+.project
+.settings/
+target/
+logs/
+data/doc/
+data/test/
