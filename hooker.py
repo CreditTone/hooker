@@ -5,6 +5,7 @@ Created on 2020年3月23日
 '''
 import frida, sys
 import os
+import io
 import __init__
 import getopt
 import uuid
@@ -115,6 +116,23 @@ def hookJs(packageName, hookCmdArg, savePath = None):
     finally:    
         detach(online_session)
         
+def hookStr(packageName, keyword):
+    checkRadarDex()
+    online_session = None
+    online_script = None
+    try:
+        online_session,online_script = attach(packageName);
+        jscode = io.open('../string_hooker.js','r',encoding= 'utf8').read()
+        jscode = jscode.replace("大保健", keyword)
+        savePath = packageName+"/hook_str_"+keyword+".js";
+        createHookingEnverment(packageName)
+        writingFile(savePath, jscode)
+        print("Hooking js code have generated. Path is " + savePath+".")
+    except Exception:
+        print(traceback.format_exc())  
+    finally:
+        detach(online_session)
+        
 def hookOnClick(packageName):
     checkRadarDex()
     online_session = None
@@ -142,13 +160,14 @@ def checkHookLine(hooklinea):
 if __name__ == '__main__':
     #print(__init__.classes_hooker_js)
     try:    
-        opts, args = getopt.getopt(sys.argv[1:], "hp:s:l:e:j:c:g:o:",["help", "package=", "scan=", "exist=", "hookjs=","click=","genarate="])
+        opts, args = getopt.getopt(sys.argv[1:], "hp:s:l:e:j:k:c:g:o:",["help", "package=", "scan=", "exist=", "hookjs=","click=","genarate="])
     except getopt.GetoptError:    
         sys.exit(2);
     packageName = None
     e = None
     scanTargetName = None
     JhookLine = None
+    KhookLine = None
     hookClick = False
     genarateEnv = False
     out = None
@@ -161,7 +180,7 @@ if __name__ == '__main__':
             e = value
         elif op in ("-j", "--hookjs"):     
             JhookLine = value
-        elif op in ("-k"):     
+        elif op in ("-k", "--hookstr"):     
             KhookLine = value
         elif op in ("-c", "--click"):     
             hookClick = True
@@ -181,6 +200,8 @@ if __name__ == '__main__':
         discover(packageName, scanTargetName)
     elif JhookLine != None and checkHookLine(JhookLine):
         hookJs(packageName, JhookLine, out)
+    elif KhookLine != None:
+        hookStr(packageName, KhookLine)
     elif hookClick:
         hookOnClick(packageName)
     else:
