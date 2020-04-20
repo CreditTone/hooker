@@ -18,7 +18,7 @@ function stringBuilderToStringPatch(stringBuilderObj) {
 Java.perform(function() {
     var androidLogClz = Java.use("android.util.Log");
     var exceptionClz = Java.use("java.lang.Exception");
-    var reg = RegExp(/惊雷/);
+    var reg = RegExp(/第十五个作品/);
     var java_lang_StringBuilder_clz = Java.use('java.lang.StringBuilder');
     var java_lang_StringBuilder_clz_toString_9ogt = java_lang_StringBuilder_clz.toString.overload();
     var java_lang_StringBuilder_clz_substring = java_lang_StringBuilder_clz.substring.overload('int','int');
@@ -28,8 +28,9 @@ Java.perform(function() {
         try {
             toString = java_lang_StringBuilder_clz_toString_9ogt.call(this);
             if (toString.match(reg)) {
-                printStacks(androidLogClz, exceptionClz, "Detecting '惊雷' in stacks:");
+                printStacks(androidLogClz, exceptionClz, "Detecting '第十五个作品' in stacks:");
             }
+
         } catch(err) {
             thErr = err;
         } finally {
@@ -48,7 +49,7 @@ Java.perform(function() {
         try {
             toString = java_lang_StringBuffer_clz_toString_9ogt.call(this);
             if (toString.match(reg)) {
-                printStacks(androidLogClz, exceptionClz, "Detecting '惊雷' in stacks:");
+                printStacks(androidLogClz, exceptionClz, "Detecting '第十五个作品' in stacks:");
             }
 
         } catch(err) {
@@ -70,7 +71,7 @@ Java.perform(function() {
         try {
             toString = java_lang_String_clz_init_a8vt.call(this, v0, v1, v2, v3);
             if (toString.match(reg)) {
-                printStacks(androidLogClz, exceptionClz, "Detecting '惊雷' in stacks:");
+                printStacks(androidLogClz, exceptionClz, "Detecting '第十五个作品' in stacks:");
             }
 
         } catch(err) {
@@ -92,7 +93,7 @@ Java.perform(function() {
         try {
             toString = java_lang_String_clz_init_1fva.call(this, v0, v1, v2, v3);
             if (toString.match(reg)) {
-                printStacks(androidLogClz, exceptionClz, "Detecting '惊雷' in stacks:");
+                printStacks(androidLogClz, exceptionClz, "Detecting '第十五个作品' in stacks:");
             }
 
         } catch(err) {

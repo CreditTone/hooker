@@ -6,11 +6,10 @@ Created on 2020年3月23日
 import frida, sys
 import os
 import io
-import __init__
 import getopt
 import uuid
-import traceback 
-
+import traceback
+import run_env
 
 def checkRadarDex():
     files = os.popen('adb shell ls /data/local/tmp/').readlines()
@@ -36,7 +35,7 @@ def attach(packageName):
         online_session = rdev.attach(packageName)
         if online_session == None:
             print("attaching fail to " + packageName)
-        online_script = online_session.create_script(__init__.classes_hooker_js)
+        online_script = online_session.create_script(run_env.classes_hooker_jscode)
         online_script.on('message', on_message)
         online_script.load()
     except Exception:
@@ -90,8 +89,9 @@ def createHookingEnverment(packageName):
         os.makedirs(packageName)
         writingFile(packageName+"/hooking", "#!/bin/bash\n" + "frida -U -l $1 " + packageName)
         os.popen('chmod 777 ' + packageName +'/hooking').readlines()
-        writingFile(packageName + "/java_net_url.js", __init__.hooking_java_net_url_js)
-        writingFile(packageName + "/okhttp3.js", __init__.hooking_okhttp_3_js)
+        writingFile(packageName + "/java_net_url.js", run_env.hooking_java_net_url_jscode)
+        writingFile(packageName + "/okhttp3.js", run_env.hooking_okhttp_3_jscode)
+        writingFile(packageName + "/kill", "frida-kill -U "+packageName)
         writingFile(packageName + "/kill", "frida-kill -U "+packageName)
         os.popen('chmod 777 ' + packageName +'/kill').readlines()
                
@@ -109,7 +109,7 @@ def hookJs(packageName, hookCmdArg, savePath = None):
         else:
             savePath = packageName+"/"+savePath;
         createHookingEnverment(packageName)
-        writingFile(savePath, "//"+hookCmdArg + "\n"+__init__.print_stacks_js + __init__.check_radar_dex_js + jscode)
+        writingFile(savePath, "//"+hookCmdArg + "\n"+run_env.print_stacks_jscode+ run_env.json_jscode + run_env.check_radar_dex_jscode + jscode)
         print("Hooking js code have generated. Path is " + savePath+".")
     except Exception:
         print(traceback.format_exc())  
@@ -123,7 +123,7 @@ def hookStr(packageName, keyword):
     try:
         online_session,online_script = attach(packageName);
         jscode = io.open('./js/string_hooker.js','r',encoding= 'utf8').read()
-        jscode = jscode.replace("大保健", keyword)
+        jscode = jscode.replace("惊雷", keyword)
         savePath = packageName+"/hook_str_"+keyword+".js";
         createHookingEnverment(packageName)
         writingFile(savePath, jscode)
@@ -142,7 +142,7 @@ def hookOnClick(packageName):
         jscode = online_script.exports.hookonclick();
         savePath = packageName+"/onclick.js";
         createHookingEnverment(packageName)
-        writingFile(savePath, __init__.print_stacks_js + jscode)
+        writingFile(savePath, run_env.print_stacks_jscode + jscode)
         print("Hooking js code have generated. Path is " + savePath+".")
     except Exception:
         print(traceback.format_exc())  
@@ -191,7 +191,8 @@ if __name__ == '__main__':
     if packageName == None:
         print("packageName is none")
         sys.exit(2);
-     
+    run_env.init(packageName);
+    #print(run_env.classes_hooker_jscode)
     if genarateEnv:
         createHookingEnverment(packageName)
     elif e != None:
