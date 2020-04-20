@@ -13,12 +13,21 @@ import run_env
 
 def checkRadarDex():
     files = os.popen('adb shell ls /data/local/tmp/').readlines()
+    hasRadarDex = False
+    hasFastJsonDex = False
     for dexFile in files:
         if "radar.dex" in dexFile:
-            return
-    pushCmd = 'adb push radar.dex /data/local/tmp/'
-    print(pushCmd)
-    os.popen(pushCmd)
+            hasRadarDex = True
+        if "fastjson.dex" in dexFile:
+            hasFastJsonDex = True 
+    if not hasRadarDex:
+        pushCmd = 'adb push radar.dex /data/local/tmp/'
+        print(pushCmd)
+        os.popen(pushCmd)
+    if not hasFastJsonDex:
+        pushCmd = 'adb push fastjson.dex /data/local/tmp/'
+        print(pushCmd)
+        os.popen(pushCmd)
        
 
 def on_message(message, data):
