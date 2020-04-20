@@ -122,7 +122,7 @@ def hookStr(packageName, keyword):
     online_script = None
     try:
         online_session,online_script = attach(packageName);
-        jscode = io.open('../string_hooker.js','r',encoding= 'utf8').read()
+        jscode = io.open('./js/string_hooker.js','r',encoding= 'utf8').read()
         jscode = jscode.replace("大保健", keyword)
         savePath = packageName+"/hook_str_"+keyword+".js";
         createHookingEnverment(packageName)
