@@ -19,7 +19,6 @@ do
 		echo "e: Determines whether a class exists. eg:'e android.app.Application'"
 		echo "s: Discovering classes in the specified path. eg1:'s com.example.myapplication' In regex eg2:'s com.example.net.*'"
 		echo "j: Generating hooked js. eg1:'j okhttp3.Request\$Builder:build' To specific Multiple methods eg2:'j okhttp3.Request\$Builder:url'"
-		echo "k: Generating hooked the string generation js with a keyword. eg:'k YourKeyword'"
 		echo "c: Generating hooked js of all the onclick event. eg:'c'"
 		echo "ex: Exit to the upper layer. eg:'ex'"
 		read -p ": " op

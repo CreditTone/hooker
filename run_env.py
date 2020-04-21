@@ -11,8 +11,6 @@ def readJs(filename):
 
 base_jscode = readJs("base.js")
 
-string_hooker_jscode = readJs("string_hooker.js")
-
 rpc_jscode = base_jscode + readJs("rpc.js")
 
 java_net_url_jscode = readJs("java_net_url.js")

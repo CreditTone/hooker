@@ -125,22 +125,6 @@ def hookJs(packageName, hookCmdArg, savePath = None):
     finally:    
         detach(online_session)
         
-def hookStr(packageName, keyword):
-    checkRadarDex()
-    online_session = None
-    online_script = None
-    try:
-        online_session,online_script = attach(packageName);
-        jscode = io.open('./js/string_hooker.js','r',encoding= 'utf8').read()
-        jscode = jscode.replace("惊雷", keyword)
-        savePath = packageName+"/hook_str_"+keyword+".js";
-        createHookingEnverment(packageName)
-        writingFile(savePath, jscode)
-        print("Hooking js code have generated. Path is " + savePath+".")
-    except Exception:
-        print(traceback.format_exc())  
-    finally:
-        detach(online_session)
         
 def hookOnClick(packageName):
     checkRadarDex()
@@ -209,8 +193,6 @@ if __name__ == '__main__':
         discover(packageName, scanTargetName)
     elif JhookLine != None and checkHookLine(JhookLine):
         hookJs(packageName, JhookLine, out)
-    elif KhookLine != None:
-        hookStr(packageName, KhookLine)
     elif hookClick:
         hookOnClick(packageName)
     else:

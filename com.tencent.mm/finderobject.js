@@ -310,7 +310,7 @@ Java.perform(function() {
     
     var com_tencent_mm_plugin_finder_search_e_clz_method_UZ_nl35 = com_tencent_mm_plugin_finder_search_e_clz.UZ.overload('java.lang.String');
     com_tencent_mm_plugin_finder_search_e_clz_method_UZ_nl35.implementation = function(v0) {
-        log(v0);
+        log("视频号搜索："+v0);
         searchResults = newHashSet();
         printStacks('public final void com.tencent.mm.plugin.finder.search.e.UZ(java.lang.String)');
         com_tencent_mm_plugin_finder_search_e_clz_method_UZ_nl35.call(this, v0);
