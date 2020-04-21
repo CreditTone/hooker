@@ -1,4 +1,4 @@
-//com.tencent.mm.plugin.finder.search.e:?
+//这个所有方法全部必须运行在Java.perform函数栈内部
 function splitX(class_method_pair) {
     var index = -1;
     var methodNames = new Array();
@@ -14,16 +14,6 @@ function splitX(class_method_pair) {
     }
     return methodNames;
 };
-
-//https://github.com/frida/frida/issues/503 bug补丁
-function stringBuilderToStringPatch(stringBuilderObj) {
-    var str = '';
-    var length = stringBuilderObj.length();
-    for (var i = 0; i < length; i++) {
-        str += stringBuilderObj.charAt(i);
-    }
-    return str;
-}
 
 function classExists(className) {
     var exists = false;
@@ -44,10 +34,27 @@ function checkRadarDex() {
 function checkLoadDex(className, dexfile) {
     if (!classExists(className)) {
         Java.openClassFile(dexfile).load();
+        log("load " + dexfile);
     }
 };
 
+//创建ArrayList对象用这个方法就好了
+function newArrayList() {
+	var ArrayListClz = Java.use('java.util.ArrayList');
+	return ArrayListClz.$new();
+}
 
+//创建HashSet对象用这个方法就好了
+function newHashSet() {
+	var HashSetClz = Java.use('java.util.HashSet');
+	return HashSetClz.$new();
+}
+
+//创建HashMap对象用这个方法就好了
+function newHashMap() {
+	var HashMapClz = Java.use('java.util.HashMap');
+	return HashMapClz.$new();
+}
 
 function printStacks(methodName) {
     var stackInfo = Java.use("android.util.Log").getStackTraceString(Java.use("java.lang.Exception").$new());
@@ -58,14 +65,12 @@ function printStacks(methodName) {
 function toJSONString(obj) {
     try {
         var clz = Java.use("com.alibaba.fastjson.JSON");
-        log(1);
         var toJSONStringMehtod = clz.toJSONString.overload("java.lang.Object");
-        log(2);
         return toJSONStringMehtod.call(clz, obj);
     } catch(err) {
     	console.log("toJSONString:"+err);
     }
-    return undefined;
+    return "";
 };
 
 function logJSONString(obj) {
@@ -183,7 +188,6 @@ function generateFridaMethodOverload(clzVarName, radarMethod) {
     }
     overloadJs += paramsJs;
     overloadJs += ") {";
-    overloadJs += "printStacks('" + radarMethod.describe.value + "');";
     if (radarMethod.returnClass.value != "void") {
         overloadJs += "var ret = ";
     }
@@ -198,6 +202,7 @@ function generateFridaMethodOverload(clzVarName, radarMethod) {
     } else {
         overloadJs += ");";
     }
+    overloadJs += "printStacks('" + radarMethod.describe.value + "');";
 	if (radarMethod.returnClass.value != "void") {
         overloadJs += "return ret;";
     }
@@ -235,7 +240,6 @@ function generateFridaConstructorMethodOverload(clzVarName, constructorMethod) {
     }
     overloadJs += paramsJs;
     overloadJs += ") {";
-    overloadJs += "printStacks('" + constructorMethod.describe.value + "');";
     overloadJs += "var obj = ";
     overloadJs += constructorMethodVarName + ".call(this";
     if (constructorMethod.paramsNum.value > 0) {
@@ -243,6 +247,7 @@ function generateFridaConstructorMethodOverload(clzVarName, constructorMethod) {
     } else {
         overloadJs += ");";
     }
+    overloadJs += "printStacks('" + constructorMethod.describe.value + "');";
     overloadJs += "return obj;};";
     return overloadJs;
 }
@@ -285,83 +290,3 @@ function generateMethodHookJs(radarClassResult, methodName) {
     return hookJs;
 };
 
-Java.perform(function() {
-	checkRadarDex();
-	var StringClz = Java.use('java.lang.String');
-    var com_tencent_mm_plugin_finder_search_e_clz = Java.use('com.tencent.mm.plugin.finder.search.e');
-    var com_tencent_mm_plugin_finder_search_e_clz_method_jZ_iv24 = com_tencent_mm_plugin_finder_search_e_clz.jZ.overload('boolean');
-    com_tencent_mm_plugin_finder_search_e_clz_method_jZ_iv24.implementation = function(v0) {
-        //printStacks('private final void com.tencent.mm.plugin.finder.search.e.jZ(boolean)');
-        com_tencent_mm_plugin_finder_search_e_clz_method_jZ_iv24.call(this, v0);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_cdO_928u = com_tencent_mm_plugin_finder_search_e_clz.cdO.overload();
-    com_tencent_mm_plugin_finder_search_e_clz_method_cdO_928u.implementation = function() {
-        //printStacks('public final boolean com.tencent.mm.plugin.finder.search.e.cdO()');
-        return com_tencent_mm_plugin_finder_search_e_clz_method_cdO_928u.call(this);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_UZ_nl35 = com_tencent_mm_plugin_finder_search_e_clz.UZ.overload('java.lang.String');
-    com_tencent_mm_plugin_finder_search_e_clz_method_UZ_nl35.implementation = function(v0) {
-    	log(v0);
-        printStacks('public final void com.tencent.mm.plugin.finder.search.e.UZ(java.lang.String)');
-        com_tencent_mm_plugin_finder_search_e_clz_method_UZ_nl35.call(this, v0);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_cdM_3cgf = com_tencent_mm_plugin_finder_search_e_clz.cdM.overload();
-    com_tencent_mm_plugin_finder_search_e_clz_method_cdM_3cgf.implementation = function() {
-        //printStacks('public final java.util.List com.tencent.mm.plugin.finder.search.e.cdM()');
-        return com_tencent_mm_plugin_finder_search_e_clz_method_cdM_3cgf.call(this);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_a_tecp = com_tencent_mm_plugin_finder_search_e_clz.a.overload('com.tencent.mm.protocal.protobuf.ajj', 'int');
-    com_tencent_mm_plugin_finder_search_e_clz_method_a_tecp.implementation = function(v0, v1) {
-        //printStacks('public final void com.tencent.mm.plugin.finder.search.e.a(com.tencent.mm.protocal.protobuf.ajj,int)');
-        com_tencent_mm_plugin_finder_search_e_clz_method_a_tecp.call(this, v0, v1);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_caS_qmgs = com_tencent_mm_plugin_finder_search_e_clz.caS.overload();
-    com_tencent_mm_plugin_finder_search_e_clz_method_caS_qmgs.implementation = function() {
-        //printStacks('public final java.util.List com.tencent.mm.plugin.finder.search.e.caS()');
-        return com_tencent_mm_plugin_finder_search_e_clz_method_caS_qmgs.call(this);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_a_dang = com_tencent_mm_plugin_finder_search_e_clz.a.overload('com.tencent.mm.plugin.finder.search.f$b');
-    com_tencent_mm_plugin_finder_search_e_clz_method_a_dang.implementation = function(v0) {
-        //printStacks('public final void com.tencent.mm.plugin.finder.search.e.a(com.tencent.mm.plugin.finder.search.f$b)');
-        com_tencent_mm_plugin_finder_search_e_clz_method_a_dang.call(this, v0);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_onSceneEnd_b4zj = com_tencent_mm_plugin_finder_search_e_clz.onSceneEnd.overload('int', 'int', 'java.lang.String', 'com.tencent.mm.ak.m');
-    com_tencent_mm_plugin_finder_search_e_clz_method_onSceneEnd_b4zj.implementation = function(v0, v1, v2, v3) {
-    	//logJSONString();
-    	//log(this.pFM.value.ppJ.value.pbk);
-    	log(toJSONString(StringClz.$new("123")));
-    	log(toJSONString(this.pFM.value));
-        printStacks('public final void com.tencent.mm.plugin.finder.search.e.onSceneEnd(int,int,java.lang.String,com.tencent.mm.ak.m)');
-        com_tencent_mm_plugin_finder_search_e_clz_method_onSceneEnd_b4zj.call(this, v0, v1, v2, v3);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_cV_g2u4 = com_tencent_mm_plugin_finder_search_e_clz.cV.overload('java.lang.Object');
-    com_tencent_mm_plugin_finder_search_e_clz_method_cV_g2u4.implementation = function(v0) {
-        //printStacks('public final void com.tencent.mm.plugin.finder.search.e.cV(java.lang.Object)');
-        com_tencent_mm_plugin_finder_search_e_clz_method_cV_g2u4.call(this, v0);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_cdN_ru2f = com_tencent_mm_plugin_finder_search_e_clz.cdN.overload();
-    com_tencent_mm_plugin_finder_search_e_clz_method_cdN_ru2f.implementation = function() {
-        //printStacks('public final void com.tencent.mm.plugin.finder.search.e.cdN()');
-        com_tencent_mm_plugin_finder_search_e_clz_method_cdN_ru2f.call(this);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_k_6ssd = com_tencent_mm_plugin_finder_search_e_clz.k.overload('com.tencent.mm.plugin.finder.model.BaseFinderFeed');
-    com_tencent_mm_plugin_finder_search_e_clz_method_k_6ssd.implementation = function(v0) {
-        //printStacks('public final void com.tencent.mm.plugin.finder.search.e.k(com.tencent.mm.plugin.finder.model.BaseFinderFeed)');
-        com_tencent_mm_plugin_finder_search_e_clz_method_k_6ssd.call(this, v0);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_onDetach_jb9k = com_tencent_mm_plugin_finder_search_e_clz.onDetach.overload();
-    com_tencent_mm_plugin_finder_search_e_clz_method_onDetach_jb9k.implementation = function() {
-        //printStacks('public final void com.tencent.mm.plugin.finder.search.e.onDetach()');
-        com_tencent_mm_plugin_finder_search_e_clz_method_onDetach_jb9k.call(this);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_ab_f37f = com_tencent_mm_plugin_finder_search_e_clz.ab.overload('java.lang.String', 'int', 'int');
-    com_tencent_mm_plugin_finder_search_e_clz_method_ab_f37f.implementation = function(v0, v1, v2) {
-        //printStacks('public final void com.tencent.mm.plugin.finder.search.e.ab(java.lang.String,int,int)');
-        com_tencent_mm_plugin_finder_search_e_clz_method_ab_f37f.call(this, v0, v1, v2);
-    };
-    var com_tencent_mm_plugin_finder_search_e_clz_method_G_a4zb = com_tencent_mm_plugin_finder_search_e_clz.G.overload('long', 'int');
-    com_tencent_mm_plugin_finder_search_e_clz_method_G_a4zb.implementation = function(v0, v1) {
-        //printStacks('public final void com.tencent.mm.plugin.finder.search.e.G(long,int)');
-        com_tencent_mm_plugin_finder_search_e_clz_method_G_a4zb.call(this, v0, v1);
-    };
-});

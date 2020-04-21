@@ -1,4 +1,5 @@
 .iml
+.DS_Store
 log
 .*source/.*
 com.example.myapplication/

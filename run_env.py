@@ -5,26 +5,21 @@ Created on 2020年4月20日
 '''
 
 import io
-import os
-import __init__
 
-string_hooker_jscode = io.open('./js/string_hooker.js','r',encoding= 'utf8').read()
+def readJs(filename):
+    return io.open('./js/' + filename,'r',encoding= 'utf8').read()
 
-json_jscode = io.open('./js/json.js','r',encoding= 'utf8').read()
+base_jscode = readJs("base.js")
 
-classes_hooker_jscode = __init__.classes_hooker_js
+string_hooker_jscode = readJs("string_hooker.js")
 
-hooking_java_net_url_jscode = __init__.hooking_java_net_url_js
+rpc_jscode = base_jscode + readJs("rpc.js")
 
-hooking_okhttp_3_jscode = __init__.hooking_okhttp_3_js
+java_net_url_jscode = readJs("java_net_url.js")
 
-print_stacks_jscode = __init__.print_stacks_js
-
-check_radar_dex_jscode = __init__.check_radar_dex_js
+okhttp_3_jscode = readJs("okhttp3_request_builder.js")
 
 def init(packageName):
     if packageName == None:
         return
-    if os.path.exists(packageName+"/json.js"):
-        json_jscode = io.open(packageName+"/json.js",'r',encoding= 'utf8').read()
 

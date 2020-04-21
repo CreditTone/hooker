@@ -44,7 +44,7 @@ def attach(packageName):
         online_session = rdev.attach(packageName)
         if online_session == None:
             print("attaching fail to " + packageName)
-        online_script = online_session.create_script(run_env.classes_hooker_jscode)
+        online_script = online_session.create_script(run_env.rpc_jscode)
         online_script.on('message', on_message)
         online_script.load()
     except Exception:
@@ -55,7 +55,7 @@ def attach(packageName):
 def detach(online_session):
     if online_session != None:
         online_session.detach()
-
+ 
 def existsClass(packageName,className):
     online_session = None
     online_script = None
@@ -98,8 +98,8 @@ def createHookingEnverment(packageName):
         os.makedirs(packageName)
         writingFile(packageName+"/hooking", "#!/bin/bash\n" + "frida -U -l $1 " + packageName)
         os.popen('chmod 777 ' + packageName +'/hooking').readlines()
-        writingFile(packageName + "/java_net_url.js", run_env.hooking_java_net_url_jscode)
-        writingFile(packageName + "/okhttp3.js", run_env.hooking_okhttp_3_jscode)
+        writingFile(packageName + "/java_net_url.js", run_env.java_net_url_jscode)
+        writingFile(packageName + "/okhttp3_request_builder.js", run_env.okhttp_3_jscode)
         writingFile(packageName + "/kill", "frida-kill -U "+packageName)
         writingFile(packageName + "/kill", "frida-kill -U "+packageName)
         os.popen('chmod 777 ' + packageName +'/kill').readlines()
@@ -118,7 +118,7 @@ def hookJs(packageName, hookCmdArg, savePath = None):
         else:
             savePath = packageName+"/"+savePath;
         createHookingEnverment(packageName)
-        writingFile(savePath, "//"+hookCmdArg + "\n"+run_env.print_stacks_jscode+ run_env.json_jscode + run_env.check_radar_dex_jscode + jscode)
+        writingFile(savePath, "//"+hookCmdArg + "\n"+run_env.base_jscode + jscode)
         print("Hooking js code have generated. Path is " + savePath+".")
     except Exception:
         print(traceback.format_exc())  
@@ -151,7 +151,7 @@ def hookOnClick(packageName):
         jscode = online_script.exports.hookonclick();
         savePath = packageName+"/onclick.js";
         createHookingEnverment(packageName)
-        writingFile(savePath, run_env.print_stacks_jscode + jscode)
+        writingFile(savePath, run_env.base_jscode + jscode)
         print("Hooking js code have generated. Path is " + savePath+".")
     except Exception:
         print(traceback.format_exc())  
@@ -167,7 +167,6 @@ def checkHookLine(hooklinea):
 
 
 if __name__ == '__main__':
-    #print(__init__.classes_hooker_js)
     try:    
         opts, args = getopt.getopt(sys.argv[1:], "hp:s:l:e:j:k:c:g:o:",["help", "package=", "scan=", "exist=", "hookjs=","click=","genarate="])
     except getopt.GetoptError:    
