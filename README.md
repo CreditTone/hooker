@@ -9,6 +9,11 @@
 ![hooker逆向微信视频号](https://jsycc.oss-cn-beijing.aliyuncs.com/toutiao_video.png "hooker逆向微信视频号")
 ### [点此播放](https://pan.baidu.com/s/14bv4c7-O_Waz72aUbUXgmA "播放")       密码：lkgf
 
+
+#### hooker逆向微店app(逆向微店app)
+![hooker逆向微店app](https://jsycc.oss-cn-beijing.aliyuncs.com/toutiao_video.png "hooker逆向微店app")
+### [点此播放](https://pan.baidu.com/s/1jeZYH6wModupx70hRzoRmw "播放")       密码：rmn8
+
 #### 快速开始
 ```shell
 git https://github.com/CreditTone/radar-frida
