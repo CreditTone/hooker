@@ -1,5 +1,5 @@
 ### 欢迎使用 radar（也叫hooker），帮助你在逆向工程中，自动扫描所有class并支持自动生成frida hook代码。此版本为Community。如想使用更强大的Pro版，联系作者。
-##各位大厂粑粑好，请不要要介意我用你们的app的一小部分的功能做技术实验案例。 我只是在这里证明一下我的专业能力，无意冒犯任何一位。如有任何介意请立即联系我进行删除。谢谢！
+##各位大厂粑粑好，请不要介意我用你们的app的一小部分的功能做技术实验案例。 我只是在这里证明一下我的专业能力，无意冒犯任何一位。如有任何介意请立即联系我进行删除。谢谢！
 #### hooker视频教程(逆向今日头条)
 ![hooker使用教程](https://jsycc.oss-cn-beijing.aliyuncs.com/toutiao_video.png "hooker使用教程")
 ### [点此播放](https://pan.baidu.com/s/1XX_AtnpSYGcx7pZAGUTPfQ "播放")       密码：dp89
