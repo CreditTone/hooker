@@ -2,7 +2,7 @@
 
 
 #### hooker视频教程(逆向今日头条)
-![hooker使用教程](https://raw.githubusercontent.com/CreditTone/staticfiles/master/video.png "hooker使用教程")
+![hooker使用教程](https://jsycc.oss-cn-beijing.aliyuncs.com/toutiao_video.png "hooker使用教程")
 ### [点此播放](https://pan.baidu.com/s/1XX_AtnpSYGcx7pZAGUTPfQ "播放")       密码：dp89
 
 #### 快速开始
