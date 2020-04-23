@@ -1,9 +1,13 @@
 ### 欢迎使用 radar，帮助你在逆向工程中，自动扫描所有class并支持自动生成frida hook代码。
 
-
 #### hooker视频教程(逆向今日头条)
 ![hooker使用教程](https://jsycc.oss-cn-beijing.aliyuncs.com/toutiao_video.png "hooker使用教程")
 ### [点此播放](https://pan.baidu.com/s/1XX_AtnpSYGcx7pZAGUTPfQ "播放")       密码：dp89
+
+
+#### hooker逆向微信视频号(逆向微信视频号)
+![hooker逆向微信视频号](https://jsycc.oss-cn-beijing.aliyuncs.com/toutiao_video.png "hooker逆向微信视频号")
+### [点此播放](https://pan.baidu.com/s/14bv4c7-O_Waz72aUbUXgmA "播放")       密码：lkgf
 
 #### 快速开始
 ```shell
