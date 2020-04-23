@@ -1,4 +1,4 @@
-### 欢迎使用 radar（也叫hooker），帮助你在逆向工程中，自动扫描所有class并支持自动生成frida hook代码。
+### 欢迎使用 radar（也叫hooker），帮助你在逆向工程中，自动扫描所有class并支持自动生成frida hook代码。此版本为Community。如想使用更强大的Pro版，联系作者购买。
 
 #### hooker视频教程(逆向今日头条)
 ![hooker使用教程](https://jsycc.oss-cn-beijing.aliyuncs.com/toutiao_video.png "hooker使用教程")
