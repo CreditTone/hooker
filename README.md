@@ -42,25 +42,11 @@ FA77C0301476	device
 #### 部署(如果你的手机已经启动了frida-server，可以忽略这步)
 ```shell
 #以piexl2为例
-stephen@ubuntu:~/hooker$ adb push mobile-deploy.sh /sdcard/
-stephen@ubuntu:~/hooker$ adb push mobile-deploy.tar /sdcard/
-
+stephen@ubuntu:~/hooker$ adb push mobile-deploy/ /sdcard/
 stephen@ubuntu:~/hooker$ adb shell #进入手机命令行界面
 sailfish:/ $ su #进入root权限命令行模式
-sailfish:/ $ sh /sdcard/mobile-deploy.sh                                                            
+sailfish:/ $ sh /sdcard/mobile-deploy/deploy.sh                                                            
 disable android firewall.
-mobile-deploy/
-mobile-deploy/frida-server-14.1.3-android-arm
-mobile-deploy/frida-server-14.1.3-android-x86
-mobile-deploy/frpc_arm
-mobile-deploy/tcpforward_linux_arm64
-mobile-deploy/busybox-armv7m
-mobile-deploy/tcpforward_linux_arm
-mobile-deploy/frpc_arm64
-mobile-deploy/frida-server-14.1.3-android-arm64
-mobile-deploy/tcpforward_linux_x86
-mobile-deploy/busybox-i686
-mobile-deploy/frpc_x86
 start frida-server
 start network adb.
 deploy successfull.
