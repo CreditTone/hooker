@@ -10,7 +10,7 @@
 - 交互方式不一样：frida和objection只有atcth上才能操作各种指令，而hooker提供shell命令行交互式让你可以通过jadx进行动静结合分析。
 - 更注提供重Android逆向思路和线索：frida和objection基于没有对任何Android Freamwork层的hook和能主动调用代码点位进行封装，这使得没有Android应用开发的人难以有逆向思路。而hooker的几乎所有命令都是围绕Android Freamwork进行封装，让一个即使没有Android开发经验的人也能快速找到逆向分析思路。
 - hook脚本产出方式不一样：frida你需要先进行很多语法方面的学习，才能完成对各种类的各种方法进行frida脚本的编写。hooker不需要你了解frida语法细节，比如你只需通过j okhttp3.OkHttpClient:newCall 就可以生成一个hook okhttp3.OkHttpClient类的newCall方法的脚本, 即使对于任何一个被混淆的类操作也是如此。（你应该把更多的时间和精力放在逆向思路上，而不是熟悉某些语法上。）
-- 提供操作原生AndroidUI功能：你可以./attch每个app目录下的android_ui.js脚本，它提供了通过ViewId、ViewText找到Android原生的View并点击，或者你想强制打开某个Activity（比如某个界面只有会员才能进入，这时候你就可以采用Android"原生代码"打开的方式）。
+- 提供操作原生AndroidUI功能：你可以./attach每个app目录下的android_ui.js脚本，它提供了通过ViewId、ViewText找到Android原生的View并点击，或者你想强制打开某个Activity（比如某个界面只有会员才能进入，这时候你就可以采用Android"原生代码"打开的方式）。
 
 #### 快速开始
 ```shell
@@ -183,7 +183,7 @@ android_ui.js       cipher.js  edit_text.js  ipc.js   log   object_store.js  tex
 ***
 - web_view.js：需要跟踪app的内嵌浏览器行为时./hooking web_view.js
 - cipher.js: 需要跟踪java.security.SecureRandom、javax.crypto.Cipher对于常规AES/DES加密算法需要用到的类
-- android_ui.js: 封装一些操作原生Android UI的函数。如startActivity(activityName)、home()、back()、finishCurrentActivity()、clickByText(text) 等等，命令使用得用attach './attach android_ui.js' 原理是借助radar.dex作为代理操作Android原生View比appuinm和airtest先进，我说过appuinm和airtest这两个东西都是乐(la)色(ji)，真正的极客都是直接操作原生View。
+- android_ui.js: 封装一些操作原生Android UI的函数。如startActivity(activityName)、home()、back()、finishCurrentActivity()、clickByText(text) 等等，命令使用得用attach './attach android_ui.js' 原理是借助radar.dex作为代理操作Android原生View。（tag）
 ![](assets/android_ui.gif)
 ***
 
