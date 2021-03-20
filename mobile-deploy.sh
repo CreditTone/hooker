@@ -1,0 +1,85 @@
+print "disable android firewall."
+iptables -P INPUT ACCEPT
+iptables -P OUTPUT ACCEPT
+iptables -P FORWARD ACCEPT
+ip6tables -P INPUT ACCEPT
+ip6tables -P OUTPUT ACCEPT
+ip6tables -P FORWARD ACCEPT
+cd /sdcard
+tar xvf /sdcard/mobile-deploy.tar -C /data/
+chmod 700 /data/mobile-deploy/hluda-server-14.2.13-android-arm
+chmod 700 /data/mobile-deploy/hluda-server-14.2.13-android-arm64
+chmod 700 /data/mobile-deploy/hluda-server-14.2.13-android-x86
+chmod 700 /data/mobile-deploy/tcpforward_linux_arm
+chmod 700 /data/mobile-deploy/tcpforward_linux_arm64
+chmod 700 /data/mobile-deploy/tcpforward_linux_x86
+chmod 700 /data/mobile-deploy/frpc_arm
+chmod 700 /data/mobile-deploy/frpc_arm64
+chmod 700 /data/mobile-deploy/frpc_x86
+chmod 700 /data/mobile-deploy/busybox-armv7m
+chmod 700 /data/mobile-deploy/busybox-i686
+
+cpuInfo=$(cat /proc/cpuinfo)
+currentTime=$(date +%s)
+
+if [[ $cpuInfo == *AArch64* ]] || [[ $cpuInfo == *ARMv8* ]] || [[ $cpuInfo == *ARMv9* ]]; then
+    abiType="arm64"
+elif [[ $cpuInfo == *ARMv7* ]]; then
+    abiType="arm"
+elif [[ $cpuInfo == *Intel* ]] || [[ $cpuInfo == *AMD* ]]; then
+    abiType="x86"
+else
+	abiType="arm64"
+fi
+
+echo "" > /data/mobile-deploy/tools_env.rc
+chmod 777 /data/mobile-deploy/tools_env.rc
+
+if [[ $abiType == arm64 ]]; then
+	echo "start frida-server"
+	nohup /data/mobile-deploy/hluda-server-14.2.13-android-arm64 -l 0.0.0.0:27042 > /sdcard/frida-server.log 2>&1 &
+	
+	echo "alias tcpforward=/data/mobile-deploy/tcpforward_linux_arm64" >> /data/mobile-deploy/tools_env.rc
+	
+	echo "alias frpc=/data/mobile-deploy/frpc_arm64" >> /data/mobile-deploy/tools_env.rc
+	
+	echo "alias vi='/data/mobile-deploy/busybox-armv7m vi'" >> /data/mobile-deploy/tools_env.rc
+	
+	echo "alias telnet='/data/mobile-deploy/busybox-armv7m telnet'" >> /data/mobile-deploy/tools_env.rc
+	
+elif [[ $abiType == arm ]]; then
+	echo "start frida-server"
+	nohup /data/mobile-deploy/hluda-server-14.2.13-android-arm -l 0.0.0.0:27042 > /sdcard/frida-server.log 2>&1 &
+	
+	echo "alias tcpforward=/data/mobile-deploy/tcpforward_linux_arm" >> /data/mobile-deploy/tools_env.rc
+	
+	echo "alias frpc=/data/mobile-deploy/frpc_arm" >> /data/mobile-deploy/tools_env.rc
+	
+	echo "alias vi='/data/mobile-deploy/busybox-armv7m vi'" >> /data/mobile-deploy/tools_env.rc
+	
+	echo "alias telnet='/data/mobile-deploy/busybox-armv7m telnet'" >> /data/mobile-deploy/tools_env.rc
+else
+	echo "start frida-server"
+	nohup /data/mobile-deploy/hluda-server-14.2.13-android-x86 -l 0.0.0.0:27042 > /sdcard/frida-server.log 2>&1 &
+	
+	echo "alias tcpforward=/data/mobile-deploy/tcpforward_linux_x86" >> /data/mobile-deploy/tools_env.rc
+	
+	echo "alias frpc=/data/mobile-deploy/frpc_x86" >> /data/mobile-deploy/tools_env.rc
+	
+	echo "alias vi='/data/mobile-deploy/busybox-i686 vi'" >> /data/mobile-deploy/tools_env.rc
+	
+	echo "alias telnet='/data/mobile-deploy/busybox-i686 telnet'" >> /data/mobile-deploy/tools_env.rc
+fi
+
+echo "alias ll='ls -l'" >> /data/mobile-deploy/tools_env.rc
+
+echo "start network adb."
+setprop service.adb.tcp.port 5555
+nohup stop adbd && start adbd > /sdcard/adbd.log 2>&1 &
+echo "deploy successfull."
+
+#如果手机的magisk root的话使用以下命令改为全局debug模式
+#magisk resetprop ro.debuggable 1
+#stop;start;
+
+

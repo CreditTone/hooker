@@ -1,0 +1,49 @@
+[SM-N950N::com.tencent.karaoke]-> tag:SearchResultView
+log:getSearchId(): 517499909900052323 mKey: 惊雷 position: 3
+------------start:f2271qhl,executor:com_tencent_component_utils_LogUtil_clz,thread:1,timestamp:1589857038901---------------
+public static void com.tencent.component.utils.LogUtil.i(java.lang.String,java.lang.String)
+	at com.tencent.component.utils.LogUtil.i(Native Method)
+	at com.tencent.karaoke.module.searchglobal.ui.view.SearchResultView.b(SourceFile:177)
+	at com.tencent.karaoke.module.searchglobal.ui.view.SearchResultView.a(SourceFile:40)
+        at com.tencent.karaoke.module.searchglobal.ui.view.SearchResultView$2.onPageSelected(SourceFile:164)
+	at androidx.viewpager.widget.ViewPager.d(SourceFile:1947)
+	at androidx.viewpager.widget.ViewPager.a(SourceFile:686)
+	at androidx.viewpager.widget.ViewPager.a(SourceFile:670)
+	at androidx.viewpager.widget.ViewPager.a(SourceFile:631)
+	at androidx.viewpager.widget.ViewPager.setCurrentItem(SourceFile:612)
+	at kk.design.tabs.KKTabLayout$h.a(SourceFile:2459)
+	at kk.design.tabs.KKTabLayout.f(SourceFile:1359)
+	at kk.design.tabs.KKTabLayout.b(SourceFile:1352)
+	at kk.design.tabs.KKTabLayout.c(SourceFile:1312)
+	at kk.design.tabs.KKTabLayout$e.g(SourceFile:1643)
+	at kk.design.tabs.KKTabLayout$g.performClick(SourceFile:1780)
+	at android.view.View$PerformClick.run(View.java:22430)
+	at android.os.Handler.handleCallback(Handler.java:751)
+	at android.os.Handler.dispatchMessage(Handler.java:95)
+	at android.os.Looper.loop(Looper.java:154)
+	at android.app.ActivityThread.main(ActivityThread.java:6198)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.ZygoteInit$MethodAndArgsCaller.run(ZygoteInit.java:891)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:781)
+	at de.robv.android.xposed.XposedBridge.main(XposedBridge.java:107)
+
+------------end:f2271qhl,usedtime:5---------------
+
+tag:SearchResultOpusPageView
+log:setOpusSearchData -> 10 key: 惊雷
+------------start:tr58ksks,executor:com_tencent_component_utils_LogUtil_clz,thread:1,timestamp:1589857039318---------------
+public static void com.tencent.component.utils.LogUtil.i(java.lang.String,java.lang.String)
+	at com.tencent.component.utils.LogUtil.i(Native Method)
+	at com.tencent.karaoke.module.searchglobal.ui.view.SearchResultOpusPageView$2.run(SourceFile:341)
+	at android.os.Handler.handleCallback(Handler.java:751)
+	at android.os.Handler.dispatchMessage(Handler.java:95)
+	at android.os.Looper.loop(Looper.java:154)
+	at android.app.ActivityThread.main(ActivityThread.java:6198)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.ZygoteInit$MethodAndArgsCaller.run(ZygoteInit.java:891)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:781)
+	at de.robv.android.xposed.XposedBridge.main(XposedBridge.java:107)
+
+------------end:tr58ksks,usedtime:7---------------
+
+http://bsy.stream.kg.qq.com/shkge-btfs/ebf4f0cf8f6b2937af89caf5f560f764ae3b0c6c

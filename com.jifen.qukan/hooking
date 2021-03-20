@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "hooking $1" > log
+date | tee -ai log
+frida -U -l $1 com.jifen.qukan | tee -ai log

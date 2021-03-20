@@ -1,0 +1,3 @@
+#!/bin/bash
+
+frida -U -l $1 com.jifen.qukan

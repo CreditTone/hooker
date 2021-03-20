@@ -1,0 +1,2 @@
+#!/bin/bash
+frida -U -l $1 com.ss.android.article.news | tee -ai log
