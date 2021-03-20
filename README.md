@@ -1,4 +1,4 @@
-### 欢迎使用hooker逆向工作台，让安卓应用开发工程师教你如何逆向安卓应用。
+### 欢迎使用hooker逆向工作台
 
 ## hooker简介
 - hooker是一个站在Android应用开发工程师的角度打造的适用于Android逆向工程人员和安全研究人员的工具包。为逆向开发人员提供自动化生成frida的hook脚本、内存探测java类、检测activity和service和其他任意对象。
