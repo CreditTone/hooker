@@ -7,7 +7,6 @@ com.ganji*
 .hooker_driver
 .DS_Store
 log
-*.adex
 .*source/.*
 com.example.myapplication/
 __handlers__/
