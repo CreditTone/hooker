@@ -48,11 +48,10 @@ def attach(packageName):
     online_session = None
     online_script = None
     rdev = None
-    hookerDriver = os.environ.get("HOOKER_DRIVER","-U")
+    remoteDriver = run_env.getRemoteDriver() #ip:port
     try:
-        if hookerDriver != "-U":
-            hookerDriverHost = os.environ.get("HOOKER_DRIVER_HOST")
-            rdev = frida.get_device_manager().add_remote_device(hookerDriverHost)
+        if remoteDriver:
+            rdev = frida.get_device_manager().add_remote_device(remoteDriver)
         elif platform.system().find("Windows") != -1:
             warn("推荐使用linux或mac操作系统获得更好的兼容性.")
             rdev = frida.get_remote_device()

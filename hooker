@@ -1,17 +1,6 @@
 #!/bin/bash
 
-HOST_SERVER=$1
-
-if [ -z "$HOST_SERVER" ]; then
-	export HOOKER_DRIVER="-U"
-fi
-if [ -n "$HOST_SERVER" ]; then
-	export HOOKER_DRIVER="-H $HOST_SERVER"
-	export HOOKER_DRIVER_HOST="$HOST_SERVER"
-fi
-
-echo "$HOOKER_DRIVER" > .hooker_driver
-
+HOOKER_DRIVER=$(cat .hooker_driver)
 while :
 do
 	frida-ps $HOOKER_DRIVER -ai | grep -v '@' | grep -v '    -  '

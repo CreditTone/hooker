@@ -6,6 +6,7 @@ Created on 2020年4月20日
 
 import io
 import os
+import re
 
 def readJs(filename):
     return io.open('./js/' + filename,'r',encoding= 'utf8').read()
@@ -96,6 +97,15 @@ def getPythonLaucher():
 
 xinitPyScript = "#! " + getPythonLaucher() + "\n\n" + readFile("xinitdeploy.py")
 spiderPyScript = readFile("spider.py")
+
+def getRemoteDriver():
+    text = readFile(".hooker_driver")
+    if not text:
+        return None
+    searchResult = re.search('\d+\.\d+\.\d+\.\d+:\d+', text)
+    if searchResult:
+        return searchResult.group()
+    return None
 
 def init(packageName):
     if packageName == None:
