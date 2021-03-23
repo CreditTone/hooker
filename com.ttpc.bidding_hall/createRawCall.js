@@ -124,9 +124,7 @@ function fastTojson(javaObject) {
     var JSONClz = Java.use("gz.com.alibaba.fastjson.JSON");
     return JSONClz.toJSONString(javaObject);
 };
-loadXRadarDexfile();
-loadXinitDexfile("ttpai-patch.dex");
-var MyOkHttpClient = Java.use("ttpai.patch.MyOkHttpClient");
+
 //retrofit2.OkHttpCall:createRawCall
 Java.perform(function() {
     var retrofit2_OkHttpCall_clz = Java.use('retrofit2.OkHttpCall');
@@ -135,15 +133,9 @@ Java.perform(function() {
         var executor = this.hashCode();
         var beatText = 'private okhttp3.Call retrofit2.OkHttpCall.createRawCall() throws java.io.IOException';
         var beat = newMethodBeat(beatText, executor);
-        log("curl:" +  MyOkHttpClient.getCurl2(this));
-        var ret = MyOkHttpClient.createRawCall(this);
-        // var ret = retrofit2_OkHttpCall_clz_method_createRawCall_8996.call(this);
-        // var requestFactory = MyOkHttpClient.getRequestFactory(this);
-        // var args = MyOkHttpClient.getArgs(this);
-        // log(getClassName(requestFactory));
-        // log(args);
-        // var request = MyOkHttpClient.doRequestFactoryCreate(requestFactory, args);
-        // log(getClassName(request));
+    
+        var ret = retrofit2_OkHttpCall_clz_method_createRawCall_8996.call(this);
+
         printBeat(beat);
         return ret;
     };

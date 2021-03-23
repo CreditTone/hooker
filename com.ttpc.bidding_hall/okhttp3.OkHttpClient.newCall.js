@@ -128,7 +128,6 @@ function fastTojson(javaObject) {
 
 //okhttp3.OkHttpClient:newCall
 Java.perform(function() {
-
     var okhttp3_OkHttpClient_clz = Java.use('okhttp3.OkHttpClient');
     var okhttp3_OkHttpClient_clz_method_newCall_8095 = okhttp3_OkHttpClient_clz.newCall.overload('okhttp3.Request');
     okhttp3_OkHttpClient_clz_method_newCall_8095.implementation = function(v0) {
