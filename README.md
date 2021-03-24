@@ -215,7 +215,7 @@ android_ui.js       cipher.js  edit_text.js  ipc.js   log   object_store.js  tex
 ![](assets/s.png)
 ***
 
-- j : 生产指定类名称的hook脚本，也是hooker最核心的功能之一。相比objection，hooker生成的脚本有标注生产脚本的apk版本和类名。并且每个方法内部已经具备打印堆栈的功能，包括调用时间、线程id、线程名、调用对象的hashcode，调用方法用时都有很详细的描述。objection生成的白纸一张，你自己填充打印堆栈等信息的代码吧...... 这时候你选谁？？？
+- j : 生成指定类名称的hook脚本，也是hooker最核心的功能之一。相比objection，hooker生成的脚本有标注生产脚本的apk版本和类名。并且每个方法内部已经具备打印堆栈的功能，包括调用时间、线程id、线程名、调用对象的hashcode，调用方法用时都有很详细的描述。objection生成的白纸一张，你自己填充打印堆栈等信息的代码吧...... 这时候你选谁？？？
 ![](assets/j0.png)
 ![](assets/j1.png)
 ![](assets/j2.png)
