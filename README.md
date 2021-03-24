@@ -67,7 +67,6 @@ stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示
 ***
 
 
-
 #### 查看当前所有可调试进程
 ```shell
 stephen@ubuntu:~/hooker$ ./hooker 
@@ -212,6 +211,15 @@ android_ui.js       cipher.js  edit_text.js  ipc.js   log   object_store.js  tex
 - e : 检测一个类在内存中是否存在。大部分情况下静态分析的类在内存中会存在，但是有时app会做热更新可能会出现类被替换的情况。作为一个严谨的逆向工程师在对类进行操作之前检测类是否存在内存中是个好习惯。如：e com.bytedance.frameworks.encryptor.EncryptorUtil 输出：True表示存在 False表示不存在
 ![](assets/exists_class.gif)
 
+- s : 用正则表达式在内存中扫描类。比如你对某些关键词类感兴趣，完全可以使用s进行扫描。配合jadx查看类实现代码爽歪歪！当然jadx自带类搜索功能但是只是静态的，并且jadx搜索功能是吃内存的，没有32G内存使用起来好卡。这时候s命令或许你是不错的选择。
+![](assets/s.png)
+***
+
+- j : 生产指定类名称的hook脚本，也是hooker最核心的功能之一。相比objection，hooker生成的脚本有标注生产脚本的apk版本和类名。并且每个方法内部已经具备打印堆栈的功能，包括调用时间、线程id、线程名、调用对象的hashcode，调用方法用时都有很详细的描述。objection生成的白纸一张，你自己填充打印堆栈等信息的代码吧...... 这时候你选谁？？？
+![](assets/j0.png)
+![](assets/j1.png)
+![](assets/j2.png)
+- j : 此脚本参考[RequestEncryptUtils.js](com.ss.android.ugc.aweme/com.bytedance.frameworks.core.encrypt.RequestEncryptUtils.js "RequestEncryptUtils.js")
 
 #### 扫描一个应用中某个包下的所有类，并输出到控制台
 ```shell
