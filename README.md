@@ -5,15 +5,15 @@ hooker是一个站在Android应用开发工程师的角度打造的适用于Andr
 目录
 =================
 
-* [hooker和frida、objection有什么不同](#hooker和frida、objection有什么不同)
+* [hooker和frida、objection有什么不同](#hooker和frida-objection有什么不同)
 * [环境部署](#环境部署)
     * [1. git clone项目](#1-git-clone项目)
     * [2. 安装依赖](#2-安装依赖)
-    * [3. Get DEX Classes](#3-get-dex-classes)
-    * [4. Get APK Signing Info](#4-get-apk-sign-info)
-    * [5. Locales](#5-locales)
-* [Reporting Issues](#open-issue)
-
+    * [3. 手机连接adb](#3-手机连接adb)
+    * [4. 手机开发环境部署](#4-手机开发环境部署)
+    * [5. 部署之后手机的增强功能](#5-部署之后手机的增强功能)
+* [使用hooker](#使用hooker)
+    * [1. 查看可调试进程](#1-查看可调试进程)
 	
 # hooker和frida、objection有什么不同
 - 职责不同：frida注重打造调试引擎、objection注重将frida的api简单封装一下让你好快速上手frida。而hooker是重新站在一个安卓应用开发和安卓逆向工程师的角度去打造的更加专业Android逆向工作台，重新定义了逆向android的工作方式。
@@ -76,7 +76,7 @@ stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示
 ![部署演示](assets/hooker-deploy.gif)
 ***
 
-##### 部署完成之后你的手机将发生一下几件事情
+##### 5. 部署之后手机的增强功能
 - 1.关闭iptables防火墙，解决部分手机默认防火墙开启的问题
 - 2.启动frida-server，如果你的手机是arm64他将优先启动arm64位的frida-server
 - 3.在/data/mobile-deploy目录生成tools_env.rc 当你有内网穿透和网络服务转发、编辑文件、检测网络方面的需求时可以执行source /data/mobile-deploy/tools_env.rc，它将临时生成vi、telnet、frpc、tcpforward、ll命令以便你进行更便捷的开发，如图
@@ -87,7 +87,9 @@ stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示
 ***
 
 
-#### 查看当前所有可调试进程
+# 使用hooker
+
+##### 1. 查看可调试进程
 ```shell
 stephen@ubuntu:~/hooker$ ./hooker 
   PID  Name                           Identifier                                                   
