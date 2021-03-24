@@ -2,6 +2,9 @@
 
 hooker是一个站在Android应用开发工程师的角度打造的适用于Android逆向工程人员和安全研究人员的工具包。为逆向开发人员提供自动化生成frida的hook脚本、内存探测java类、检测activity和service和其他任意对象。
 
+文档持续更新中.....
+=================
+
 目录
 =================
 
@@ -14,6 +17,11 @@ hooker是一个站在Android应用开发工程师的角度打造的适用于Andr
     * [5. 部署之后手机的增强功能](#5-部署之后手机的增强功能)
 * [使用hooker](#使用hooker)
     * [1. 查看可调试进程](#1-查看可调试进程)
+    * [2. attach一个应用](#2-attach一个应用)
+    * [3. 应用工作目录](#3-应用工作目录)
+* [应用工作目录的命令和脚本简介](#应用工作目录的命令和脚本简介)
+    * [1. hooking](#1-hooking)
+    * [2. attach](#2-attach)
 	
 # hooker和frida、objection有什么不同
 - 职责不同：frida注重打造调试引擎、objection注重将frida的api简单封装一下让你好快速上手frida。而hooker是重新站在一个安卓应用开发和安卓逆向工程师的角度去打造的更加专业Android逆向工作台，重新定义了逆向android的工作方式。
@@ -131,11 +139,8 @@ stephen@ubuntu:~/hooker$ ./hooker
 Enter the need to attach package.
 : 
 ```
-- PID ：进程id
-- Name ：进程名
-- Identifier ：进程唯一标识
 
-#### attach一个应用
+##### 2. attach一个应用
 ```shell
 stephen@ubuntu:~/hooker$ ./hooker
   PID  Name                           Identifier                                                   
@@ -176,24 +181,26 @@ m: Discovering so module.
 ex: Exit to the upper layer. eg:'ex'
 : 
 ```
-
-##### attach演示
+	提示1: 第一次调试你的应用时hooker将在当前目录生成以进程Identifier命名的应用专有工作目录，并初始化生成一些你可能会用到的通杀脚本。
+	提示2: 成功attach一个应用时，命令将pause在等待输入调试指令的阶段
 ![](assets/hooker-attach.gif)
-***
-
-- 当你第一次调试你的应用时hooker将在当前目录生成以进程Identifier命名的应用专有工作目录，并初始化生成一些你可能会用到的通杀脚本。比如用于url探测的url.js、模拟操作View的android_ui.js、监控Activity启动/销毁的activity.js、操作对象的object_store.js等等。
-- 当你成功attach一个应用时，命令将pause在等待输入调试指令的阶段。这时建议你打开另一个terminal并cd com.ss.android.ugc.aweme进入你的应用专有工作目录，或者直接使用sublime text、vscode等工具打开之。这样将极大的便于你观察和操作应用的专属脚本。
 
 
-#### 应用专有工作目录
+##### 3. 应用工作目录 
 ```shell
 stephen@ubuntu:~/hooker/com.ss.android.ugc.aweme$ ls
 activity_events.js  attach     click.js      hooking  kill  objection        spider.py     url.js         web_view.js
 android_ui.js       cipher.js  edit_text.js  ipc.js   log   object_store.js  text_view.js  view_pager.js  xinitdeploy
 ```
-##### 专用工作目录命令和脚本简介
-- hooking: './hooking url.js' == 'frida -U -l url.js com.ss.android.ugc.aweme | tee -ai log'，会在将hook信息写入log文件，方便回溯
-- attach: 同hooking类似，'./attach android_ui.js' == 'frida -U -l url.js com.ss.android.ugc.aweme' attach相比hooking少了日志持久化功能，且可动态调用脚本中定义函数。
+# 应用工作目录的命令和脚本简介
+
+##### 1. hooking
+执行hooking命令需要在后面跟一个脚本文件名作为参数，例如 ./hooking url.js。hooking实际上是在传统frida attach的基础上增加了将hook输出信息持久化到log文件中，比如当你hook一个调用非常频繁的函数比如某些字符串生成，输出的日志量无法短时间去全面，这时候你可以用文本编辑器打开log文件慢慢分析。
+
+##### 2. attach
+attach同hooking类似，但是相比hooking少了日志持久化功能，这才是原生frida attach的命令
+
+
 - objection: './objection' == 'objection -d -g com.ss.android.ugc.aweme explore' objection在扫描so方面还是有优势的，既然我无法完全替代objection 那我就封装下，方便使用。
 - kill: './kill'，相当于命令'frida-kill -U com.ss.android.ugc.aweme' 手机上滑动杀应用只能杀掉主进程，用这个./kill把主进程、子进程杀个干净
 - xinitdeploy: 如果你需要拷贝一些资源文件到手机上时，可把文件放在xinit目录下然后执行'./xinitdeploy'，它会把这个文件以当前应用的临时用户的权限放在应用根目录的xinit目录 如:/data/app/com.ss.android.ugc.aweme/xinit
@@ -207,6 +214,7 @@ android_ui.js       cipher.js  edit_text.js  ipc.js   log   object_store.js  tex
 - android_ui.js: 封装一些操作原生Android UI的函数。如startActivity(activityName)、home()、back()、finishCurrentActivity()、clickByText(text) 等等，命令使用得用attach './attach android_ui.js' 原理是借助radar.dex作为代理操作Android原生View。（tag）
 ![](assets/android_ui.gif)
 ***
+
 
 #### 交互命令行简介
 
