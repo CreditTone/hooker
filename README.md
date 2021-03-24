@@ -1,10 +1,21 @@
 ### 欢迎使用hooker逆向工作台
 
-## hooker简介
-- hooker是一个站在Android应用开发工程师的角度打造的适用于Android逆向工程人员和安全研究人员的工具包。为逆向开发人员提供自动化生成frida的hook脚本、内存探测java类、检测activity和service和其他任意对象。
+hooker是一个站在Android应用开发工程师的角度打造的适用于Android逆向工程人员和安全研究人员的工具包。为逆向开发人员提供自动化生成frida的hook脚本、内存探测java类、检测activity和service和其他任意对象。
+
+目录
+=================
+
+* [hooker和frida、objection有什么不同](#hooker和frida、objection有什么不同)
+* [环境部署](#环境部署)
+    * [1. git clone项目](#1-git-clone项目)
+    * [2. 安装依赖](#2-安装依赖)
+    * [3. Get DEX Classes](#3-get-dex-classes)
+    * [4. Get APK Signing Info](#4-get-apk-sign-info)
+    * [5. Locales](#5-locales)
+* [Reporting Issues](#open-issue)
+
 	
-	
-#### hooker和frida、objection有什么不同？
+# hooker和frida、objection有什么不同
 - 职责不同：frida注重打造调试引擎、objection注重将frida的api简单封装一下让你好快速上手frida。而hooker是重新站在一个安卓应用开发和安卓逆向工程师的角度去打造的更加专业Android逆向工作台，重新定义了逆向android的工作方式。
 - 封装不同：frida是基于gumjs（V8）、C/C++封装的调试引擎，用于动态Hook跟踪、拦截和主动调用函数等。hooker是基于frida作为引擎和自己打造的Dex库（radar）调用Android Framework层代码完成的。
 - 交互方式不一样：frida和objection只有atcth上才能操作各种指令，而hooker提供shell命令行交互式让你可以通过jadx进行动静结合分析。
@@ -12,7 +23,9 @@
 - hook脚本产出方式不一样：frida你需要先进行很多语法方面的学习，才能完成对各种类的各种方法进行frida脚本的编写。hooker不需要你了解frida语法细节，比如你只需通过j okhttp3.OkHttpClient:newCall 就可以生成一个hook okhttp3.OkHttpClient类的newCall方法的脚本, 即使对于任何一个被混淆的类操作也是如此。（你应该把更多的时间和精力放在逆向思路上，而不是熟悉某些语法上。）
 - 提供操作原生AndroidUI功能：你可以./attach每个app目录下的android_ui.js脚本，它提供了通过ViewId、ViewText找到Android原生的View并点击，或者你想强制打开某个Activity（比如某个界面只有会员才能进入，这时候你就可以采用Android"原生代码"打开的方式）。
 
-#### 快速开始
+# 环境部署
+
+##### 1. git clone项目
 ```shell
 stephen@ubuntu:~/hooker$ git https://github.com/CreditTone/hooker.git
 stephen@ubuntu:~/hooker$ cd hooker
@@ -31,7 +44,13 @@ com.meitu.meipaimv          js                           xapk
 com.miui.screenrecorder     mobile-deploy.sh             xinitdeploy.py
 ```
 
-#### 手机连接adb
+##### 2. 安装依赖
+```shell
+stephen@ubuntu:~/hooker$ pip install -r requirements.txt
+```
+
+
+##### 3. 手机连接adb
 ```shell
 stephen@ubuntu:~/hooker$ adb devices
 List of devices attached
@@ -39,7 +58,9 @@ FA77C0301476	device
 ```
 
 
-#### 部署(如果你的手机已经启动了frida-server，可以忽略这步)
+##### 4. 手机开发环境部署
+ 如果你的手机已经启动了frida-server，可以忽略这步。不过还是建议你采用hooker推荐的hluda-server，因为官方的frida-server在启动之后实际上会向app注入frida-agent.so作为代理，聪明的应用可以通过读取/proc/{pid}/maps检测到正在被frida调试。不过，已经有前人帮我们重新编译了frida-server，把敏感特征去掉了。有兴趣可以参考[strongR-frida-android](https://github.com/hluwa/strongR-frida-android "strongR-frida-android")。
+
 ```shell
 #以piexl2为例
 stephen@ubuntu:~/hooker$ adb push mobile-deploy/ /sdcard/
@@ -52,7 +73,6 @@ start network adb.
 deploy successfull.
 stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示已经正常部署。
 ```
-##### 部署演示
 ![部署演示](assets/hooker-deploy.gif)
 ***
 
