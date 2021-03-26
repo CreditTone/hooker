@@ -221,7 +221,7 @@ drwxrwxr-x 2 stephen stephen   4096 3月  25 21:21 xinit
 # 应用工作目录的命令
 
 ##### 1. hooking
-hooking命令需要在后面跟一个脚本文件名作为参数，例如 ./hooking url.js。hooking实际上是在传统frida attach的基础上增加了将hook输出信息持久化到log文件中，比如当你hook一个调用非常频繁的函数比如某些字符串生成，输出的日志量无法短时间去全面，这时候你可以用文本编辑器打开log文件慢慢分析。hooking实现如下
+hooking命令需要在后面跟一个脚本文件名作为参数，例如 ./hooking url.js。hooking实际上是在传统frida attach的基础上增加了将hook输出信息持久化到log文件中，比如当你hook一个调用非常频繁的函数比如某些字符串生成，输出的日志量无法短时间去全面，这时候你可以用文本编辑器打开log文件慢慢分析。以抖音工作目录为例，hooking实现如下
 
 ```shell
 #!/bin/bash
@@ -232,7 +232,7 @@ frida $HOOKER_DRIVER -l $1 com.ss.android.ugc.aweme | tee -ai log
 ```
 
 ##### 2. attach
-attach同hooking类似，但是相比hooking少了日志持久化功能，这才是原生frida attach的命令。例如:./attach android_ui.js。 attach实现如下
+attach同hooking类似，但是相比hooking少了日志持久化功能，这才是原生frida attach的命令。例如:./attach android_ui.js。以抖音工作目录为例，attach实现如下
 
 ```shell
 #!/bin/bash
@@ -241,7 +241,7 @@ frida $HOOKER_DRIVER -l $1 com.ss.android.ugc.aweme
 ```
 
 ##### 3. objection
-快捷执行objection调试命令，执行./objection即可。实现如下
+快捷执行objection调试命令，执行./objection即可。以抖音工作目录为例，objection实现如下
 
 ```shell
 #!/bin/bash
@@ -253,7 +253,7 @@ objection -d -g com.ss.android.ugc.aweme explore
 xinitdeploy是用于部署资源的命令，它会把xinit目录下所放的文件拷贝到手机上/data/user/0/{packageName}/xinit/上。由于实现有些复杂且极少有人能get到它潜在的价值，这里不列出它的实现方式。有兴趣的朋友可以自行查看源码——它其实是一个python脚本。
 
 ##### 5. kill
-如果你想重启app，先执行./kill会杀掉应用的主进程和所有子进程。作为一个Andrioid应用开发工程师出身，然后干到后台，接着干到爬虫，现在干到逆向的我必须告诉你：每个手机厂商都会实现一个自己的“内存清理”工具效果不一定好，且可能app本身也有保活机制。所以不建议你通过操作手机滑动进程列表来杀——有可能杀不干净。实现如下:
+如果你想重启app，先执行./kill会杀掉应用的主进程和所有子进程。作为一个Andrioid应用开发工程师出身，然后干到后台，接着干到爬虫，现在干到逆向的我必须告诉你：每个手机厂商都会实现一个自己的“内存清理”工具效果不一定好，且可能app本身也有保活机制。所以不建议你通过操作手机滑动进程列表来杀——有可能杀不干净。以抖音工作目录为例，kill实现如下:
 
 ```shell
 #!/bin/bash
