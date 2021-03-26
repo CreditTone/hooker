@@ -21,3 +21,4 @@ target/
 logs/
 data/doc/
 data/test/
+.vscode/

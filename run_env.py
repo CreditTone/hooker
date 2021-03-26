@@ -68,23 +68,15 @@ rpc_jscode = base_jscode + radar_jscode + jsfmt_jscode + readJs("rpc.js")
 
 url_jscode = readJs("url.js")
 
-webview_jscode = readJs("web_view.js")
-
-android_jscode = readJs("android_ui.js")
+android_ui_jscode = readJs("android_ui.js")
 
 edit_text_jscode = readJs("edit_text.js")
 
 text_view_jscode = readJs("text_view.js")
 
-cipher_jscode = readJs("cipher.js")
-
-ipc_jscode = readJs("ipc.js")
-
 click_jscode = readJs("click.js")
 
-view_pager_jscode = readJs("view_pager.js")
-
-activity_jscode = readJs("activity.js")
+activity_events_jscode = readJs("activity_events.js")
 
 object_store_jscode = readJs("object_store.js")
 

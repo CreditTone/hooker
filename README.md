@@ -19,9 +19,17 @@ hooker是一个站在Android应用开发工程师的角度打造的适用于Andr
     * [1. 查看可调试进程](#1-查看可调试进程)
     * [2. attach一个应用](#2-attach一个应用)
     * [3. 应用工作目录](#3-应用工作目录)
-* [应用工作目录的命令和脚本简介](#应用工作目录的命令和脚本简介)
+* [应用工作目录的命令](#应用工作目录的命令)
     * [1. hooking](#1-hooking)
     * [2. attach](#2-attach)
+    * [3. objection](#3-objection)
+    * [4. xinitdeploy](#4-xinitdeploy)
+    * [5. kill](#5-kill)
+* [应用工作目录的通杀脚本](#应用工作目录的通杀脚本)
+    * [1. url.js](#1-url-js)
+    * [2. activity_events.js](#2-activity_events-js)
+    * [3. click.js](#3-click-js)
+    * [4. android_ui.js](#4-android_ui-js)
 	
 # hooker和frida、objection有什么不同
 - 职责不同：frida注重打造调试引擎、objection注重将frida的api简单封装一下让你好快速上手frida。而hooker是重新站在一个安卓应用开发和安卓逆向工程师的角度去打造的更加专业Android逆向工作台，重新定义了逆向android的工作方式。
@@ -186,34 +194,91 @@ ex: Exit to the upper layer. eg:'ex'
 ![](assets/hooker-attach.gif)
 
 
-##### 3. 应用工作目录 
+##### 3. 应用工作目录
+应用工作目录的意义在于提供一个的地方存放和管理frida脚本和快捷命令。hooker在你第一次调试应用时会创建应用工作目录，并初始化一些通杀脚本和快捷命令。
+
 ```shell
-stephen@ubuntu:~/hooker/com.ss.android.ugc.aweme$ ls
-activity_events.js  attach     click.js      hooking  kill  objection        spider.py     url.js         web_view.js
-android_ui.js       cipher.js  edit_text.js  ipc.js   log   object_store.js  text_view.js  view_pager.js  xinitdeploy
+stephen@ubuntu:~/hooker/com.ss.android.ugc.aweme$ ls -l
+total 784
+-rw-rw-r-- 1 stephen stephen   7662 3月  16 20:55 activity_events.js
+-rw-rw-r-- 1 stephen stephen   5790 3月  16 20:55 android_ui.js
+-rwxrwxrwx 1 stephen stephen    102 8月   3  2020 attach
+-rw-rw-r-- 1 stephen stephen   2242 8月   3  2020 click.js
+-rw-rw-r-- 1 stephen stephen  12687 3月  23 22:23 com.bytedance.frameworks.core.encrypt.RequestEncryptUtils.js
+-rw-rw-r-- 1 stephen stephen   4322 8月   3  2020 edit_text.js
+-rwxrwxrwx 1 stephen stephen    159 8月   3  2020 hooking
+-rwxrwxrwx 1 stephen stephen    101 8月   3  2020 kill
+-rw-rw-r-- 1 stephen stephen 709448 3月  18 22:11 log
+-rwxrwxr-x 1 stephen stephen     99 3月  16 20:55 objection
+-rw-rw-r-- 1 stephen stephen   1226 3月  16 20:55 object_store.js
+-rw-rw-r-- 1 stephen stephen   2553 3月  16 20:55 spider.py
+-rw-rw-r-- 1 stephen stephen   2371 8月   3  2020 text_view.js
+-rw-rw-r-- 1 stephen stephen   4789 3月  16 20:55 url.js
+drwxrwxr-x 2 stephen stephen   4096 3月  25 21:21 xinit
+-rwxrwxr-x 1 stephen stephen   5552 3月  16 20:55 xinitdeploy
 ```
-# 应用工作目录的命令和脚本简介
+
+# 应用工作目录的命令
 
 ##### 1. hooking
-执行hooking命令需要在后面跟一个脚本文件名作为参数，例如 ./hooking url.js。hooking实际上是在传统frida attach的基础上增加了将hook输出信息持久化到log文件中，比如当你hook一个调用非常频繁的函数比如某些字符串生成，输出的日志量无法短时间去全面，这时候你可以用文本编辑器打开log文件慢慢分析。
+hooking命令需要在后面跟一个脚本文件名作为参数，例如 ./hooking url.js。hooking实际上是在传统frida attach的基础上增加了将hook输出信息持久化到log文件中，比如当你hook一个调用非常频繁的函数比如某些字符串生成，输出的日志量无法短时间去全面，这时候你可以用文本编辑器打开log文件慢慢分析。hooking实现如下
+
+```shell
+#!/bin/bash
+HOOKER_DRIVER=$(cat ../.hooker_driver)
+echo "hooking $1" > log
+date | tee -ai log
+frida $HOOKER_DRIVER -l $1 com.ss.android.ugc.aweme | tee -ai log
+```
 
 ##### 2. attach
-attach同hooking类似，但是相比hooking少了日志持久化功能，这才是原生frida attach的命令
+attach同hooking类似，但是相比hooking少了日志持久化功能，这才是原生frida attach的命令。例如:./attach android_ui.js。 attach实现如下
 
+```shell
+#!/bin/bash
+HOOKER_DRIVER=$(cat ../.hooker_driver)
+frida $HOOKER_DRIVER -l $1 com.ss.android.ugc.aweme
+```
 
-- objection: './objection' == 'objection -d -g com.ss.android.ugc.aweme explore' objection在扫描so方面还是有优势的，既然我无法完全替代objection 那我就封装下，方便使用。
-- kill: './kill'，相当于命令'frida-kill -U com.ss.android.ugc.aweme' 手机上滑动杀应用只能杀掉主进程，用这个./kill把主进程、子进程杀个干净
-- xinitdeploy: 如果你需要拷贝一些资源文件到手机上时，可把文件放在xinit目录下然后执行'./xinitdeploy'，它会把这个文件以当前应用的临时用户的权限放在应用根目录的xinit目录 如:/data/app/com.ss.android.ugc.aweme/xinit
-- activity_events.js：当你需要跟踪start某个Activity启动时可执行./hooking activity_events.js
-- click.js：需要跟踪点击事件时可执行./hooking click.js
-- url.js：需要跟踪url生成时可执行./hooking url.js
+##### 3. objection
+快捷执行objection调试命令，执行./objection即可。实现如下
+
+```shell
+#!/bin/bash
+HOOKER_DRIVER=$(cat ../.hooker_driver)
+objection -d -g com.ss.android.ugc.aweme explore
+```
+
+##### 4. xinitdeploy
+xinitdeploy是用于部署资源的命令，它会把xinit目录下所放的文件拷贝到手机上/data/user/0/{packageName}/xinit/上。由于实现有些复杂且极少有人能get到它潜在的价值，这里不列出它的实现方式。有兴趣的朋友可以自行查看源码——它其实是一个python脚本。
+
+##### 5. kill
+如果你想重启app，先执行./kill会杀掉应用的主进程和所有子进程。作为一个Andrioid应用开发工程师出身，然后干到后台，接着干到爬虫，现在干到逆向的我必须告诉你：每个手机厂商都会实现一个自己的“内存清理”工具效果不一定好，且可能app本身也有保活机制。所以不建议你通过操作手机滑动进程列表来杀——有可能杀不干净。实现如下:
+
+```shell
+#!/bin/bash
+HOOKER_DRIVER=$(cat ../.hooker_driver)
+frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
+```
+
+# 应用工作目录的通杀脚本
+
+##### 1. url.js
+需要跟踪url生成时可执行./hooking url.js
 ![](assets/hooking_url.gif)
 ***
-- web_view.js：需要跟踪app的内嵌浏览器行为时./hooking web_view.js
-- cipher.js: 需要跟踪java.security.SecureRandom、javax.crypto.Cipher对于常规AES/DES加密算法需要用到的类
-- android_ui.js: 封装一些操作原生Android UI的函数。如startActivity(activityName)、home()、back()、finishCurrentActivity()、clickByText(text) 等等，命令使用得用attach './attach android_ui.js' 原理是借助radar.dex作为代理操作Android原生View。（tag）
+
+##### 2. activity_events.js
+当你需要跟踪start某个Activity启动时可执行./hooking activity_events.js
+
+##### 3. click.js
+需要跟踪点击事件时可执行./hooking click.js
+
+##### 4. android_ui.js
+封装一些操作原生Android UI的函数。如startActivity(activityName)、home()、back()、finishCurrentActivity()、clickByText(text) 等等，命令使用得用attach './attach android_ui.js' 原理是借助radar.dex作为代理操作Android原生View。（tag）
 ![](assets/android_ui.gif)
 ***
+
 
 
 #### 交互命令行简介

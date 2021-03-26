@@ -107,7 +107,7 @@ def findclasses2(packageName, className):
     finally:    
         detach(online_session)        
 
-def writingFile(filename, text):
+def createFile(filename, text):
     file = None
     try:
         file = open(filename, mode='w+')
@@ -121,33 +121,30 @@ def writingFile(filename, text):
 def createHookingEnverment(packageName, mainActivity):
     if not os.path.exists(packageName):
         os.makedirs(packageName)
+        os.makedirs(packageName+"/xinit")
         shellPrefix = "#!/bin/bash\nHOOKER_DRIVER=$(cat ../.hooker_driver)\n"
         logHooking = shellPrefix + "echo \"hooking $1\" > log\ndate | tee -ai log\n" + "frida $HOOKER_DRIVER -l $1 " + packageName + " | tee -ai log"
         attachjs = shellPrefix + "frida $HOOKER_DRIVER -l $1 " + packageName
         xinitPyScript = run_env.xinitPyScript + "xinitDeploy('"+packageName+"')"
         spiderPyScript = run_env.spiderPyScript.replace("{appPackageName}", packageName).replace("{mainActivity}", mainActivity) 
-        writingFile(packageName+"/hooking", logHooking)
-        writingFile(packageName+"/attach", attachjs)
-        writingFile(packageName+"/xinitdeploy", xinitPyScript)
-        writingFile(packageName+"/spider.py", spiderPyScript)
-        writingFile(packageName + "/kill", shellPrefix + "frida-kill $HOOKER_DRIVER "+packageName)
-        writingFile(packageName+"/objection", shellPrefix + "objection -d -g "+packageName+" explore")
+        createFile(packageName+"/hooking", logHooking)
+        createFile(packageName+"/attach", attachjs)
+        createFile(packageName+"/xinitdeploy", xinitPyScript)
+        createFile(packageName+"/spider.py", spiderPyScript)
+        createFile(packageName + "/kill", shellPrefix + "frida-kill $HOOKER_DRIVER "+packageName)
+        createFile(packageName+"/objection", shellPrefix + "objection -d -g "+packageName+" explore")
         os.popen('chmod 777 ' + packageName +'/hooking').readlines()
         os.popen('chmod 777 ' + packageName +'/attach').readlines()
         os.popen('chmod 777 ' + packageName +'/xinitdeploy').readlines()
         os.popen('chmod 777 ' + packageName +'/kill').readlines()
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
-        writingFile(packageName + "/url.js", run_env.url_jscode)
-        writingFile(packageName + "/web_view.js", run_env.webview_jscode)
-        writingFile(packageName + "/edit_text.js", run_env.edit_text_jscode)
-        writingFile(packageName + "/text_view.js", run_env.text_view_jscode)
-        writingFile(packageName + "/cipher.js", run_env.cipher_jscode)
-        writingFile(packageName + "/ipc.js", run_env.ipc_jscode)
-        writingFile(packageName + "/click.js", run_env.click_jscode)
-        writingFile(packageName + "/android_ui.js", run_env.android_jscode.replace("com.smile.gifmaker", packageName))
-        writingFile(packageName + "/view_pager.js", run_env.view_pager_jscode)
-        writingFile(packageName + "/activity_events.js", run_env.activity_jscode.replace("com.smile.gifmaker", packageName))
-        writingFile(packageName + "/object_store.js", run_env.object_store_jscode.replace("com.smile.gifmaker", packageName))
+        createFile(packageName + "/url.js", run_env.url_jscode)
+        createFile(packageName + "/edit_text.js", run_env.edit_text_jscode)
+        createFile(packageName + "/text_view.js", run_env.text_view_jscode)
+        createFile(packageName + "/click.js", run_env.click_jscode)
+        createFile(packageName + "/android_ui.js", run_env.android_ui_jscode.replace("com.smile.gifmaker", packageName))
+        createFile(packageName + "/activity_events.js", run_env.activity_events_jscode.replace("com.smile.gifmaker", packageName))
+        createFile(packageName + "/object_store.js", run_env.object_store_jscode.replace("com.smile.gifmaker", packageName))
 
 def hookJs(packageName, hookCmdArg, savePath = None):
     online_session = None
@@ -178,7 +175,7 @@ def hookJs(packageName, hookCmdArg, savePath = None):
             warpExtraInfo += "//"+hookCmdArg + "\n"
             warpExtraInfo += run_env.base_jscode
             warpExtraInfo += ganaretoionJscode
-            writingFile(savePath, warpExtraInfo)
+            createFile(savePath, warpExtraInfo)
             info("Hooking js code have generated. Path is " + savePath+".")
         else:
             warn("Not found any classes by pattern "+hookCmdArg+".")
@@ -195,7 +192,7 @@ def hookStr(packageName, keyword):
         jscode = io.open('./js/string_hooker.js','r',encoding= 'utf8').read()
         jscode = jscode.replace("惊雷", keyword)
         savePath = packageName+"/str_"+keyword+".js";
-        writingFile(savePath, jscode)
+        createFile(savePath, jscode)
         info("Hooking js code have generated. Path is " + savePath+".")
     except Exception:
         print(traceback.format_exc())  
@@ -211,7 +208,7 @@ def hookParma(packageName, keyword):
         jscode = io.open('./js/param_hook.js','r',encoding= 'utf8').read()
         jscode = jscode.replace("NStokensig", keyword)
         savePath = packageName+"/param_"+keyword+".js";
-        writingFile(savePath, jscode)
+        createFile(savePath, jscode)
         info("Hooking js code have generated. Path is " + savePath+".")
     except Exception:
         print(traceback.format_exc())  
