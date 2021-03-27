@@ -15,7 +15,7 @@ hooker是一个站在Android应用开发工程师的角度打造的适用于Andr
     * [3. 手机连接adb](#3-手机连接adb)
     * [4. 手机开发环境部署](#4-手机开发环境部署)
     * [5. 部署之后手机的增强功能](#5-部署之后手机的增强功能)
-* [使用hooker](#使用hooker)
+* [快速开始](#快速开始)
     * [1. 查看可调试进程](#1-查看可调试进程)
     * [2. attach一个应用](#2-attach一个应用)
     * [3. 应用工作目录](#3-应用工作目录)
@@ -30,6 +30,15 @@ hooker是一个站在Android应用开发工程师的角度打造的适用于Andr
     * [2. activity_events.js](#2-activity_events-js)
     * [3. click.js](#3-click-js)
     * [4. android_ui.js](#4-android_ui-js)
+* [hooker调试命令行](#hooker调试命令行)
+    * [a-打印Activity栈](#a-打印activity栈)
+    * [b-打印Service栈](#b-打印Service栈)
+    * [c-扫描指定Object](#c-扫描指定Object)
+    * [d-展开Object[]、List或Map](#d-展开Object[]-List或Map)
+    * [v-以View方式查看对象](#v-以view的方式查看对象)
+    * [e-检测类在内存中是否存在](#e-检测类在内存中是否存在)
+    * [s-正则表达式扫描类](#s-正则表达式扫描类)
+    * [j-生成指定类的hook脚本](#j-生成指定类的hook脚本)
 	
 # hooker和frida、objection有什么不同
 - 职责不同：frida注重打造调试引擎、objection注重将frida的api简单封装一下让你好快速上手frida。而hooker是重新站在一个安卓应用开发和安卓逆向工程师的角度去打造的更加专业Android逆向工作台，重新定义了逆向android的工作方式。
@@ -103,9 +112,9 @@ stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示
 ***
 
 
-# 使用hooker
+# 快速开始
 
-##### 1. 查看可调试进程
+### 1. 查看可调试进程
 ```shell
 stephen@ubuntu:~/hooker$ ./hooker 
   PID  Name                           Identifier                                                   
@@ -148,7 +157,7 @@ Enter the need to attach package.
 : 
 ```
 
-##### 2. attach一个应用
+### 2. attach一个应用
 ```shell
 stephen@ubuntu:~/hooker$ ./hooker
   PID  Name                           Identifier                                                   
@@ -190,11 +199,11 @@ ex: Exit to the upper layer. eg:'ex'
 : 
 ```
 	提示1: 第一次调试你的应用时hooker将在当前目录生成以进程Identifier命名的应用专有工作目录，并初始化生成一些你可能会用到的通杀脚本。
-	提示2: 成功attach一个应用时，命令将pause在等待输入调试指令的阶段
+	提示2: 成功attach一个应用时，命令将pause在等待输入调试指令的阶段。pause状态下使用命令进行高级调试请直接跳到
 ![](assets/hooker-attach.gif)
 
 
-##### 3. 应用工作目录
+### 3. 应用工作目录
 应用工作目录的意义在于提供一个的地方存放和管理frida脚本和快捷命令。hooker在你第一次调试应用时会创建应用工作目录，并初始化一些通杀脚本和快捷命令。
 
 ```shell
@@ -220,7 +229,7 @@ drwxrwxr-x 2 stephen stephen   4096 3月  25 21:21 xinit
 
 # 应用工作目录的命令
 
-##### 1. hooking
+### 1. hooking
 hooking命令需要在后面跟一个脚本文件名作为参数，例如 ./hooking url.js。hooking实际上是在传统frida attach的基础上增加了将hook输出信息持久化到log文件中，比如当你hook一个调用非常频繁的函数比如某些字符串生成，输出的日志量无法短时间去全面，这时候你可以用文本编辑器打开log文件慢慢分析。以抖音工作目录为例，hooking实现如下
 
 ```shell
@@ -231,7 +240,7 @@ date | tee -ai log
 frida $HOOKER_DRIVER -l $1 com.ss.android.ugc.aweme | tee -ai log
 ```
 
-##### 2. attach
+### 2. attach
 attach同hooking类似，但是相比hooking少了日志持久化功能，这才是原生frida attach的命令。例如:./attach android_ui.js。以抖音工作目录为例，attach实现如下
 
 ```shell
@@ -240,7 +249,7 @@ HOOKER_DRIVER=$(cat ../.hooker_driver)
 frida $HOOKER_DRIVER -l $1 com.ss.android.ugc.aweme
 ```
 
-##### 3. objection
+### 3. objection
 快捷执行objection调试命令，执行./objection即可。以抖音工作目录为例，objection实现如下
 
 ```shell
@@ -249,10 +258,10 @@ HOOKER_DRIVER=$(cat ../.hooker_driver)
 objection -d -g com.ss.android.ugc.aweme explore
 ```
 
-##### 4. xinitdeploy
+### 4. xinitdeploy
 xinitdeploy是用于部署资源的命令，它会把xinit目录下所放的文件拷贝到手机上/data/user/0/{packageName}/xinit/上。由于实现有些复杂且极少有人能get到它潜在的价值，这里不列出它的实现方式。有兴趣的朋友可以自行查看源码——它其实是一个python脚本。
 
-##### 5. kill
+### 5. kill
 如果你想重启app，先执行./kill会杀掉应用的主进程和所有子进程。作为一个Andrioid应用开发工程师出身，然后干到后台，接着干到爬虫，现在干到逆向的我必须告诉你：每个手机厂商都会实现一个自己的“内存清理”工具效果不一定好，且可能app本身也有保活机制。所以不建议你通过操作手机滑动进程列表来杀——有可能杀不干净。以抖音工作目录为例，kill实现如下:
 
 ```shell
@@ -263,58 +272,61 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 
 # 应用工作目录的通杀脚本
 
-##### 1. url.js
+### 1. url.js
 需要跟踪url生成时可执行./hooking url.js
 ![](assets/hooking_url.gif)
 ***
 
-##### 2. activity_events.js
+### 2. activity_events.js
 当你需要跟踪start某个Activity启动时可执行./hooking activity_events.js
 
-##### 3. click.js
+### 3. click.js
 需要跟踪点击事件时可执行./hooking click.js
 
-##### 4. android_ui.js
+### 4. android_ui.js
 封装一些操作原生Android UI的函数。如startActivity(activityName)、home()、back()、finishCurrentActivity()、clickByText(text) 等等，命令使用得用attach './attach android_ui.js' 原理是借助radar.dex作为代理操作Android原生View。（tag）
 ![](assets/android_ui.gif)
 ***
 
 
 
-#### 交互命令行简介
+# hooker调试命令行
 
-- a : 打印Activity栈的所有实例，当前界面排最前面。你可以立刻获取当前手机界面的Activity实现类、继承关系、实现接口、Activity中的所有属性值和方法声明。配合jadx动静分析效果最佳，分析Activity对象的内部情况将极快的提供逆向的线索。值得注意的是Activity中每个成员变量hooker会分配一个ObjectId，这是为了让你用c命令对内部成员变量进行扫描的。
+### a - 打印Activity栈
+打印Activity栈的所有实例，当前界面排最前面。你可以立刻获取当前手机界面的Activity实现类、继承关系、实现接口、Activity中的所有属性值和方法声明。配合jadx动静分析效果最佳，分析Activity对象的内部情况将极快的提供逆向的线索。值得注意的是Activity中每个成员变量hooker会分配一个ObjectId，这是为了让你用c命令对内部成员变量进行扫描的。
 ![](assets/a.gif)
-***
 
-- b : 打印Service栈的所有实例。和a命令一样，获取当前手机界面的Service实现类、继承关系、实现接口、Service中的所有属性值和方法声明。配合jadx动静分析效果最佳，分析Service对象的内部情况将极快的提供逆向的线索。值得注意的是Service中每个成员变量hooker会分配一个ObjectId，这是为了让你用c命令对内部成员变量进行扫描的。
+
+### b - 打印Service栈
+打印Service栈的所有实例。和a命令一样，获取当前手机界面的Service实现类、继承关系、实现接口、Service中的所有属性值和方法声明。配合jadx动静分析效果最佳，分析Service对象的内部情况将极快的提供逆向的线索。值得注意的是Service中每个成员变量hooker会分配一个ObjectId，这是为了让你用c命令对内部成员变量进行扫描的。
 ![](assets/b.gif)
-***
 
-- c : 扫描指定ObjectId的对象，a、b命令扫描Activity和Service带出一托线索。结合jadx观察之成员变量的类型和值情况，你一定可以发现一些新的对象，想窥视之。那么请用c命令扫描吧，而c命令扫描完之后又会带出新的你感兴趣的线索（对象）。顺藤摸瓜，你可以找到很多有趣东西。
+### c - 扫描指定Object
+扫描指定ObjectId的对象，a、b命令扫描Activity和Service带出一托线索。结合jadx观察之成员变量的类型和值情况，你一定可以发现一些新的对象，想窥视之。那么请用c命令扫描吧，而c命令扫描完之后又会带出新的你感兴趣的线索（对象）。顺藤摸瓜，你可以找到很多有趣东西。
 ![](assets/c.gif)
-***
 
-- d : 展开一个Object[]、List或Map，并以Index/key->value的形式打印出来，从而进一步获取集合对象内部的每个对象类型和ObjectId。比如我们通过a命令查看某Activity发现属性o是一个Fragment数组'name:o	static:false	fromExtends:false	type:[Landroidx.fragment.app.Fragment; objectId:tGErGHXLso	value:[Landroidx.fragment.app.Fragment;@94023208'，那么这个数组里面每个成员是什么我们就可以用d命令对其进行展开了。
+### d - 展开Object[]、List或Map
+展开一个Object[]、List或Map，并以Index/key->value的形式打印出来，从而进一步获取集合对象内部的每个对象类型和ObjectId。比如我们通过a命令查看某Activity发现属性o是一个Fragment数组'name:o	static:false	fromExtends:false	type:[Landroidx.fragment.app.Fragment; objectId:tGErGHXLso	value:[Landroidx.fragment.app.Fragment;@94023208'，那么这个数组里面每个成员是什么我们就可以用d命令对其进行展开了。
 ![](assets/d.png)
-***
 
-- v : 以View的方式查看一个对象，除了有c命令全部的功能之外。v命令会先强转对象为View,然后获取view绑定的OnClickListener、OnLongClickListener、OnTouchListener、OnFocusChangeListener、OnEditorActionListener、OnItemClickListener等等，这些对象也将完全探测出来。比如对于属性:'name:h	static:false	fromExtends:false	type:com.ttpc.bidding_hall.weight.HomeTabButton	viewId:2131297762	objectId:GKuWPZOyY0	value:com.ttpc.bidding_hall.weight.HomeTabButton@227103246' 如下图用v命令查看我们可以发现HomeTabButton绑定了一个点击事件com.ttpai.track.g，这样的话你去jadx找到这个类就知道处理这个按钮的逻辑啦！！！此外，v 命令还可以跟上ViewId，但是ViewId对于每个View不一定都存在并且也不一定唯一，这个具体细节可以了解Android应用开发。
+### v - 以View的方式查看对象
+以View的方式查看一个对象，除了有c命令全部的功能之外。v命令会先强转对象为View,然后获取view绑定的OnClickListener、OnLongClickListener、OnTouchListener、OnFocusChangeListener、OnEditorActionListener、OnItemClickListener等等，这些对象也将完全探测出来。比如对于属性:'name:h	static:false	fromExtends:false	type:com.ttpc.bidding_hall.weight.HomeTabButton	viewId:2131297762	objectId:GKuWPZOyY0	value:com.ttpc.bidding_hall.weight.HomeTabButton@227103246' 如下图用v命令查看我们可以发现HomeTabButton绑定了一个点击事件com.ttpai.track.g，这样的话你去jadx找到这个类就知道处理这个按钮的逻辑啦！！！此外，v 命令还可以跟上ViewId，但是ViewId对于每个View不一定都存在并且也不一定唯一，这个具体细节可以了解Android应用开发。
 ![](assets/v.png)
-***
 
-- e : 检测一个类在内存中是否存在。大部分情况下静态分析的类在内存中会存在，但是有时app会做热更新可能会出现类被替换的情况。作为一个严谨的逆向工程师在对类进行操作之前检测类是否存在内存中是个好习惯。如：e com.bytedance.frameworks.encryptor.EncryptorUtil 输出：True表示存在 False表示不存在
+### e - 检测类在内存中是否存在
+检测一个类在内存中是否存在。大部分情况下静态分析的类在内存中会存在，但是有时app会做热更新可能会出现类被替换的情况。作为一个严谨的逆向工程师在对类进行操作之前检测类是否存在内存中是个好习惯。如：e com.bytedance.frameworks.encryptor.EncryptorUtil 输出：True表示存在 False表示不存在
 ![](assets/exists_class.gif)
 
-- s : 用正则表达式在内存中扫描类。比如你对某些关键词类感兴趣，完全可以使用s进行扫描。配合jadx查看类实现代码爽歪歪！当然jadx自带类搜索功能但是只是静态的，并且jadx搜索功能是吃内存的，没有32G内存使用起来好卡。这时候s命令或许你是不错的选择。
+### s - 正则表达式扫描类
+用正则表达式在内存中扫描类。比如你对某些关键词类感兴趣，完全可以使用s进行扫描。配合jadx查看类实现代码爽歪歪！当然jadx自带类搜索功能但是只是静态的，并且jadx搜索功能是吃内存的，没有32G内存使用起来好卡。这时候s命令或许你是不错的选择。
 ![](assets/s.png)
-***
 
-- j : 生成指定类名称的hook脚本，也是hooker最核心的功能之一。相比objection，hooker生成的脚本有标注生产脚本的apk版本和类名。并且每个方法内部已经具备打印堆栈的功能，包括调用时间、线程id、线程名、调用对象的hashcode，调用方法用时都有很详细的描述。objection生成的白纸一张，你自己填充打印堆栈等信息的代码吧...... 这时候你选谁？？？
+### j - 生成指定类的hook脚本
+生成指定类名称的hook脚本，也是hooker最核心的功能之一。相比objection，hooker生成的脚本有标注生产脚本的apk版本和类名。并且每个方法内部已经具备打印堆栈的功能，包括调用时间、线程id、线程名、调用对象的hashcode，调用方法用时都有很详细的描述。objection生成的白纸一张，打印堆栈的代码你自己填充吧...... 这时候你选谁？？？
 ![](assets/j0.png)
 ![](assets/j1.png)
 ![](assets/j2.png)
-- j : 此脚本参考[RequestEncryptUtils.js](com.ss.android.ugc.aweme/com.bytedance.frameworks.core.encrypt.RequestEncryptUtils.js "RequestEncryptUtils.js")
+此脚本参考[RequestEncryptUtils.js](com.ss.android.ugc.aweme/com.bytedance.frameworks.core.encrypt.RequestEncryptUtils.js "RequestEncryptUtils.js")
 
 #### 扫描一个应用中某个包下的所有类，并输出到控制台
 ```shell
