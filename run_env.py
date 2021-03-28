@@ -80,6 +80,8 @@ activity_events_jscode = readJs("activity_events.js")
 
 object_store_jscode = readJs("object_store.js")
 
+keystore_dump_jscode = readJs("keystore_dump.js")
+
 def getPythonLaucher():
     pythonLaucher = os.environ.get("__PYVENV_LAUNCHER__")
     if not pythonLaucher:
