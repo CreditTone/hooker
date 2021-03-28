@@ -30,6 +30,7 @@ hooker是一个站在Android应用开发工程师的角度打造的适用于Andr
     * [2. activity_events.js](#2-activity_events-js)
     * [3. click.js](#3-click-js)
     * [4. android_ui.js](#4-android_ui-js)
+    * [5. keystore_dump.js](#5-keystore_dump-js)
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a-打印activity栈)
     * [b-打印Service栈](#b-打印Service栈)
