@@ -10,7 +10,7 @@ do
 		break
 	fi
 	echo "It's $package that you have attached app."
-	#python3 hooker.py -p $package -g true
+	python3 hooker.py -p $package -g true
 	echo "--------------------------------------------------"
 	while :
 	do

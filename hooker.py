@@ -117,6 +117,17 @@ def createFile(filename, text):
     finally:
         if file != None:
             file.close()
+            
+def onlyCheckHookingEnverment(packageName):
+    if os.path.exists(packageName):
+        return
+    online_session = None
+    try:
+        online_session,_ = attach(packageName);
+    except Exception:
+        print(traceback.format_exc())  
+    finally:
+        detach(online_session)
 
 def createHookingEnverment(packageName, mainActivity):
     if not os.path.exists(packageName):
@@ -341,6 +352,11 @@ if __name__ == '__main__':
         warn("packageName is none")
         sys.exit(2);
     run_env.init(packageName);
+    
+    #初始化应用目录
+    if genarateEnv and packageName:
+        onlyCheckHookingEnverment(packageName)
+    
     if e != None:
         existsClass(packageName, e)
     elif findclassesClassRegex:
@@ -365,7 +381,7 @@ if __name__ == '__main__':
         printView(packageName, viewId)
     elif moduleName:
         printModuleName(packageName, moduleName)
-    else:
+    elif not genarateEnv:
         warn(opts)
         sys.exit(2);
     
