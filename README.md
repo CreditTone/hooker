@@ -290,7 +290,7 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 ***
 
 ### 5. keystore_dump.js
-在https双向认证的情况下，dump客户端证书为p12. 存储位置:/data/user/0/cn.soulapp.android/client_keystore_{nowtime}.p12 证书密码: hooker。原理是hook java.security.KeyStore的getPrivateKey和getCertificate方法，因为客户端向服务发送证书必调这个方法。
+在https双向认证的情况下，dump客户端证书为p12. 存储位置:/data/user/0/{packagename}/client_keystore_{nowtime}.p12 证书密码: hooker。原理是hook java.security.KeyStore的getPrivateKey和getCertificate方法，因为客户端向服务发送证书必调这个方法。
 ![](assets/keystore_dump.png)
 
 
