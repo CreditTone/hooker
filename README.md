@@ -333,37 +333,14 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 ![](assets/j2.png)
 此脚本参考[RequestEncryptUtils.js](com.ss.android.ugc.aweme/com.bytedance.frameworks.core.encrypt.RequestEncryptUtils.js "RequestEncryptUtils.js")
 
-#### 扫描一个应用中某个包下的所有类，并输出到控制台
-```shell
-Please enter e, s, h or ex command.
-e: Determines whether a class exists. eg:'e android.app.Application'
-s: Discovering classes in the specified path. eg1:'s com.example.myapplication' In regex eg2:'s com.example.net.*'
-j: Generating hooked js. eg1:'j okhttp3.Request:build' To specific Multiple methods eg2:'j okhttp3.Request:url,method,build'
-ex: Exit to the upper layer. eg:'ex'
-:s com.example.myapplication
-python hooker.py -p com.example.myapplication -s com.example.myapplication
-androidVersion:7.1.2
-Discovering:com.example.myapplication
-class com.example.myapplication.MainActivity extends androidx.appcompat.app.AppCompatActivity
-class com.example.myapplication.MainActivity$1 implements android.view.View$OnClickListener
-class com.example.myapplication.MainActivity$2 implements android.view.View$OnClickListener
-Discovering done
-#由此我们知道com.example.myapplication这个包下有一个类com.example.myapplication.MainActivity，并且在com.example.myapplication.MainActivity中有两个内部类com.example.myapplication.MainActivity$1和com.example.myapplication.MainActivity$2
-```
+hooker生成脚本和objection生成脚本优势对比
 
-#### 生成针对某个类的hook代码
-```shell
-Please enter e, s, h or ex command.
-e: Determines whether a class exists. eg:'e android.app.Application'
-s: Discovering classes in the specified path. eg1:'s com.example.myapplication' In regex eg2:'s com.example.net.*'
-j: Generating hooked js. eg1:'j okhttp3.Request:build' To specific Multiple methods eg2:'j okhttp3.Request:url,method,build'
-ex: Exit to the upper layer. eg:'ex'
-:j com.example.myapplication.MainActivity:stringFromJNI,stringFromJNI2
-python hooker.py -p com.example.myapplication -j com.example.myapplication.MainActivity:stringFromJNI,stringFromJNI2
-Hooking js code have generated. Path is ef555384-772a-11ea-bfdd-086d41d57a6a.js.
-#生成的js文件是当前目录的ef555384-772a-11ea-bfdd-086d41d57a6a.js
-#建议使用https://tool.oschina.net/codeformat/js/做格式化处理
-```
+| 项目        | 生成脚本命令   |  能否打印堆栈  |  包含辅助方法  |  脚本版本信息注释  |  脚本可定制性  |
+| --------   | -----:  | :----:  | :----:  | :----:  | :----:  |
+| hooker      | j [class_name] -o [outputpath].js   |   能     |   包含     |   带apk version和生成命令     |   好     |
+| objection        |   android hooking generate simple [class_name]  |   不能（白纸一张）   |   不包含     |   不带     |   一般     |
+
+
 ##### hook js
 ```js
 Java.perform(function() {
