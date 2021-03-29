@@ -327,7 +327,7 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 ![](assets/s.png)
 
 ### j - 生成指定类的hook脚本
-生成指定类名称的hook脚本，也是hooker最核心的功能之一。相比objection，hooker生成的脚本有标注生产脚本的apk版本和类名。并且每个方法内部已经具备打印堆栈的功能，包括调用时间、线程id、线程名、调用对象的hashcode，调用方法用时都有很详细的描述。objection生成的白纸一张，打印堆栈的代码你自己填充吧...... 这时候你选谁？？？
+生成指定类名称的hook脚本，也是hooker最核心的功能之一。相比objection，hooker生成的脚本有标注生产脚本的apk版本和类名。并且每个方法内部已经具备打印堆栈的功能，包括调用时间、线程id、线程名、调用对象的hashcode，调用方法用时都有很详细的描述。
 ![](assets/j0.png)
 ![](assets/j1.png)
 ![](assets/j2.png)
@@ -341,72 +341,7 @@ hooker生成脚本和objection生成脚本优势对比
 | objection        |   android hooking generate simple [class_name]  |   不能（白纸一张）   |   不包含     |   不带     |   一般     |
 
 
-##### hook js
-```js
-Java.perform(function() {
-    var com_example_myapplication_MainActivity_clz = Java.use('com.example.myapplication.MainActivity');
-    com_example_myapplication_MainActivity_clz.stringFromJNI2.overload().implementation = function() {
-        printStacks('public static native java.lang.String com.example.myapplication.MainActivity.stringFromJNI2()');
-        return com_example_myapplication_MainActivity_clz.stringFromJNI2();
-    };
-    com_example_myapplication_MainActivity_clz.stringFromJNI.overload().implementation = function() {
-        printStacks('public native java.lang.String com.example.myapplication.MainActivity.stringFromJNI()');
-        return this.stringFromJNI();
-    };
-});
-#根据自身需求做修改
-```
 
-```shell
-androidVersion:7.1.2
-inject dex of radar.
-injected.
-Discovering:com.example.myapplication
-class com.example.myapplication.MainActivity extends androidx.appcompat.app.AppCompatActivity
-	hasLocalNativeMethod:true
-	fields:131
-	constructors:1
-	methods:445
-class com.example.myapplication.MainActivity$1 extends java.lang.Object
-	hasLocalNativeMethod:false
-	fields:2
-	constructors:1
-	methods:10
-class com.example.myapplication.MainActivity$2 extends java.lang.Object
-	hasLocalNativeMethod:false
-	fields:2
-	constructors:1
-	methods:10
-Discovering done
-执行:Java.perform(function() {var com_example_myapplication_MainActivity_clz = Java.use('com.example.myapplication.MainActivity');com_example_myapplication_MainActivity_clz.stringFromJNI2.overload().implementation = function() {printStacks('public static native java.lang.String com.example.myapplication.MainActivity.stringFromJNI2()');return com_example_myapplication_MainActivity_clz.stringFromJNI2();};com_example_myapplication_MainActivity_clz.stringFromJNI.overload().implementation = function() {printStacks('public native java.lang.String com.example.myapplication.MainActivity.stringFromJNI()');return this.stringFromJNI();};com_example_myapplication_MainActivity_clz.stringFromJNI3.overload('java.lang.String','java.lang.String').implementation = function(v0,v1) {printStacks('private static native java.lang.String com.example.myapplication.MainActivity.stringFromJNI3(java.lang.String,java.lang.String)');return com_example_myapplication_MainActivity_clz.stringFromJNI3(v0,v1);};});
-sys.stdin.read()
-public native java.lang.String com.example.myapplication.MainActivity.stringFromJNI()
-	at com.example.myapplication.MainActivity.stringFromJNI(Native Method)
-	at com.example.myapplication.MainActivity$1.onClick(MainActivity.java:35)
-	at android.view.View.performClick(View.java:5637)
-	at android.view.View$PerformClick.run(View.java:22433)
-	at android.os.Handler.handleCallback(Handler.java:751)
-	at android.os.Handler.dispatchMessage(Handler.java:95)
-	at android.os.Looper.loop(Looper.java:154)
-	at android.app.ActivityThread.main(ActivityThread.java:6236)
-	at java.lang.reflect.Method.invoke(Native Method)
-	at com.android.internal.os.ZygoteInit$MethodAndArgsCaller.run(ZygoteInit.java:891)
-	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:781)
-
-public static native java.lang.String com.example.myapplication.MainActivity.stringFromJNI2()
-	at com.example.myapplication.MainActivity.stringFromJNI2(Native Method)
-	at com.example.myapplication.MainActivity$2.onClick(MainActivity.java:44)
-	at android.view.View.performClick(View.java:5637)
-	at android.view.View$PerformClick.run(View.java:22433)
-	at android.os.Handler.handleCallback(Handler.java:751)
-	at android.os.Handler.dispatchMessage(Handler.java:95)
-	at android.os.Looper.loop(Looper.java:154)
-	at android.app.ActivityThread.main(ActivityThread.java:6236)
-	at java.lang.reflect.Method.invoke(Native Method)
-	at com.android.internal.os.ZygoteInit$MethodAndArgsCaller.run(ZygoteInit.java:891)
-	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:781)
-
-```
 ##关于作者
 
 ```javascript
