@@ -1,0 +1,3 @@
+#!/bin/bash
+HOOKER_DRIVER=$(cat ../.hooker_driver)
+objection -d -g com.ttpc.bidding_hall explore
