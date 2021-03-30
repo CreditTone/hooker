@@ -345,7 +345,7 @@ hooker生成脚本和objection生成脚本优势对比
 
 
 
-##关于作者
+## 关于作者
 
 ```javascript
 var author = {
