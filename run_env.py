@@ -82,6 +82,8 @@ object_store_jscode = readJs("object_store.js")
 
 keystore_dump_jscode = readJs("keystore_dump.js")
 
+ssl_log_jscode = readJs("ssl_log.js")
+
 def getPythonLaucher():
     pythonLaucher = os.environ.get("__PYVENV_LAUNCHER__")
     if not pythonLaucher:

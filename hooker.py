@@ -149,6 +149,7 @@ def createHookingEnverment(packageName, mainActivity):
         os.popen('chmod 777 ' + packageName +'/xinitdeploy').readlines()
         os.popen('chmod 777 ' + packageName +'/kill').readlines()
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
+        createFile(packageName + "/ssl_log.js", run_env.ssl_log_jscode)
         createFile(packageName + "/url.js", run_env.url_jscode)
         createFile(packageName + "/edit_text.js", run_env.edit_text_jscode)
         createFile(packageName + "/text_view.js", run_env.text_view_jscode)
