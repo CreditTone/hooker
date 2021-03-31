@@ -1,7 +1,7 @@
 function loadDexfile(dexfile) {
     Java.perform(function() {
           Java.openClassFile(dexfile).load();
-          console.log("load " + dexfile);
+          //console.log("load " + dexfile);
     });
 };
 
@@ -9,7 +9,7 @@ function checkLoadDex(className, dexfile) {
     Java.perform(function() {
         if (!classExists(className)) {
             Java.openClassFile(dexfile).load();
-            console.log("load " + dexfile);
+            //console.log("load " + dexfile);
         }
     });
 };

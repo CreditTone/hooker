@@ -31,6 +31,7 @@ hooker是一个站在Android应用开发工程师的角度打造的适用于Andr
     * [3. click.js](#3-click-js)
     * [4. android_ui.js](#4-android_ui-js)
     * [5. keystore_dump.js](#5-keystore_dump-js)
+    * [6. edit_text.js](#6-edit_text-js)
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a-打印activity栈)
     * [b-打印Service栈](#b-打印Service栈)
@@ -279,13 +280,15 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 ### 1. url.js
 需要跟踪url生成时可执行./hooking url.js
 ![](assets/hooking_url.gif)
-***
+
 
 ### 2. activity_events.js
-当你需要跟踪start某个Activity启动时可执行./hooking activity_events.js
+当你需要跟踪start某个Activity启动时可执行，获取startActivity的intent信息和调用堆栈。/hooking activity_events.js
+![](assets/activity_events.gif)
 
 ### 3. click.js
-需要跟踪点击事件时可执行./hooking click.js
+跟踪点击事件时可执行，并获取被点击View的真实Vew Class（很重要）。获取到了Class，你就可以在jadx找到这个View绑定事件代码。多一种办法定位到关键逻辑不好吗？一定要靠分析网络请求吗？ 有些同学的人就会死扣网络库的代码！条条大路通罗马，不一定非从网络库分析！ /hooking click.js
+![](assets/click.gif)
 
 ### 4. android_ui.js
 封装一些操作原生Android UI的函数。如startActivity(activityName)、home()、back()、finishCurrentActivity()、clickByText(text) 等等，命令使用得用attach './attach android_ui.js' 原理是借助radar.dex作为代理操作Android原生View。（tag）
@@ -296,7 +299,9 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 在https双向认证的情况下，dump客户端证书为p12. 存储位置:/data/user/0/{packagename}/client_keystore_{nowtime}.p12 证书密码: hooker。原理是hook java.security.KeyStore的getPrivateKey和getCertificate方法，因为客户端向服务发送证书必调这个方法。
 ![](assets/keystore_dump.png)
 
-
+### 6. edit_text.js
+跟踪获取Editview的getText()事件，并获取Editview的真实Vew Class（很重要）。Editview一般绑定Search Action的实现代码，如果你抓取“搜索”接口。那么这个一定可以帮助你定位发送搜索请求的相关代码。多一种办法定位到关键逻辑不好吗？一定要靠分析网络请求吗？ 有些同学的人就会死扣网络库的代码！条条大路通罗马，不一定非从网络库分析！
+![](assets/edit_text.png)
 
 # hooker调试命令行
 
