@@ -362,6 +362,14 @@ hooker生成脚本和objection生成脚本优势对比
 | objection        |   android hooking generate simple [class_name]  |   不能（白纸一张）   |   不包含     |   不带     |   一般     |
 
 
+高级篇
+=================
+
+# https双向认证抓包
+
+# ssl_log链路层离线抓包
+
+# objectId的深度理解和灵活应用
 
 ## 关于作者
 
@@ -376,4 +384,3 @@ var author = {
 
 ### End
 [1]: https://github.com/frida/frida "frida"
-[2]: https://github.com/CreditTone/radar "radar"
