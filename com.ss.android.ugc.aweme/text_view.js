@@ -32,19 +32,19 @@ Java.perform(function() {
             methodInBeat(invokeId, startTime, "android.widget.TextView.setText()", executor);
         };
     }
-    if (textViewClz.getText) {
-        var getTextFunc = textViewClz.getText.overload();
-        getTextFunc.implementation = function() {
-            var clz = this.getClass().getName();
-            var viewId = this.getId();
-            var editable = getTextFunc.call(this);
-            console.log("TextViewClz: " + clz);
-            console.log("ViewId: " + viewId);
-            console.log("Text: " + editable.toString());
-            var invokeId = Math.random().toString(36).slice( - 8);
-            var executor = this.hashCode();
-            methodInBeat(invokeId, startTime, "android.widget.TextView.getText()", executor);
-            return editable;
-        };
-    }
+    // if (textViewClz.getText) {
+    //     var getTextFunc = textViewClz.getText.overload();
+    //     getTextFunc.implementation = function() {
+    //         var clz = this.getClass().getName();
+    //         var viewId = this.getId();
+    //         var editable = getTextFunc.call(this);
+    //         console.log("TextViewClz: " + clz);
+    //         console.log("ViewId: " + viewId);
+    //         console.log("Text: " + editable.toString());
+    //         var invokeId = Math.random().toString(36).slice( - 8);
+    //         var executor = this.hashCode();
+    //         methodInBeat(invokeId, startTime, "android.widget.TextView.getText()", executor);
+    //         return editable;
+    //     };
+    // }
 });

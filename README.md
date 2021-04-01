@@ -32,6 +32,9 @@ hooker是一个站在Android应用开发工程师的角度打造的适用于Andr
     * [4. android_ui.js](#4-android_ui-js)
     * [5. keystore_dump.js](#5-keystore_dump-js)
     * [6. edit_text.js](#6-edit_text-js)
+    * [7. text_view.js](#7-text_view-js)
+    * [8. ssl_log.js](#8-ssl_log-js)
+    * [9. object_store.js](#9-object_store-js)
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a-打印activity栈)
     * [b-打印Service栈](#b-打印Service栈)
@@ -287,7 +290,7 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 ![](assets/activity_events.gif)
 
 ### 3. click.js
-跟踪点击事件时可执行，并获取被点击View的真实Vew Class（很重要）。获取到了Class，你就可以在jadx找到这个View绑定事件代码。多一种办法定位到关键逻辑不好吗？一定要靠分析网络请求吗？ 有些同学的人就会死扣网络库的代码！条条大路通罗马，不一定非从网络库分析！ /hooking click.js
+跟踪点击事件时可执行，并获取被点击View的真实VClass（很重要）。获取到了Class，你就可以在jadx找到这个View绑定事件代码。多一种办法定位到关键逻辑不好吗？一定要靠分析网络请求吗？条条大路通罗马，不一定非从网络库分析！ /hooking click.js
 ![](assets/click.gif)
 
 ### 4. android_ui.js
@@ -300,8 +303,18 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 ![](assets/keystore_dump.png)
 
 ### 6. edit_text.js
-跟踪获取Editview的getText()事件，并获取Editview的真实Vew Class（很重要）。Editview一般绑定Search Action的实现代码，如果你抓取“搜索”接口。那么这个一定可以帮助你定位发送搜索请求的相关代码。多一种办法定位到关键逻辑不好吗？一定要靠分析网络请求吗？ 有些同学的人就会死扣网络库的代码！条条大路通罗马，不一定非从网络库分析！
+跟踪获取Editview的getText()事件，并获取Editview的真实Class（很重要）。Editview一般绑定Search Action的实现代码，如果你抓取“搜索”接口。那么这个一定可以帮助你定位发送搜索请求的相关代码。多一种办法定位到关键逻辑不好吗？一定要靠分析网络请求吗？条条大路通罗马，不一定非从网络库分析！
 ![](assets/edit_text.png)
+
+### 7. text_view.js
+跟踪TextView的setText和getText，获取TextView的真实Class。一般setText的堆栈信息会带出业务层的数据model处理逻辑，进而进一步分析到业务层数据bean封装类。
+![](assets/text_view.png)
+
+### 8. ssl_log.js
+在native层跟踪ssl握手并记录CLIENT RANDOM，tcpdump出来的链路层pacp里面的TLS包可以用CLIENT RANDOM记录文件解出来，将在高级篇讲解使用步骤。
+
+### 9. object_store.js
+操作ObjectId标识的对象，根据自身分析情况可进行特定的序列化打印、操作对象的私有成员变量。将在高级篇讲解使用步骤。
 
 # hooker调试命令行
 
