@@ -26,23 +26,23 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [4. xinitdeploy](#4-xinitdeploy)
     * [5. kill](#5-kill)
 * [应用工作目录的通杀脚本](#应用工作目录的通杀脚本)
-    * [1. url.js](#1-url-js)
-    * [2. activity_events.js](#2-activity_events-js)
-    * [3. click.js](#3-click-js)
-    * [4. android_ui.js](#4-android_ui-js)
-    * [5. keystore_dump.js](#5-keystore_dump-js)
-    * [6. edit_text.js](#6-edit_text-js)
-    * [7. text_view.js](#7-text_view-js)
-    * [8. ssl_log.js](#8-ssl_log-js)
-    * [9. object_store.js](#9-object_store-js)
+    * [1. url.js](#1-urljs)
+    * [2. activity_events.js](#2-activity_eventsjs)
+    * [3. click.js](#3-clickjs)
+    * [4. android_ui.js](#4-android_uijs)
+    * [5. keystore_dump.js](#5-keystore_dumpjs)
+    * [6. edit_text.js](#6-edit_textjs)
+    * [7. text_view.js](#7-text_viewjs)
+    * [8. ssl_log.js](#8-ssl_logjs)
+    * [9. object_store.js](#9-object_storejs)
 * [hooker调试命令行](#hooker调试命令行)
-    * [a-打印Activity栈](#a-打印activity栈)
-    * [b-打印Service栈](#b-打印Service栈)
-    * [c-扫描指定Object](#c-扫描指定Object)
-    * [d-展开Object[]、List或Map](#d-展开Object[]-List或Map)
-    * [v-以View方式查看对象](#v-以view的方式查看对象)
-    * [e-检测类在内存中是否存在](#e-检测类在内存中是否存在)
-    * [s-正则表达式扫描类](#s-正则表达式扫描类)
+    * [a-打印Activity栈](#a---打印activity栈)
+    * [b-打印Service栈](#b---打印Service栈)
+    * [c-扫描指定Object](#c---扫描指定Object)
+    * [d-展开Object[]、List或Map](#d---%E5%B1%95%E5%BC%80objectlist%E6%88%96map)
+    * [v-以View方式查看对象](#v---以view的方式查看对象)
+    * [e-检测类在内存中是否存在](#e---检测类在内存中是否存在)
+    * [s-正则表达式扫描类](#s---正则表达式扫描类)
     * [j-生成指定类的hook脚本](#j-生成指定类的hook脚本)
 	
 # hooker和frida、objection有什么不同
@@ -360,6 +360,9 @@ hooker生成脚本和objection生成脚本优势对比
 | --------   | -----:  | :----:  | :----:  | :----:  | :----:  |
 | hooker      | j [class_name] -o [outputpath].js   |   能     |   包含     |   带apk version和生成命令     |   好     |
 | objection        |   android hooking generate simple [class_name]  |   不能（白纸一张）   |   不包含     |   不带     |   一般     |
+
+
+
 
 
 高级篇
