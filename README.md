@@ -279,7 +279,7 @@ objection -d -g com.ss.android.ugc.aweme explore
 ### 4. xinitdeploy
 xinitdeploy是用于部署资源的命令，它会把xinit目录下所放的文件拷贝到手机上/data/user/0/{packageName}/xinit/。同时保证资源文件的user/group权限和app进程是同一个临时用户。
 ![](assets/xinitdeploy.gif)
-![](assets/xinit_files.gif)
+![](assets/xinit_files.png)
 
 ### 5. kill
 如果你想重启app，先执行./kill会杀掉应用的主进程和所有子进程。作为一个Andrioid应用开发工程师出身，然后干到后台，接着干到爬虫，现在干到逆向的我必须告诉你：每个手机厂商都会实现一个自己的“内存清理”工具效果不一定好，且可能app本身也有保活机制。所以不建议你通过操作手机滑动进程列表来杀——有可能杀不干净。以抖音工作目录为例，kill实现如下:
