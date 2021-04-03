@@ -58,8 +58,9 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 - 提供操作原生AndroidUI功能：你可以./attach每个app目录下的android_ui.js脚本，它提供了通过ViewId、ViewText找到Android原生的View并点击，或者你想强制打开某个Activity（比如某个界面只有会员才能进入，这时候你就可以采用Android"原生代码"打开的方式）。
 
 # 环境部署
+前言：hooker仅支持在Linux和MacOS下运行，并且现在和将来都不会支持windows操作系统！windows命令行就是垃圾中的垃圾，windows从诞生起的产品定位就不是给专业的计算机人员使用的。基因上它就不具备开发环境的属性，请不要用windows做开发，不要让我鄙视你，好吗？
 
-##### 1. git clone项目
+### 1. git clone项目
 ```shell
 stephen@ubuntu:~/hooker$ git https://github.com/CreditTone/hooker.git
 stephen@ubuntu:~/hooker$ cd hooker
@@ -78,13 +79,13 @@ com.meitu.meipaimv          js                           xapk
 com.miui.screenrecorder     mobile-deploy.sh             xinitdeploy.py
 ```
 
-##### 2. 安装依赖
+### 2. 安装依赖
 ```shell
 stephen@ubuntu:~/hooker$ pip install -r requirements.txt
 ```
 
 
-##### 3. 手机连接adb
+### 3. 手机连接adb
 ```shell
 stephen@ubuntu:~/hooker$ adb devices
 List of devices attached
@@ -92,7 +93,7 @@ FA77C0301476	device
 ```
 
 
-##### 4. 手机开发环境部署
+### 4. 手机开发环境部署
  如果你的手机已经启动了frida-server，可以忽略这步。不过还是建议你采用hooker推荐的hluda-server，因为官方的frida-server在启动之后实际上会向app注入frida-agent.so作为代理，聪明的应用可以通过读取/proc/{pid}/maps检测到正在被frida调试。不过，已经有前人帮我们重新编译了frida-server，把敏感特征去掉了。有兴趣可以参考[strongR-frida-android](https://github.com/hluwa/strongR-frida-android "strongR-frida-android")。
 
 ```shell
@@ -110,7 +111,7 @@ stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示
 ![部署演示](assets/hooker-deploy.gif)
 ***
 
-##### 5. 部署之后手机的增强功能
+### 5. 部署之后手机的增强功能
 - 1.关闭iptables防火墙，解决部分手机默认防火墙开启的问题
 - 2.启动frida-server，如果你的手机是arm64他将优先启动arm64位的frida-server
 - 3.在/data/mobile-deploy目录生成tools_env.rc 当你有内网穿透和网络服务转发、编辑文件、检测网络方面的需求时可以执行source /data/mobile-deploy/tools_env.rc，它将临时生成vi、telnet、frpc、tcpforward、ll命令以便你进行更便捷的开发，如图
@@ -270,7 +271,9 @@ objection -d -g com.ss.android.ugc.aweme explore
 ![](assets/objection.gif)
 
 ### 4. xinitdeploy
-xinitdeploy是用于部署资源的命令，它会把xinit目录下所放的文件拷贝到手机上/data/user/0/{packageName}/xinit/上。由于实现有些复杂且极少有人能get到它潜在的价值，这里不列出它的实现方式。有兴趣的朋友可以自行查看源码——它其实是一个python脚本。
+xinitdeploy是用于部署资源的命令，它会把xinit目录下所放的文件拷贝到手机上/data/user/0/{packageName}/xinit/。同时保证资源文件的user/group权限和app进程是同一个临时用户。
+![](assets/xinitdeploy.gif)
+![](assets/xinit_files.gif)
 
 ### 5. kill
 如果你想重启app，先执行./kill会杀掉应用的主进程和所有子进程。作为一个Andrioid应用开发工程师出身，然后干到后台，接着干到爬虫，现在干到逆向的我必须告诉你：每个手机厂商都会实现一个自己的“内存清理”工具效果不一定好，且可能app本身也有保活机制。所以不建议你通过操作手机滑动进程列表来杀——有可能杀不干净。以抖音工作目录为例，kill实现如下:
@@ -374,10 +377,14 @@ hooker最核心的功能是自动化生产frida脚本，这个功能直接让很
 脚本是frida的核心，一个脚本不能只做打印堆栈信息的事情。我们还要进一步深挖脚本的潜在价值。比如我们改变被hook对象的内部成员变量的值、直接调用对象的方法、patch我们的dex。所以在hooker生成的每个脚本当中，我还内置了你可能需要用到的方法用于定制脚本。下面我就开始介绍这些方法的作用吧。
 
 ### 1. loadDexfile(dexfile)
-加载一个dex文件到app进程中。
+加载一个dex文件到app进程中。dexfile是dex在手机上绝对路径，调用此方法必须保证dex文件用户和组权限对app进程的可见性。
 
 ### 2. checkLoadDex(className， dexfile)
-先检测className是否存在内存中，如果不存在加载一个dex文件到app进程中。
+先检测className是否存在内存中，如果不存在加载一个dex文件到app进程中。dexfile是dex在手机上绝对路径，调用此方法必须保证dex文件用户和组权限对app进程的可见性。
+
+### 3. loadXinitDexfile(dexfile)
+加载一个dex文件到app进程中。与loadDexfile和checkLoadDex不同，此方法直接从/data/user/0/{packageName}/xinit/路径下找dex文件。比如我们要加载基于[xinitdeploy](#4-xinitdeploy)命令部署的patch.dex，直接loadXinitDexfile("patch.dex");就可以给app进程注入dex了。到了这里你明白[xinitdeploy](#4-xinitdeploy)的良苦用心了没有！
+
 
 hooker实战应用
 =================
