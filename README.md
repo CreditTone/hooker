@@ -49,10 +49,10 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [j-生成指定类的hook脚本](#j---生成指定类的hook脚本)
 * [hooker高级应用](#hooker高级应用)
     * [脚本的内置函数](#脚本的内置函数)
-        * [1. loadDexfile(dexfile)](#a---打印activity栈)
-        * [2. checkLoadDex(className，dexfile)](#a---打印activity栈)
-        * [3. loadXinitDexfile(dexfile)](#a---打印activity栈)
-        * [4. loadXRadarDexfile()](#a---打印activity栈)
+        * [1. loadDexfile(dexfile)](#1-loaddexfiledexfile)
+        * [2. checkLoadDex(className，dexfile)](#2-checkloaddexclassname-dexfile)
+        * [3. loadXinitDexfile(dexfile)](#3-loadxinitdexfiledexfile)
+        * [4. loadXRadarDexfile()](#4-loadxradardexfile)
 
 	
 # hooker和frida、objection有什么不同
@@ -379,7 +379,7 @@ hooker高级应用
 =================
 hooker最核心的功能是自动化生产frida脚本，这个功能直接让很多写通杀脚本的同行“痛恨”我。因为我让那些懒人也能快速使用上自定义的脚本，而不再依赖于一些割韭菜大佬的通杀脚本了。这影响了他们卖网课的转化率，所以我想对那些大佬说：“对不起，我是故意的”。
 
-# 脚本的内置函数
+## 脚本的内置函数
 脚本是frida的核心，一个脚本不能只做打印堆栈信息的事情。我们还要进一步深挖脚本的潜在价值。比如我们改变被hook对象的内部成员变量的值、直接调用对象的方法、patch我们的dex。所以在hooker生成的每个脚本当中，我还内置了你可能需要用到的方法用于定制脚本。下面我就开始介绍这些方法的作用吧。
 
 ### 1. loadDexfile(dexfile)
