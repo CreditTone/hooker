@@ -47,6 +47,12 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [e-检测类在内存中是否存在](#e---检测类在内存中是否存在)
     * [s-正则表达式扫描类](#s---正则表达式扫描类)
     * [j-生成指定类的hook脚本](#j---生成指定类的hook脚本)
+* [hooker高级应用](#hooker高级应用)
+    * [脚本的内置函数](#脚本的内置函数)
+        * [1. loadDexfile(dexfile)](#a---打印activity栈)
+        * [2. checkLoadDex(className，dexfile)](#a---打印activity栈)
+        * [3. loadXinitDexfile(dexfile)](#a---打印activity栈)
+        * [4. loadXRadarDexfile()](#a---打印activity栈)
 
 	
 # hooker和frida、objection有什么不同
@@ -383,7 +389,12 @@ hooker最核心的功能是自动化生产frida脚本，这个功能直接让很
 先检测className是否存在内存中，如果不存在加载一个dex文件到app进程中。dexfile是dex在手机上绝对路径，调用此方法必须保证dex文件用户和组权限对app进程的可见性。
 
 ### 3. loadXinitDexfile(dexfile)
-加载一个dex文件到app进程中。与loadDexfile和checkLoadDex不同，此方法直接从/data/user/0/{packageName}/xinit/路径下找dex文件。比如我们要加载基于[xinitdeploy](#4-xinitdeploy)命令部署的patch.dex，直接loadXinitDexfile("patch.dex");就可以给app进程注入dex了。到了这里你明白[xinitdeploy](#4-xinitdeploy)的良苦用心了没有！
+加载一个dex文件到app进程中。与loadDexfile、checkLoadDex不同，此方法直接从/data/user/0/{packageName}/xinit/路径下找dex文件。比如我们要加载上面基于[xinitdeploy](#4-xinitdeploy)命令部署的patch.dex，直接loadXinitDexfile("patch.dex");就可以给app进程注入dex了。到了这里你明白[xinitdeploy](#4-xinitdeploy)的良苦用心了没有！
+
+### 4. loadXRadarDexfile()
+加载radar.dex文件到app进程中。radar.dex内部包含操作java对象的增强功能，如果你需要使用fastTojson、getPrettyString、storeObjectAndLog等方法，必需在脚本加载时调用一次loadXRadarDexfile()。
+
+
 
 
 hooker实战应用
