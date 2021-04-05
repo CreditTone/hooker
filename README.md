@@ -48,11 +48,16 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [s-正则表达式扫描类](#s---正则表达式扫描类)
     * [j-生成指定类的hook脚本](#j---生成指定类的hook脚本)
 * [hooker高级应用](#hooker高级应用)
+    * [radar.dex](#radar-dex)
     * [脚本的内置函数](#脚本的内置函数)
         * [1. loadDexfile(dexfile)](#1-loaddexfiledexfile)
         * [2. checkLoadDex(className，dexfile)](#2-checkloaddexclassname-dexfile)
         * [3. loadXinitDexfile(dexfile)](#3-loadxinitdexfiledexfile)
         * [4. loadXRadarDexfile()](#4-loadxradardexfile)
+        * [5. fastTojson(javaObject)](#4-loadxradardexfile)
+        * [6. getPrettyString(javaObject)](#4-loadxradardexfile)
+        * [7. getField(javaObject, fieldName)](#4-loadxradardexfile)
+        * [8. storeObjectAndLog(javaObject)](#4-loadxradardexfile)
 
 	
 # hooker和frida、objection有什么不同
@@ -379,6 +384,9 @@ hooker高级应用
 =================
 hooker最核心的功能是自动化生产frida脚本，这个功能直接让很多写通杀脚本的同行“痛恨”我。因为我让那些懒人也能快速使用上自定义的脚本，而不再依赖于一些割韭菜大佬的通杀脚本了。这影响了他们卖网课的转化率，所以我想对那些大佬说：“对不起，我是故意的”。
 
+## radar.dex
+在hooker根目录中有一个radar.dex，这是为操作java类的增强库。
+
 ## 脚本的内置函数
 脚本是frida的核心，一个脚本不能只做打印堆栈信息的事情。我们还要进一步深挖脚本的潜在价值。比如我们改变被hook对象的内部成员变量的值、直接调用对象的方法、patch我们的dex。所以在hooker生成的每个脚本当中，我还内置了你可能需要用到的方法用于定制脚本。下面我就开始介绍这些方法的作用吧。
 
@@ -394,8 +402,29 @@ hooker最核心的功能是自动化生产frida脚本，这个功能直接让很
 ### 4. loadXRadarDexfile()
 加载radar.dex文件到app进程中。radar.dex内部包含操作java对象的增强功能，如果你需要使用fastTojson、getPrettyString、storeObjectAndLog等方法，必需在脚本加载时调用一次loadXRadarDexfile()。
 
+### 5. fastTojson(javaObject)
+基于radar.dex中fastjson序列化一个java对象为json字符串。该方法依赖radar.dex，使用前必须loadXRadarDexfile()。注意loadXRadarDexfile()进行一次即可，无需多次调用。
 
+### 6. getPrettyString(javaObject)
+类似与toString()，与toString()不同的是它将判断子类是否实现toString方法，如果没有现实toString或者类是android.os.Parcelable可能会引起循环调用的异常，所以getPrettyString会根据情况采用[className]@[hashCode]的方法来规避。该方法依赖radar.dex，使用前必须loadXRadarDexfile()。注意loadXRadarDexfile()进行一次即可，无需多次调用。
 
+### 7. getField(javaObject, fieldName)
+获取对象的属性，这是来弥补frida语法中this.a.b.c.d深度查找的不足。该方法依赖radar.dex，使用前必须loadXRadarDexfile()。注意loadXRadarDexfile()进行一次即可，无需多次调用。
+
+在frida中深度查找是不支持的，以下方式获取对象将发生错误。
+```js
+let d = this.a.b.c.d;
+```
+所以你可以使用getField(javaObject, fieldName)来替代以上的逻辑
+```js
+let aObj = getField(this, "a");
+let bObj = getField(aObj, "b");
+let cObj = getField(bObj, "c");
+let dObj = getField(cObj, "d");
+```
+
+### 8. storeObjectAndLog(javaObject)
+将对象存储至对象缓存中，同时输出对象缓存id。然后你可以用c [objectId]，扫描对象，这将帮助你更好的窥视内存。该方法依赖radar.dex，使用前必须loadXRadarDexfile()。注意loadXRadarDexfile()进行一次即可，无需多次调用。
 
 hooker实战应用
 =================
