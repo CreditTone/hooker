@@ -48,16 +48,16 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [s-正则表达式扫描类](#s---正则表达式扫描类)
     * [j-生成指定类的hook脚本](#j---生成指定类的hook脚本)
 * [hooker高级应用](#hooker高级应用)
-    * [radar.dex](#radar-dex)
+    * [radar.dex](#radardex)
     * [脚本的内置函数](#脚本的内置函数)
         * [1. loadDexfile(dexfile)](#1-loaddexfiledexfile)
         * [2. checkLoadDex(className，dexfile)](#2-checkloaddexclassname-dexfile)
         * [3. loadXinitDexfile(dexfile)](#3-loadxinitdexfiledexfile)
         * [4. loadXRadarDexfile()](#4-loadxradardexfile)
-        * [5. fastTojson(javaObject)](#4-loadxradardexfile)
-        * [6. getPrettyString(javaObject)](#4-loadxradardexfile)
-        * [7. getField(javaObject, fieldName)](#4-loadxradardexfile)
-        * [8. storeObjectAndLog(javaObject)](#4-loadxradardexfile)
+        * [5. fastTojson(javaObject)](#5-fasttojsonjavaobject)
+        * [6. getPrettyString(javaObject)](#6-getprettystringjavaobject)
+        * [7. getField(javaObject, fieldName)](#7-getfieldjavaobject-fieldname)
+        * [8. storeObjectAndLog(javaObject)](#8-storeobjectandlogjavaobject)
 
 	
 # hooker和frida、objection有什么不同
