@@ -58,6 +58,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
         * [6. getPrettyString(javaObject)](#6-getprettystringjavaobject)
         * [7. getField(javaObject, fieldName)](#7-getfieldjavaobject-fieldname)
         * [8. storeObjectAndLog(javaObject)](#8-storeobjectandlogjavaobject)
+    * [远程frida支持](#远程frida支持)
 
 	
 # hooker和frida、objection有什么不同
@@ -425,6 +426,19 @@ let dObj = getField(cObj, "d");
 
 ### 8. storeObjectAndLog(javaObject)
 将对象存储至对象缓存中，同时输出对象缓存id。然后你可以用c [objectId]，扫描对象，这将帮助你更好的窥视内存。该方法依赖radar.dex，使用前必须loadXRadarDexfile()。注意loadXRadarDexfile()进行一次即可，无需多次调用。
+
+## 远程frida支持
+在hooker根目录有一个.hooker_driver文件，内容默认是-U表示通过usb连接frida-server。
+```shell
+stephen@ubuntu:~/hooker$ cat .hooker_driver 
+-U
+```
+如果你的frida-server绑定在0.0.0.0:27042，并且你需要远程连接的话。你需要知晓你的手机局域网ip比如是192.168.0.105，则把.hooker_driver改为如下内容即可实现hooker全局远程调试。
+```shell
+stephen@ubuntu:~/hooker$ cat .hooker_driver 
+-H 192.168.0.105:27042
+```
+
 
 hooker实战应用
 =================
