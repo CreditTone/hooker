@@ -451,7 +451,7 @@ hooker实战应用
 
 # 内存漫游窥视对象内部数据
 
-## 关于作者
+# 关于作者
 
 ```javascript
 var author = {
@@ -461,6 +461,9 @@ var author = {
   experience : ["Android应用开发", "网络爬虫", "Android逆向", "JAVA/Go后台开发", "中间件开发"]
 }
 ```
+
+# 加入hooker pro知识星球，每天分享行业最新干货。
+![soul](assets/soul.jpg)
 
 ### End
 [1]: https://github.com/frida/frida "frida"
