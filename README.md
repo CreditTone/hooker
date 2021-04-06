@@ -106,7 +106,9 @@ FA77C0301476	device
 
 
 ### 4. 手机开发环境部署
- 如果你的手机已经启动了frida-server，可以忽略这步。不过还是建议你采用hooker推荐的hluda-server，因为官方的frida-server在启动之后实际上会向app注入frida-agent.so作为代理，聪明的应用可以通过读取/proc/{pid}/maps检测到正在被frida调试。不过，已经有ju人帮我们重新编译了frida-server，把敏感特征去掉了。
+如果你的手机已经启动了frida-server，可以忽略这步。不过还是建议你采用hooker推荐的hluda-server，因为官方的frida-server在启动之后实际上会向app注入frida-agent.so作为代理，聪明的应用可以通过读取/proc/{pid}/maps检测到正在被frida调试。不过，已经有ju人帮我们重新编译了frida-server，把敏感特征去掉了。
+
+注意:部分手机出现部署之后adb连不上的问题，那请使用deploy2.sh。
 
 ```shell
 #以piexl2为例
@@ -122,6 +124,7 @@ stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示
 ```
 ![部署演示](assets/hooker-deploy.gif)
 ***
+
 
 ### 5. 部署之后手机的增强功能
 - 1.关闭iptables防火墙，解决部分手机默认防火墙开启的问题
@@ -461,11 +464,13 @@ var author = {
 }
 ```
 
-# 行业巨佬带队
+
+# 行业巨佬支持（我不是r0，我只是感谢他帮我推广）
 ![3](https://raw.githubusercontent.com/hluwa/strongR-frida-android/main/img/3.png)
 
 # hooker交流专区
 ![soul](assets/soul.jpg)
+
 
 
 
