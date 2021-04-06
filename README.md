@@ -429,6 +429,30 @@ let dObj = getField(cObj, "d");
 ### 8. storeObjectAndLog(javaObject)
 将对象存储至对象缓存中，同时输出对象缓存id。然后你可以用c [objectId]，扫描对象，这将帮助你更好的窥视内存。该方法依赖radar.dex，使用前必须loadXRadarDexfile()。注意loadXRadarDexfile()进行一次即可，无需多次调用。
 
+## 原生ui自动化
+hooker借助radar.dex中gz.radar.AndroidUI的实现，将代码直接打到app进程当中实现直接操作View对象。这种效率已经超越了所有的三方自动化框架，因为无论哪种自动化框架都是基于C/S架构的，而hooker通过打补丁的方式是直接侵入式的修改app内部的代码逻辑。
+
+不过android_ui.js只是一个ui简单操作的体验工具，更高效的ui操作还是要结合每个应用实际情况定制patch代码。
+
+应用工作目录输入后./attach android_ui.js进入ui操作命令行，你可以操作以下几个方法
+
+### 1. startActivity(activityName)
+不传intent和action，强制启动一个Activity。比如，2020年4月份某信刚上视频号功能的时候，我的微信小号没有体验资格——也就是没有"视频号"那个按钮，不给我按钮我就启动不了了吗？按钮背后的逻辑就是执行了一个startActivity的操作，所以我就实现了这个方法————强制启动v信视频号的搜索界面。
+
+```js
+startActivity("com.tencent.mm.plugin.finder.search.FinderFeedSearchUI")
+```
+
+不过这个方法不一定成功，因为应用很多Activity都需要特定的intent和action，这个在应用的AndroidManifest.xml中有定义，另外你还有结合[activity_events.js](#2-activity_eventsjs)去参照原来的启动代码。比如我要强制打开一个用户资料的Activity，那你必须传一个userid或者uid什么数据给他，而且你还得知道它定义的数据方式。这时候你需要定位原来启动Activity代码，这就是[activity_events.js](#2-activity_eventsjs)的意义所在。比如，下面经过我的分析启动某一视频号作者主页面的代码应该这样实现。
+
+```java
+Intent intent = new Intent();
+intent.putExtra("finder_username", username);
+com.tencent.mm.plugin.finder.g.a aVar = com.tencent.mm.plugin.finder.g.a.pPL;
+com.tencent.mm.plugin.finder.g.a.enterFinderProfileUI(Android.getTopActivity(), intent);
+```
+
+
 ## 远程frida支持
 在hooker根目录有一个.hooker_driver文件，内容默认是-U表示通过usb连接frida-server。
 ```shell
