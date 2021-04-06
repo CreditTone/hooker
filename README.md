@@ -464,7 +464,7 @@ var author = {
 # 行业巨佬带队
 ![3](https://raw.githubusercontent.com/hluwa/strongR-frida-android/main/img/3.png)
 
-# hooker交流专曲
+# hooker交流专区
 ![soul](assets/soul.jpg)
 
 
