@@ -383,7 +383,6 @@ hooker生成脚本和objection生成脚本优势对比
 
 hooker高级应用
 =================
-hooker最核心的功能是自动化生产frida脚本，这个功能直接让很多写通杀脚本的同行“痛恨”我。因为我让那些懒人也能快速使用上自定义的脚本，而不再依赖于一些割韭菜大佬的通杀脚本了。这影响了他们卖网课的转化率，所以我想对那些大佬说：“对不起，我是故意的”。
 
 ## radar.dex
 在hooker根目录中有一个radar.dex，这是为操作java类的增强库。
@@ -462,8 +461,13 @@ var author = {
 }
 ```
 
-# 加入hooker pro知识星球，每天分享行业最新干货。
+# 行业巨佬带队
+![3](https://raw.githubusercontent.com/hluwa/strongR-frida-android/main/img/3.png)
+
+# hooker交流专曲
 ![soul](assets/soul.jpg)
+
+
 
 ### End
 [1]: https://github.com/frida/frida "frida"
