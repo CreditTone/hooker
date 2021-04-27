@@ -2,6 +2,16 @@
 
 hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供统一化的脚本包管理方式、通杀脚本、自动化生成hook脚本、内存漫游探测activity和service和其他任意对象。
 
+# [hooker开源协议](https://github.com/CreditTone/hooker/blob/master/LICENSE.md)
+https://github.com/CreditTone/hooker/blob/master/LICENSE.md
+hooker使用[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)开源协议，协议核心规范如下。
+
+### 1.授权使用者免费使用个人专利
+### 2.使用者必须放置协议说明
+### 3.使用者需要对修改部分声明
+### 4.禁止用作者的名号进行商业广告
+### 5.原作者不承担代码使用后风险
+
 
 本项目仅作为学习使用，不参与任何入侵、破解计算机信息系统的行为。如有影响您app信息安全的地方，请立即与我联系删除，谢谢！邮箱：1273568669@qq.com
 
