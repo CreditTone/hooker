@@ -4,11 +4,12 @@ function loadDexfile(dexfile) {
     });
 };
 
+
+loadDexfile('/data/user/0/com.smile.gifmaker/radar.dex');
+
 var okHostnameVerifier_Verify1_DescribText = "okhttp3.internal.tls.OkHostnameVerifier ---> public boolean verify(String str, SSLSession sSLSession);";
 var okHostnameVerifier_Verify2_DescribText = "okhttp3.internal.tls.OkHostnameVerifier ---> public boolean verify(String str, X509Certificate x509Certificate);";
 var certificatePinner_Check_DescribText = "okhttp3.CertificatePinner ---> public void check(String str, List<Certificate> list);";
-
-loadDexfile('/data/user/0/com.smile.gifmaker/radar.dex');
 
 Java.perform(function () {
     console.log("开始模糊匹配okhttp的混淆类......");
@@ -16,14 +17,14 @@ Java.perform(function () {
     var foundCount = 0;
     Java.enumerateLoadedClasses({
         onMatch: function (className) {
-            var matchOk3CertificatePinnerCheckResult = OkHttp3FakeFinder.matchOk3CertificatePinnerCheck(className);
+            var matchOk3CertificatePinnerCheckResult = OkHttp3FakeFinder.okHttpCertificatePinnerCheck(className);
             if (matchOk3CertificatePinnerCheckResult && matchOk3CertificatePinnerCheckResult.length == 2) {
                 let describText = certificatePinner_Check_DescribText + " matching: " + matchOk3CertificatePinnerCheckResult[0] + "---> public void " + matchOk3CertificatePinnerCheckResult[1] + "(String str, List<Certificate> list)";
                 console.log(describText+"\n");
                 foundCount += 1;
             }
 
-            var matchOk3OkHostnameVerifierVerifyResult = OkHttp3FakeFinder.matchOk3OkHostnameVerifierVerify(className);
+            var matchOk3OkHostnameVerifierVerifyResult = OkHttp3FakeFinder.okHttpOkHostnameVerifierVerify(className);
             if (matchOk3OkHostnameVerifierVerifyResult && matchOk3OkHostnameVerifierVerifyResult.length == 3) {
                 let describText1 = okHostnameVerifier_Verify1_DescribText + " matching: " + matchOk3OkHostnameVerifierVerifyResult[0] + "---> public boolean " + matchOk3OkHostnameVerifierVerifyResult[1] + "(String str, SSLSession sSLSession)";
                 let describText2 = okHostnameVerifier_Verify2_DescribText + " matching: " + matchOk3OkHostnameVerifierVerifyResult[0] + "---> public boolean " + matchOk3OkHostnameVerifierVerifyResult[2] + "(String str, X509Certificate x509Certificate)";
