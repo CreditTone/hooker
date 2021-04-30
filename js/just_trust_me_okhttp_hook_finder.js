@@ -7,40 +7,65 @@ function loadDexfile(dexfile) {
 
 loadDexfile('/data/user/0/com.smile.gifmaker/radar.dex');
 
-var okHostnameVerifier_Verify1_DescribText = "okhttp3.internal.tls.OkHostnameVerifier ---> public boolean verify(String str, SSLSession sSLSession);";
-var okHostnameVerifier_Verify2_DescribText = "okhttp3.internal.tls.OkHostnameVerifier ---> public boolean verify(String str, X509Certificate x509Certificate);";
-var certificatePinner_Check_DescribText = "okhttp3.CertificatePinner ---> public void check(String str, List<Certificate> list);";
 
-Java.perform(function () {
-    console.log("开始模糊匹配okhttp的混淆类......");
-    var OkHttp3FakeFinder = Java.use("gz.justtrustme.OkHttp3FakeFinder");
-    var foundCount = 0;
-    Java.enumerateLoadedClasses({
-        onMatch: function (className) {
-            var matchOk3CertificatePinnerCheckResult = OkHttp3FakeFinder.okHttpCertificatePinnerCheck(className);
-            if (matchOk3CertificatePinnerCheckResult && matchOk3CertificatePinnerCheckResult.length == 2) {
-                let describText = certificatePinner_Check_DescribText + " matching: " + matchOk3CertificatePinnerCheckResult[0] + "---> public void " + matchOk3CertificatePinnerCheckResult[1] + "(String str, List<Certificate> list)";
-                console.log(describText+"\n");
-                foundCount += 1;
-            }
-
-            var matchOk3OkHostnameVerifierVerifyResult = OkHttp3FakeFinder.okHttpOkHostnameVerifierVerify(className);
-            if (matchOk3OkHostnameVerifierVerifyResult && matchOk3OkHostnameVerifierVerifyResult.length == 3) {
-                let describText1 = okHostnameVerifier_Verify1_DescribText + " matching: " + matchOk3OkHostnameVerifierVerifyResult[0] + "---> public boolean " + matchOk3OkHostnameVerifierVerifyResult[1] + "(String str, SSLSession sSLSession)";
-                let describText2 = okHostnameVerifier_Verify2_DescribText + " matching: " + matchOk3OkHostnameVerifierVerifyResult[0] + "---> public boolean " + matchOk3OkHostnameVerifierVerifyResult[2] + "(String str, X509Certificate x509Certificate)";
-                console.log(describText1+"\n");
-                console.log(describText2+"\n");
-                foundCount += 2;
-            }
-
-        },
-        onComplete: function () {
-            if (foundCount > 0) {
-                console.log("模糊匹配完成，请打开jadx确认以上结果是否匹配正确。如果正确，你可以把正确的hook点修改到just_trust_me.js的processOkHttp方法里。祝你抓包成功！");
-            }else{
-                console.log("模糊匹配完成，未找到任何结果!");
-            } 
+function printOkhttp3FakeClass(okhttp3FakeClassObject) {
+    if (okhttp3FakeClassObject) {
+        console.log("-----------------------------------------------------------------------");
+        console.log("原类名：" + okhttp3FakeClassObject.getOriginalClassName());
+        console.log("混淆类名：" + okhttp3FakeClassObject.getFakeClassName());
+        console.log("\n");
+        for (let k = 0; k < okhttp3FakeClassObject.fakeMethodSize(); k ++) {
+            let fakeMethod = okhttp3FakeClassObject.getFakeMethod(k);
+            console.log("混淆方法" + k + ":");
+            console.log("原方法签名：" + fakeMethod.getOriginalMethod());
+            console.log("混淆方法签名：" + fakeMethod.getFakeMethod());
+            console.log("\n");
         }
+        if (okhttp3FakeClassObject.fakeMethodSize() == 0) {
+            //手动找混淆方法
+            console.error("自动定位混淆方法失败，请去jadx打开"+okhttp3FakeClassObject.getFakeClassName()+"手动分析混淆方法");
+        }
+    }
+}
+
+//设置下混淆okhttp混淆类包名的前戳，以便加快扫描速度
+//一般okhttp用的版本是3，并且混淆没有到包名级别所以我这里默认给^okhttp3
+//如果你的apk混淆的到了包名级别。先用jadx静态分析找到包名前戳改到这即可
+//你可以用.*，但是全量扫描太慢了。frida不是那么的耐操，容易崩溃！
+var matchClassNameRegExp = RegExp(/^okhttp3/);
+
+
+JJava.perform(function() {
+    var OkHttp3FakeFinder = Java.use("gz.justtrustme.OkHttp3FakeFinder");
+    Java.enumerateLoadedClasses({
+        onMatch: function(className) {
+            if (className.match(matchClassNameRegExp)) {
+                try {
+                    let tempClassHandle = Java.use(className).class;
+                    let matchOkHttpClientBuilderCheckResult = OkHttp3FakeFinder.okHttpClientBuilderCheck(tempClassHandle);
+                    if (matchOkHttpClientBuilderCheckResult) {
+                        printOkhttp3FakeClass(matchOkHttpClientBuilderCheckResult);
+                        continue;
+                    }
+                    
+                    let matchOk3CertificatePinnerCheckResult = OkHttp3FakeFinder.okHttpCertificatePinnerCheck(tempClassHandle);
+                    if (matchOk3CertificatePinnerCheckResult) {
+                        printOkhttp3FakeClass(matchOk3CertificatePinnerCheckResult);
+                        continue;
+                    }
+
+                    let matchOk3OkHostnameVerifierVerifyResult = OkHttp3FakeFinder.okHttpOkHostnameVerifierVerify(tempClassHandle);
+                    if (matchOk3OkHostnameVerifierVerifyResult) {
+                        printOkhttp3FakeClass(matchOk3OkHostnameVerifierVerifyResult);
+                        continue;
+                    }
+                    
+                } catch(error) {
+                    //console.error(error);
+                }
+            }
+        },
+        onComplete: function() {}
     });
 });
 
