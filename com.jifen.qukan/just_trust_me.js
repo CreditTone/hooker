@@ -48,10 +48,10 @@ function processOkHttp() {
         console.error("没找到com.squareup.okhttp.CertificatePinner类，这是android系统自带的类没找到就算求了。不同系统不一样，不用找了!!!");
     }
 
-    if (classExists("okhttp3.CertificatePinner")) {
+    if (classExists("okhttp3.g")) {
         try {
-            var okhttp3CertificatePinnerClz = Java.use('okhttp3.CertificatePinner');
-            var okhttp3CertificatePinnerClzCheck = okhttp3CertificatePinnerClz.check.overload('java.lang.String', 'java.util.List');
+            var okhttp3CertificatePinnerClz = Java.use('okhttp3.g');
+            var okhttp3CertificatePinnerClzCheck = okhttp3CertificatePinnerClz.a.overload('java.lang.String', 'java.util.List');
             okhttp3CertificatePinnerClzCheck.implementation = function(v0, v1) {
                 //什么都不做
                 console.log("okhttp3.CertificatePinner.check('java.lang.String', 'java.util.List') was hooked!");
@@ -63,16 +63,16 @@ function processOkHttp() {
         console.error("没找到okhttp3.CertificatePinner类，可能被混淆了。你可以jadx反编译下还原回来！");
     }
 
-    if (classExists("okhttp3.internal.tls.OkHostnameVerifier")) {
+    if (classExists("okhttp3.internal.i.d")) {
         try {
-            var OkHostnameVerifierClz = Java.use('okhttp3.internal.tls.OkHostnameVerifier');
+            var OkHostnameVerifierClz = Java.use('okhttp3.internal.i.d');
             var OkHostnameVerifierClzVerify_5791 = OkHostnameVerifierClz.verify.overload('java.lang.String', 'javax.net.ssl.SSLSession');
             OkHostnameVerifierClzVerify_5791.implementation = function(v0, v1) {
                 //强制返回true
                 console.log("okhttp3.internal.tls.OkHostnameVerifier.verify('java.lang.String', 'javax.net.ssl.SSLSession') was hooked!");
                 return true;
             };
-            var OkHostnameVerifierVerify_8978 = OkHostnameVerifierClz.verify.overload('java.lang.String', 'java.security.cert.X509Certificate');
+            var OkHostnameVerifierVerify_8978 = OkHostnameVerifierClz.a.overload('java.lang.String', 'java.security.cert.X509Certificate');
             OkHostnameVerifierVerify_8978.implementation = function(v0, v1) {
                 //强制返回true
                 console.log("okhttp3.internal.tls.OkHostnameVerifier.verify('java.lang.String', 'java.security.cert.X509Certificate') was hooked!");
