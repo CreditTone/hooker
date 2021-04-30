@@ -35,7 +35,7 @@ function printOkhttp3FakeClass(okhttp3FakeClassObject) {
 var matchClassNameRegExp = RegExp(/^okhttp3/);
 
 
-JJava.perform(function() {
+Java.perform(function() {
     var OkHttp3FakeFinder = Java.use("gz.justtrustme.OkHttp3FakeFinder");
     Java.enumerateLoadedClasses({
         onMatch: function(className) {

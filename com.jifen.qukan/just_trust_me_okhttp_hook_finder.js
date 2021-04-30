@@ -5,7 +5,7 @@ function loadDexfile(dexfile) {
 };
 
 
-loadDexfile('/data/user/0/com.twitter.android/radar.dex');
+loadDexfile('/data/user/0/com.jifen.qukan/radar.dex');
 
 
 function printOkhttp3FakeClass(okhttp3FakeClassObject) {
