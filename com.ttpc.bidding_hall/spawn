@@ -1,0 +1,4 @@
+#!/bin/bash
+HOOKER_DRIVER=$(cat ../.hooker_driver)
+
+frida $HOOKER_DRIVER --no-pause -f com.ttpc.bidding_hall -l $1
