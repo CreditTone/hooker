@@ -7,11 +7,15 @@ https://github.com/CreditTone/hooker/blob/master/LICENSE.md
 
 hooker使用[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)开源协议，协议核心规范如下。
 
-### 1.授权使用者免费使用个人专利
-### 2.使用者必须放置协议说明
-### 3.使用者需要对修改部分声明
-### 4.禁止用作者的名号进行商业广告
-### 5.原作者不承担代码使用后风险
+  1.授权使用者免费使用个人专利
+
+  2.使用者必须放置协议说明
+
+  3.使用者需要对修改部分声明
+
+  4.禁止用作者的名号进行商业广告
+
+  5.原作者不承担代码使用后风险
 
 
 本项目仅作为学习使用，不参与任何入侵、破解计算机信息系统的行为。如有影响您app信息安全的地方，请立即与我联系删除，谢谢！邮箱：1273568669@qq.com
@@ -21,6 +25,7 @@ hooker使用[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)开
 
 # 快速定位
 ##### [自动化生成frida hook脚本](#j---生成指定类的hook脚本)
+##### [frida版just_trust_me](#11-just_trust_mejs)
 
 目录
 =================
@@ -54,6 +59,7 @@ hooker使用[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)开
     * [8. ssl_log.js](#8-ssl_logjs)
     * [9. object_store.js](#9-object_storejs)
     * [10. hook_RN.js](#10-hook_RNjs)
+    * [11. just_trust_me.js](#11-just_trust_mejs)
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a---打印activity栈)
     * [b-打印Service栈](#b---打印Service栈)
@@ -388,6 +394,16 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 对于动态注册的native函数，我们需要用hook_RN.js来分析。强烈建议hook_RN.js用spawn模式启动，启动命令为 ./spawn hook_RN.js
 
 ![](assets/hook_RN.gif)
+
+### 11. just_trust_me.js
+frida版本的just_trust_me————这是一个hooker有竞争力的功能。如果你需要bypass sslpinning请执行./spawn just_trust_me.js
+
+下面以Twitter为例，启动just_trust_me.js
+启动演示
+![](assets/strat_just_trust_me.gif)
+
+抓包效果演示
+![](assets/just_trust_me_show.gif)
 
 # hooker调试命令行
 
