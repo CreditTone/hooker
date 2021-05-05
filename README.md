@@ -25,6 +25,7 @@ hooker使用[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)开
 
 # 快速定位
 ##### [自动化生成frida hook脚本](#j---生成指定类的hook脚本)
+
 ##### [frida版just_trust_me](#11-just_trust_mejs)
 
 目录
