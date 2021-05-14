@@ -5,7 +5,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 # [hooker开源协议](https://github.com/CreditTone/hooker/blob/master/LICENSE.md)
 https://github.com/CreditTone/hooker/blob/master/LICENSE.md
 
-hooker使用[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)开源协议，协议核心规范如下。
+hooker使用[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)开源协议，协议核心规范如下
 
   1.授权使用者免费使用个人专利
 
@@ -61,6 +61,7 @@ hooker使用[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)开
     * [9. object_store.js](#9-object_storejs)
     * [10. hook_RN.js](#10-hook_RNjs)
     * [11. just_trust_me.js](#11-just_trust_mejs)
+    * [12. just_trust_me_okhttp_hook_finder.js](#12-just_trust_me_okhttp_hook_finderjs)
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a---打印activity栈)
     * [b-打印Service栈](#b---打印Service栈)
@@ -397,7 +398,7 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 ![](assets/hook_RN.gif)
 
 ### 11. just_trust_me.js
-frida版本的just_trust_me————这是一个hooker有竞争力的功能。如果你需要bypass sslpinning请执行./spawn just_trust_me.js
+frida版本的just_trust_me。如果你需要bypass sslpinning请执行./spawn just_trust_me.js
 
 下面以Twitter为例，启动just_trust_me.js
 启动演示
@@ -405,6 +406,52 @@ frida版本的just_trust_me————这是一个hooker有竞争力的功能�
 
 抓包效果演示
 ![](assets/just_trust_me_show.gif)
+
+### 12. just_trust_me_okhttp_hook_finder.js
+为配合just_trust_me.js在okhttp混淆场景下辅助你找到混淆点 
+jadx打开某资讯apk发现okhttp3如下
+![](assets/qutoutiao.png)
+
+执行./hooking just_trust_me_okhttp_hook_finder.js命令扫描hook点
+```shell
+-----------------------------------------------------------------------
+原类名：okhttp3.CertificatePinner
+混淆类名：okhttp3.g
+
+
+混淆方法0:
+原方法签名：public void okhttp3.CertificatePinner.check(java.lang.String,java.util.List)
+混淆方法签名：public void okhttp3.g.a(java.lang.String,java.util.List) throws javax.net.ssl.SSLPeerUnverifiedException
+
+
+-----------------------------------------------------------------------
+原类名：okhttp3.OkHttpClient$Builder
+混淆类名：okhttp3.OkHttpClient$Builder
+
+
+自动定位混淆方法失败，请去jadx打开okhttp3.OkHttpClient$Builder手动分析混淆方法
+-----------------------------------------------------------------------
+原类名：okhttp3.internal.tls.OkHostnameVerifier
+混淆类名：okhttp3.internal.i.d
+
+
+混淆方法0:
+原方法签名：public boolean okhttp3.internal.tls.OkHostnameVerifier.verify(java.lang.String,javax.net.ssl.SSLSession)
+混淆方法签名：public boolean okhttp3.internal.i.d.verify(java.lang.String,javax.net.ssl.SSLSession)
+
+
+混淆方法1:
+原方法签名：public boolean okhttp3.internal.tls.OkHostnameVerifier.verify(java.lang.String,java.security.cert.X509Certificate)
+混淆方法签名：public boolean okhttp3.internal.i.d.a(java.lang.String,java.security.cert.X509Certificate)
+
+-----------------------------------------------------------------------
+```
+根据上面just_trust_me_okhttp_hook_finder.js跑的结果
+把okhttp3的hook点改成混淆的类：
+
+![](assets/okhttp_justhook.png)
+这个提交记录：https://github.com/CreditTone/hooker/commit/f47d2068320a58306735a623f12bd955cbd20632
+
 
 # hooker调试命令行
 
