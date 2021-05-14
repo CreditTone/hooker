@@ -28,6 +28,10 @@ hooker使用[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)开
 
 ##### [frida版just_trust_me](#11-just_trust_mejs)
 
+##### [frida版just_trust_me实战测试报告](https://github.com/CreditTone/hooker/blob/master/JUSTTRUSTME.md)
+
+
+
 目录
 =================
 
@@ -406,6 +410,7 @@ frida版本的just_trust_me。如果你需要bypass sslpinning请执行./spawn j
 
 抓包效果演示
 ![](assets/just_trust_me_show.gif)
+
 
 ### 12. just_trust_me_okhttp_hook_finder.js
 为配合just_trust_me.js在okhttp混淆场景下辅助你找到混淆点 
