@@ -5,7 +5,7 @@ function loadDexfile(dexfile) {
 };
 
 
-loadDexfile('/data/user/0/com.smile.gifmaker/radar.dex');
+loadDexfile('/data/user/0/com.blockchainvault/radar.dex');
 
 
 function printOkhttp3FakeClass(okhttp3FakeClassObject) {
@@ -45,19 +45,19 @@ Java.perform(function() {
                     let matchOkHttpClientBuilderCheckResult = OkHttp3FakeFinder.okHttpClientBuilderCheck(tempClassHandle);
                     if (matchOkHttpClientBuilderCheckResult) {
                         printOkhttp3FakeClass(matchOkHttpClientBuilderCheckResult);
-                        return;
+                        continue;
                     }
                     
                     let matchOk3CertificatePinnerCheckResult = OkHttp3FakeFinder.okHttpCertificatePinnerCheck(tempClassHandle);
                     if (matchOk3CertificatePinnerCheckResult) {
                         printOkhttp3FakeClass(matchOk3CertificatePinnerCheckResult);
-                        return;
+                        continue;
                     }
 
                     let matchOk3OkHostnameVerifierVerifyResult = OkHttp3FakeFinder.okHttpOkHostnameVerifierVerify(tempClassHandle);
                     if (matchOk3OkHostnameVerifierVerifyResult) {
                         printOkhttp3FakeClass(matchOk3OkHostnameVerifierVerifyResult);
-                        return;
+                        continue;
                     }
                     
                 } catch(error) {

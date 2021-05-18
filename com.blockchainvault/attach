@@ -1,0 +1,3 @@
+#!/bin/bash
+HOOKER_DRIVER=$(cat ../.hooker_driver)
+frida $HOOKER_DRIVER -l $1 com.blockchainvault
