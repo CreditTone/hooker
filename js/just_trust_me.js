@@ -217,7 +217,7 @@ Java.perform(function() {
     SSLSocketFactoryRapeConstructor.implementation = function(v0, v1, v2, v3, v4, v5) {
         var returnObj = SSLSocketFactoryRapeConstructor.call(this, v0, v1, v2, v3, v4, v5);
         console.log("org.apache.http.conn.ssl.SSLSocketFactory.$init('java.lang.String', 'java.security.KeyStore', 'java.lang.String', 'java.security.KeyStore', 'java.security.SecureRandom', 'org.apache.http.conn.scheme.HostNameResolver') was hooked!");
-        if (Helper.reInitSSLSocketFactory(returnObj, v0, v1, v2, v3, v4, v5)) {
+        if (Helper.reInitSSLSocketFactory(this, v0, v1, v2, v3, v4, v5)) {
             console.log("替换trustmanagers参数成功!");
         }else{
             console.log("替换trustmanagers参数失败!"); 
