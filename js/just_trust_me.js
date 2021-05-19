@@ -45,7 +45,7 @@ function processOkHttp() {
             console.log("com.squareup.okhttp.CertificatePinner.check('java.lang.String', 'java.util.List') was hooked!");
         };
     }else{
-        console.error("没找到com.squareup.okhttp.CertificatePinner类，这是android系统自带的类没找到就算求了。不同系统不一样，不用找了!!!");
+        console.error("没找到com.squareup.okhttp.CertificatePinner类，这是android系统自带的类没找到就算了。不同系统不一样，不用找了!!!");
     }
 
     if (classExists("okhttp3.CertificatePinner")) {
