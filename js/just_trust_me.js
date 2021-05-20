@@ -230,7 +230,7 @@ Java.perform(function() {
     SSLSocketFactoryGetSocketFactoryMethod.implementation = function() {
         //强制用空的构造方法
         console.log("org.apache.http.conn.ssl.SSLSocketFactory.getSocketFactory() was hooked!");
-        return SSLSocketFactoryEmptyConstructor.call(this);
+        return SSLSocketFactory.$new();
     };
 
     var SSLSocketFactoryIsSecure = SSLSocketFactory.isSecure.overload('java.net.Socket');
