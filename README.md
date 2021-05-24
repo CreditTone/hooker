@@ -117,7 +117,7 @@ hooker使用[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)开
 
 ### 1. git clone项目
 ```shell
-stephen@ubuntu:~$ git https://github.com/CreditTone/hooker.git
+stephen@ubuntu:~$ git clone https://github.com/CreditTone/hooker.git
 stephen@ubuntu:~$ cd hooker
 stephen@ubuntu:~$ ls
 colorful.py                 com.mokee.aegis              mobile-deploy.tar
