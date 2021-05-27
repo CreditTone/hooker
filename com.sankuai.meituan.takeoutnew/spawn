@@ -1,0 +1,4 @@
+#!/bin/bash
+HOOKER_DRIVER=$(cat ../.hooker_driver)
+
+frida $HOOKER_DRIVER --no-pause -f com.sankuai.meituan.takeoutnew -l $1
