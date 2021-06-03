@@ -23,6 +23,6 @@ six==1.15.0
 sqlparse==0.4.1
 tabulate==0.8.9
 terminaltables==3.1.0
-urllib3==1.26.4
+urllib3==1.26.5
 wcwidth==0.2.5
 Werkzeug==1.0.1
