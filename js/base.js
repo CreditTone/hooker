@@ -102,3 +102,10 @@ function sleep(time) {
     while(new Date().getTime() < startTime) {}
 };
 
+//byte数组转String，这个方法不能直接调，把方法逻辑内嵌到你的方法体。这里只是展示语法，告诉你怎么转
+function byteArrayToStringStudy() {
+    var bytes = null;//假如bytes是一个java的byte[]
+    var JavaString = Java.use("java.lang.String");//声明java类
+    var result = JavaString.$new(decryptData, "utf-8");//result就是java的String
+}
+
