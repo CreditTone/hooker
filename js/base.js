@@ -106,6 +106,6 @@ function sleep(time) {
 function byteArrayToStringStudy() {
     var bytes = null;//假如bytes是一个java的byte[]
     var JavaString = Java.use("java.lang.String");//声明java类
-    var result = JavaString.$new(decryptData, "utf-8");//result就是java的String
+    var result = JavaString.$new(bytes, "utf-8");//result就是java的String
 }
 
