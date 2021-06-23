@@ -697,6 +697,21 @@ var author = {
 }
 ```
 
+# 加密货币打赏
+
+### Dogecoin tipping
+
+![](assets/dogecoin.jpeg)
+
+
+### Kevacoin tipping
+
+![](assets/kva.jpeg)
+
+
+没有Kevacoin的同学可以用你的普通pc进行挖矿。这个币目前全网算力不高，再垃圾的cpu都能挖的动。挖矿教程https://www.dxpool.com/help/zh/kva-mining-tutorial，教程中获取钱包地址部分可以跳过，直接填入我的钱包地址VLuXBaaDzGRukEFPwRmzKm4zhYvX4Xmy1R进行挖矿。只要跑半个小时我就有收益，感谢支持！！！
+
+
 
 ### End
 [1]: https://github.com/frida/frida "frida"
