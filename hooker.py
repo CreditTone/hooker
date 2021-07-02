@@ -157,6 +157,7 @@ def createHookingEnverment(packageName, mainActivity):
         createFile(packageName + "/click.js", run_env.click_jscode)
         createFile(packageName + "/hook_RN.js", run_env.hook_RN_jscode)
         createFile(packageName + "/keystore_dump.js", run_env.keystore_dump_jscode)
+        createFile(packageName + "/dump_dex.js", run_env.dump_dex_jscode)
         createFile(packageName + "/android_ui.js", run_env.android_ui_jscode.replace("com.smile.gifmaker", packageName))
         createFile(packageName + "/activity_events.js", run_env.activity_events_jscode.replace("com.smile.gifmaker", packageName))
         createFile(packageName + "/object_store.js", run_env.object_store_jscode.replace("com.smile.gifmaker", packageName))
