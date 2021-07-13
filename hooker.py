@@ -6,6 +6,7 @@ Created on 2020年3月23日
 import frida, sys
 import os
 import io
+import re
 import getopt
 import uuid
 import traceback
@@ -44,7 +45,35 @@ def checkRadarDex(packageName, online_script):
 def on_message(message, data):
     pass
 
-def attach(packageName):
+def is_number(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        pass
+    try:
+        import unicodedata
+        unicodedata.numeric(s)
+        return True
+    except (TypeError, ValueError):
+        pass
+    return False
+
+def getPidMap():
+    pidMap = {}
+    lines = os.popen("frida-ps -U").readlines();
+    for line in lines:
+        result = re.search("(\d+)\s+([a-z\d\.]+)$", line.strip())
+        if not result:
+            continue
+        pidMap[result.group(1)] = result.group(2)
+    return pidMap
+
+#target可以是pid或者packageName    
+def attach(target):
+    packageName = target
+    if is_number(target):#pid
+        packageName = getPidMap()[target]
     online_session = None
     online_script = None
     rdev = None
@@ -57,9 +86,14 @@ def attach(packageName):
             rdev = frida.get_remote_device()
         else:
             rdev = frida.get_usb_device(1000)
-        online_session = rdev.attach(packageName)
+        print(f"attach {target}")
+        if is_number(target):
+            pid = int(target)
+            online_session = frida.core.Session(rdev._impl.attach(pid))
+        else:
+            online_session = rdev.attach(target)
         if online_session == None:
-            warn("attaching fail to " + packageName)
+            warn("attaching fail to " + target)
         online_script = online_session.create_script(run_env.rpc_jscode)
         online_script.on('message', on_message)
         online_script.load()

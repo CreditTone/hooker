@@ -37,7 +37,7 @@ def runCommand(cmd):
     print(cmd);
     lines = os.popen(cmd).readlines();
     for line in lines:
-        print(line);
+        print(line.strip());
 
 def on_message(message, data):
     pass
