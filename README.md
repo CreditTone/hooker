@@ -41,7 +41,8 @@ hooker使用[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)开
     * [2. 安装依赖](#2-安装依赖)
     * [3. 手机连接adb](#3-手机连接adb)
     * [4. 手机开发环境部署](#4-手机开发环境部署)
-    * [5. 部署之后手机的增强功能](#5-部署之后手机的增强功能)
+    * [5. 指定fridaserver端口的手机开发环境部署](#5-指定fridaserver端口的手机开发环境部署)
+    * [6. 部署之后手机的增强功能](#6-部署之后手机的增强功能)
 * [快速开始](#快速开始)
     * [1. 查看可调试进程](#1-查看可调试进程)
     * [2. attach一个应用](#2-attach一个应用)
@@ -136,7 +137,7 @@ com.miui.screenrecorder     mobile-deploy.sh             xinitdeploy.py
 
 ### 2. 安装依赖
 ```shell
-stephen@ubuntu:~/hooker$ pip install -r requirements.txt
+stephen@ubuntu:~/hooker$ pip3 install -r requirements.txt
 ```
 
 
@@ -149,7 +150,7 @@ FA77C0301476	device
 
 
 ### 4. 手机开发环境部署
-如果你的手机已经启动了frida-server，可以忽略这步。不过还是建议你采用hooker推荐的hluda-server，因为官方的frida-server在启动之后实际上会向app注入frida-agent.so作为代理，聪明的应用可以通过读取/proc/{pid}/maps检测到正在被frida调试。不过，已经有ju人帮我们重新编译了frida-server，把敏感特征去掉了。
+如果你的手机已经启动了frida-server，可以忽略这步。
 
 注意:部分手机出现部署之后adb连不上的问题，那请使用deploy2.sh。
 
@@ -168,8 +169,24 @@ stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示
 ![部署演示](assets/hooker-deploy.gif)
 ***
 
+### 5. 指定fridaserver端口的手机开发环境部署
 
-### 5. 部署之后手机的增强功能
+```shell
+stephen@ubuntu:~/hooker$ adb shell #进入手机命令行界面
+sailfish:/ $ su #进入root权限命令行模式
+sailfish:/ $ sh /sdcard/mobile-deploy/deploy.sh 6666  #deploy.sh启动失败的同样可以尝试deploy2.sh                                                   
+disable android firewall.
+set firda_server_bind_port to 6666
+start frida-server
+start network adb.
+deploy successfull.
+stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示已经正常部署。
+```
+***
+
+注意：自定义fridaserver端口的开发环境必须走host:post的方式调试，因为usb默认找27042端口。所以请务必[更改本地.hooker_driver文件](#远程frida支持)，否则hooker无法正常工作。
+
+### 6. 部署之后手机的增强功能
 - 1.关闭iptables防火墙，解决部分手机默认防火墙开启的问题
 - 2.启动frida-server，如果你的手机是arm64他将优先启动arm64位的frida-server
 - 3.在/data/mobile-deploy目录生成tools_env.rc 当你有内网穿透和网络服务转发、编辑文件、检测网络方面的需求时可以执行source /data/mobile-deploy/tools_env.rc，它将临时生成vi、telnet、frpc、tcpforward、ll命令以便你进行更便捷的开发，如图
