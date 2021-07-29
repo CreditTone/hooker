@@ -8,7 +8,6 @@ import os
 import io
 import re
 import getopt
-import uuid
 import traceback
 import run_env
 import base64
@@ -171,16 +170,19 @@ def createHookingEnverment(packageName, mainActivity):
         spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER --no-pause -f {packageName} -l $1"
         xinitPyScript = run_env.xinitPyScript + "xinitDeploy('"+packageName+"')"
         spiderPyScript = run_env.spiderPyScript.replace("{appPackageName}", packageName).replace("{mainActivity}", mainActivity) 
+        disableSslPinningPyScript = run_env.disableSslPinningPyScript.replace("{appPackageName}", packageName) 
         createFile(packageName+"/hooking", logHooking)
         createFile(packageName+"/attach", attach_shell)
         createFile(packageName+"/spawn", spawn_shell)
         createFile(packageName+"/xinitdeploy", xinitPyScript)
+        createFile(packageName+"/disable_sslpinning", disableSslPinningPyScript)
         createFile(packageName+"/spider.py", spiderPyScript)
         createFile(packageName + "/kill", shellPrefix + "frida-kill $HOOKER_DRIVER "+packageName)
         createFile(packageName+"/objection", shellPrefix + "objection -d -g "+packageName+" explore")
         os.popen('chmod 777 ' + packageName +'/hooking').readlines()
         os.popen('chmod 777 ' + packageName +'/attach').readlines()
         os.popen('chmod 777 ' + packageName +'/xinitdeploy').readlines()
+        os.popen('chmod 777 ' + packageName +'/disable_sslpinning').readlines()
         os.popen('chmod 777 ' + packageName +'/kill').readlines()
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
         os.popen('chmod 777 ' + packageName +'/spawn').readlines()
