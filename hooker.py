@@ -85,7 +85,7 @@ def attach(target):
             rdev = frida.get_remote_device()
         else:
             rdev = frida.get_usb_device(1000)
-        print(f"attach {target}")
+        #print(f"attach {target}")
         if is_number(target):
             pid = int(target)
             online_session = frida.core.Session(rdev._impl.attach(pid))
@@ -100,40 +100,40 @@ def attach(target):
         createHookingEnverment(packageName, online_script.exports.mainactivity())
     except Exception:
         warn(traceback.format_exc())   
-    return online_session,online_script
+    return online_session,online_script,packageName
     
 
 def detach(online_session):
     if online_session != None:
         online_session.detach()
  
-def existsClass(packageName,className):
+def existsClass(target,className):
     online_session = None
     online_script = None
     try:
-        online_session,online_script = attach(packageName);
+        online_session,online_script,_ = attach(target);
         info(online_script.exports.containsclass(className))
     except Exception:
         warn(traceback.format_exc())  
     finally:    
         detach(online_session)
 
-def findclasses(packageName, classRegex):
+def findclasses(target, classRegex):
     online_session = None
     online_script = None
     try:
-        online_session,online_script = attach(packageName);
+        online_session,online_script,_ = attach(target);
         info(online_script.exports.findclasses(classRegex));
     except Exception:
         warn(traceback.format_exc())  
     finally:    
         detach(online_session)
 
-def findclasses2(packageName, className):
+def findclasses2(target, className):
     online_session = None
     online_script = None
     try:
-        online_session,online_script = attach(packageName);
+        online_session,online_script,_ = attach(target);
         info(online_script.exports.findclasses2(className));
     except Exception:
         warn(traceback.format_exc())  
@@ -151,10 +151,10 @@ def createFile(filename, text):
         if file != None:
             file.close()
             
-def onlyCheckHookingEnverment(packageName):
+def onlyCheckHookingEnverment(target):
     online_session = None
     try:
-        online_session,_ = attach(packageName);
+        online_session,_,_ = attach(target);
     except Exception:
         print(traceback.format_exc())  
     finally:
@@ -200,12 +200,13 @@ def createHookingEnverment(packageName, mainActivity):
         createFile(packageName + "/just_trust_me.js", run_env.just_trust_me_jscode.replace("com.smile.gifmaker", packageName))
         createFile(packageName + "/just_trust_me_okhttp_hook_finder.js", run_env.just_trust_me_okhttp_hook_finder_jscode.replace("com.smile.gifmaker", packageName))
 
-def hookJs(packageName, hookCmdArg, savePath = None):
+def hookJs(target, hookCmdArg, savePath = None):
     online_session = None
     online_script = None
+    packageName = None
     try:
         ganaretoionJscode = ""
-        online_session,online_script = attach(packageName);
+        online_session,online_script,packageName = attach(target);
         appversion = online_script.exports.appversion();
         classes = hookCmdArg.split(",")
         for classN in classes:
@@ -239,11 +240,11 @@ def hookJs(packageName, hookCmdArg, savePath = None):
     finally:    
         detach(online_session)
         
-def hookStr(packageName, keyword):
+def hookStr(target, keyword):
     online_session = None
-    online_script = None
+    packageName = None
     try:
-        online_session,online_script = attach(packageName);
+        online_session,_,packageName = attach(target);
         jscode = io.open('./js/string_hooker.js','r',encoding= 'utf8').read()
         jscode = jscode.replace("惊雷", keyword)
         savePath = packageName+"/str_"+keyword+".js";
@@ -255,11 +256,11 @@ def hookStr(packageName, keyword):
         detach(online_session)
         
         
-def hookParma(packageName, keyword):
+def hookParma(target, keyword):
     online_session = None
-    online_script = None
+    packageName = None
     try:
-        online_session,online_script = attach(packageName);
+        online_session,_,packageName = attach(target);
         jscode = io.open('./js/param_hook.js','r',encoding= 'utf8').read()
         jscode = jscode.replace("NStokensig", keyword)
         savePath = packageName+"/param_"+keyword+".js";
@@ -271,55 +272,55 @@ def hookParma(packageName, keyword):
         detach(online_session)
         
 
-def printActivitys(packageName):
+def printActivitys(target):
     online_session = None
     online_script = None
     try:
-        online_session,online_script = attach(packageName);
+        online_session,online_script,_ = attach(target);
         info(online_script.exports.activitys())
     except Exception:
         print(traceback.format_exc())  
     finally:
         detach(online_session)
         
-def printServices(packageName):
+def printServices(target):
     online_session = None
     online_script = None
     try:
-        online_session,online_script = attach(packageName);
+        online_session,online_script,_ = attach(target);
         info(online_script.exports.services())
     except Exception:
         print(traceback.format_exc())  
     finally:
         detach(online_session)
 
-def printObject(packageName, objectId):
+def printObject(target, objectId):
     online_session = None
     online_script = None
     try:
-        online_session,online_script = attach(packageName);
+        online_session,online_script,_ = attach(target);
         info(online_script.exports.objectinfo(objectId))
     except Exception:
         print(traceback.format_exc())  
     finally:
         detach(online_session)
         
-def object2Explain(packageName, objectId):
+def object2Explain(target, objectId):
     online_session = None
     online_script = None
     try:
-        online_session,online_script = attach(packageName);
+        online_session,online_script,_ = attach(target);
         info(online_script.exports.objecttoexplain(objectId))
     except Exception:
         print(traceback.format_exc())  
     finally:
         detach(online_session)
 
-def printView(packageName, viewId):
+def printView(target, viewId):
     online_session = None
     online_script = None
     try:
-        online_session,online_script = attach(packageName);
+        online_session,online_script,_ = attach(target);
         report = online_script.exports.viewinfo(viewId)
         info(report);
     except Exception:
@@ -329,11 +330,11 @@ def printView(packageName, viewId):
         
 
 
-def printModuleName(packageName, moduleName):
+def printModuleName(target, moduleName):
     online_session = None
     online_script = None
     try:
-        online_session,online_script = attach(packageName);
+        online_session,online_script,_ = attach(target);
         info(online_script.exports.so(moduleName))
     except Exception:
         print(traceback.format_exc())
@@ -345,6 +346,7 @@ if __name__ == '__main__':
         opts, args = getopt.getopt(sys.argv[1:], "hp:x:a:b:c:d:v:s:t:l:e:j:k:l:g:o:m:",[])
     except getopt.GetoptError:    
         sys.exit(2);
+    #这个packageName可以是进程名也可以是进程号
     packageName = None
     e = None
     findclassesClassRegex = None
@@ -395,10 +397,10 @@ if __name__ == '__main__':
     if packageName == None:
         warn("packageName is none")
         sys.exit(2);
-    run_env.init(packageName);
     
     #初始化应用目录
     if genarateEnv and packageName:
+        run_env.init(packageName)
         onlyCheckHookingEnverment(packageName)
     
     if e != None:
