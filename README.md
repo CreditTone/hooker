@@ -712,6 +712,8 @@ https://bbs.pediy.com/thread-267245.htm
 https://bbs.pediy.com/thread-267245.htm
 
 ### 亲测好用的脱壳工具
+https://github.com/CodingGay/BlackDex
+
 https://github.com/GuoQiang1993/Frida-Apk-Unpack
 
 https://github.com/hanbinglengyue/FART
