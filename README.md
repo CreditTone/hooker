@@ -713,7 +713,12 @@ https://bbs.pediy.com/thread-267245.htm
 
 ### 亲测好用的脱壳工具
 https://github.com/GuoQiang1993/Frida-Apk-Unpack
+
 https://github.com/hanbinglengyue/FART
+
+### 通信降级案例（亲测有效）
+https://blog.csdn.net/qq314000558/article/details/105958847
+
 
 # 关于作者
 
