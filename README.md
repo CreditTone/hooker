@@ -711,6 +711,10 @@ https://bbs.pediy.com/thread-267245.htm
 ### 内存漫游窥视对象内部数据
 https://bbs.pediy.com/thread-267245.htm
 
+### 亲测好用的脱壳工具
+https://github.com/GuoQiang1993/Frida-Apk-Unpack
+https://github.com/hanbinglengyue/FART
+
 # 关于作者
 
 ```javascript
