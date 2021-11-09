@@ -62,7 +62,7 @@ def getPidMap():
     pidMap = {}
     lines = os.popen("frida-ps -U").readlines();
     for line in lines:
-        result = re.search("(\d+)\s+([a-z\d\.]+)$", line.strip())
+        result = re.search("(\d+)\s+([a-z\d\.]+)($|:)", line.strip())
         if not result:
             continue
         pidMap[result.group(1)] = result.group(2)
