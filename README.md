@@ -20,7 +20,10 @@ hooker使用[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)开
 
 本项目仅作为学习使用，不参与任何入侵、破解计算机信息系统的行为。如有影响您app信息安全的地方，请立即与我联系删除，谢谢！邮箱：1273568669@qq.com
 
-文档持续更新中.....
+
+### radar增强项目源码
+https://github.com/CreditTone/radar4hooker
+
 =================
 
 # 快速定位
