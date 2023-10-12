@@ -717,17 +717,6 @@ https://github.com/hanbinglengyue/FART
 https://blog.csdn.net/qq314000558/article/details/105958847
 
 
-# 关于作者
-
-```javascript
-var author = {
-  name  : "stephen",
-  bilibili : "https://space.bilibili.com/105035514",
-  email : "1273568669@qq.com",
-  experience : ["Android应用开发", "网络爬虫", "Android逆向", "JAVA/Go后台开发", "中间件开发"]
-}
-```
-
 # 加密货币打赏
 
 ### Dogecoin tipping
