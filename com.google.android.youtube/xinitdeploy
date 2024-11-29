@@ -1,0 +1,108 @@
+#! /Library/Frameworks/Python.framework/Versions/3.8/bin/python3
+
+import frida
+import os
+import io
+import traceback
+import base64
+
+def withColor(string, fg, bg=49):
+    print("\33[0m\33[%d;%dm%s\33[0m" % (fg, bg, string))
+    
+Red = 1
+Green = 2
+Yellow = 3
+Blue = 4
+Magenta = 5
+Cyan = 6
+White = 7
+ 
+def red(string):
+    return withColor(string, Red+30) # Red
+def yellow(string):
+    return withColor(string, Yellow+30) # Yellow
+
+warn = red
+info = yellow
+
+def readJs(filename):
+    return io.open('../js/' + filename,'r',encoding= 'utf8').read()
+
+base_jscode = readJs("base.js")
+
+radar_jscode = readJs("radar.js")
+
+jsfmt_jscode = readJs("jsfmt.js")
+
+rpc_jscode = base_jscode + radar_jscode + jsfmt_jscode + readJs("rpc.js")
+
+class XinitFile:
+    def __init__(self, filename, filepath):
+        self.filename = filename
+        self.filepath = filepath
+
+    def fileData(self):
+        fopen = open(self.filepath,"rb")
+        data = fopen.read()
+        fopen.close()
+        return data
+    
+def readXinitFiles():
+    xinitFiles = []
+    if not os.path.exists("./xinit"):
+        return xinitFiles
+    allFiles = os.listdir("./xinit")
+    for filename in allFiles:
+        filepath = "./xinit/" + filename
+        if os.path.isdir(filepath):
+            continue
+        xinitFile = XinitFile(filename, filepath)
+        xinitFiles = xinitFiles.append(xinitFile)
+    return xinitFiles
+
+def on_message(message, data):
+    pass
+
+def attach(packageName):
+    online_session = None
+    online_script = None
+    try:
+        rdev = frida.get_usb_device()
+        online_session = rdev.attach(packageName)
+        if online_session == None:
+            warn("attaching fail to " + packageName)
+        online_script = online_session.create_script(rpc_jscode)
+        online_script.on('message', on_message)
+        online_script.load()
+    except Exception:
+        warn(traceback.format_exc())   
+    return online_session,online_script
+    
+
+def detach(online_session):
+    if online_session != None:
+        online_session.detach()
+ 
+
+def xinitDeploy(packageName):
+    xinitFiles = readXinitFiles()
+    if len(xinitFiles) == 0:
+        warn("deploying aborted.")
+        return
+    online_session = None
+    online_script = None
+    try:
+        online_session,online_script = attach(packageName);
+        for xinitFile in xinitFiles:
+            dataBase64 = base64.b64encode(xinitFile.fileData()).decode()
+            distPath = "/data/user/0/" + packageName + "/xinit/" + xinitFile.filename
+            print("copying " + xinitFile.filename + " to that path " + distPath + ".")
+            online_script.exports.write(distPath, dataBase64)
+        info("deploying xinit finished.")
+    except Exception:
+        warn("deploying xinit failure.")
+        warn(traceback.format_exc())  
+    finally:    
+        detach(online_session)
+        
+xinitDeploy('com.google.android.youtube')
