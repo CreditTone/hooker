@@ -3,7 +3,7 @@ chardet==4.0.0
 cli-helpers==2.1.0
 click==7.1.2
 colorama==0.4.4
-configobj==5.0.6
+configobj==5.0.9
 delegator.py==0.1.1
 Flask==1.1.2
 frida==14.2.2
