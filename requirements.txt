@@ -10,7 +10,7 @@ frida==14.2.2
 frida-tools==9.1.0
 idna==2.10
 itsdangerous==1.1.0
-Jinja2==2.11.3
+Jinja2==3.1.5
 litecli==1.5.0
 MarkupSafe==1.1.1
 objection==1.9.6
