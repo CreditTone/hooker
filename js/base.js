@@ -147,6 +147,58 @@ function printAndCloneOkhttp3Request(ok3ReqObj) {
     return newRequest;
 }
 
+// Response读取body会消耗一次，使后面的程序读取不成功，这时候我们就要克隆一个新的Response
+function printAndCloneOkhttp3Response(ok3ResObj) {
+    // 构建 JSON 数据
+    var result = {
+        request: {},
+        response: {}
+    };
+
+    // 获取 Request 信息
+    var request = ok3ResObj.request();
+    result.request.url = request.url().toString();
+    result.request.method = request.method();
+
+    // 请求头
+    var reqHeaders = request.headers();
+    var reqHeadersJson = {};
+    for (var i = 0; i < reqHeaders.size(); i++) {
+        reqHeadersJson[reqHeaders.name(i)] = reqHeaders.value(i);
+    }
+    result.request.headers = reqHeadersJson;
+
+    // 获取 Response 信息
+    result.response.statusCode = ok3ResObj.code();
+
+    var resHeaders = ok3ResObj.headers();
+    var resHeadersJson = {};
+    for (var i = 0; i < resHeaders.size(); i++) {
+        resHeadersJson[resHeaders.name(i)] = resHeaders.value(i);
+    }
+    result.response.headers = resHeadersJson;
+    var newOk3ResObj = ok3ResObj;
+    // 读取 Response Body
+    var body = ok3ResObj.body();
+    if (body) {
+        try {
+            var bodyStr = body.string();
+            result.response.body = bodyStr;
+
+            // 重新封装 Body 防止内容被消耗
+            var newBody = Java.use("okhttp3.ResponseBody").create(body.contentType(), Java.use("java.lang.String").$new(bodyStr));
+            newOk3ResObj = ok3ResObj.newBuilder().body(newBody).build();
+        } catch (e) {
+            result.response.body = "[!] Failed to read body: " + e;
+        }
+    } else {
+        result.response.body = "[!] No body";
+    }
+
+    // 将 JSON 数据格式化输出
+    console.log(JSON.stringify(result, null, 4));
+    return newOk3ResObj
+}
 
 // loadXRadarDexfile if you want to ued func fastTojson or storeObjectAndLog  
 //loadXRadarDexfile();
