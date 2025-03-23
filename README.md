@@ -15,6 +15,8 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 
 #### [最新内置脚本函数printAndCloneOkhttp3Request(javaObject)](#9-printAndCloneOkhttp3Request)
 
+#### [内部探测类实现由radar做复杂的操作] (https://github.com/CreditTone/radar4hooker)
+
 目录
 =================
 
