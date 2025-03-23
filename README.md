@@ -13,11 +13,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 # 快速定位
 ##### [自动化生成frida hook脚本](#j---生成指定类的hook脚本)
 
-##### [frida版just_trust_me](#11-just_trust_mejs)
-
-##### [frida版just_trust_me实战测试报告](https://github.com/CreditTone/hooker/blob/master/JUSTTRUSTME.md)
-
-##### [disable_sslpinning](#7-disable_sslpinning)
+#### [最新内置脚本函数printAndCloneOkhttp3Request(javaObject)](#9-printAndCloneOkhttp3Request)
 
 目录
 =================
@@ -77,7 +73,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
         * [6. getPrettyString(javaObject)](#6-getprettystringjavaobject)
         * [7. getField(javaObject, fieldName)](#7-getfieldjavaobject-fieldname)
         * [8. storeObjectAndLog(javaObject)](#8-storeobjectandlogjavaobject)
-        * [9. printAndCloneOkhttp3Request(javaObject)](#8-printAndCloneOkhttp3Request)
+        * [9. printAndCloneOkhttp3Request(javaObject)](#9-printAndCloneOkhttp3Request)
   * [原生ui自动化](#原生ui自动化)
       * [1. startActivity(activityName)](#1-startactivityactivityname)
       * [2. contextStartActivity(activityName)](#1-startactivityactivityname)
