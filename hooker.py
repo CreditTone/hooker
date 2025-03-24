@@ -199,6 +199,7 @@ def createHookingEnverment(packageName, mainActivity):
         createFile(packageName + "/object_store.js", run_env.object_store_jscode.replace("com.smile.gifmaker", packageName))
         createFile(packageName + "/just_trust_me.js", run_env.just_trust_me_jscode.replace("com.smile.gifmaker", packageName))
         createFile(packageName + "/just_trust_me_okhttp_hook_finder.js", run_env.just_trust_me_okhttp_hook_finder_jscode.replace("com.smile.gifmaker", packageName))
+        createFile(packageName + "/trace_initproc.js", run_env.trace_initproc_jscode)
 
 def hookJs(target, hookCmdArg, savePath = None):
     online_session = None

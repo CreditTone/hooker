@@ -13,7 +13,9 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 # 快速定位
 ##### [自动化生成frida hook脚本](#j---生成指定类的hook脚本)
 
-#### [最新内置脚本函数printAndCloneOkhttp3Request(javaObject)](#9-printAndCloneOkhttp3Request)
+#### [内存抓包printAndCloneOkhttp3Request(javaObject)](#9-printAndCloneOkhttp3Request)
+
+#### [trace init_proc函数](#13-trace_init_procjs)
 
 #### [内部探测类实现由radar做复杂的操作] (https://github.com/CreditTone/radar4hooker)
 
@@ -52,7 +54,8 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [9. object_store.js](#9-object_storejs)
     * [10. hook_RN.js](#10-hook_RNjs)
     * [11. just_trust_me.js](#11-just_trust_mejs)
-    * [12. just_trust_me_okhttp_hook_finder.js](#12-just_trust_me_okhttp_hook_finderjs)
+    * [13. trace_iniproc.js](#13-trace_init_procjs)
+    * 
     
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a---打印activity栈)
@@ -472,7 +475,9 @@ jadx打开某资讯apk发现okhttp3如下
 jadx打开某资讯apk发现okhttp3如下
 ![](assets/qutoutiao.png)
 
-
+### 13. trace_init_proc.js
+init_proc的hook实现比较麻烦，这边给一个实现模版，你需要把脚本中init_proc函数的startAddr、endAddr补充上，somodule是你so的名字，这样你就可以trace init_proc了
+![trace_init_proc.png](assets/trace_init_proc.png)
 
 # hooker调试命令行
 
