@@ -17,6 +17,8 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 
 #### [trace init_proc函数](#13-trace_init_procjs)
 
+#### [hook art_method](#15-hook_artmethod_registerjs)
+
 #### [内部探测类实现由radar做复杂的操作] (https://github.com/CreditTone/radar4hooker)
 
 目录
@@ -56,6 +58,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [11. just_trust_me.js](#11-just_trust_mejs)
     * [13. trace_iniproc.js](#13-trace_init_procjs)
     * [14. dump_dex.js](#14-dump_dexjs)
+    * [15. hook_artmethod_register.js](#15-hook_artmethod_registerjs)
     
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a---打印activity栈)
@@ -413,7 +416,7 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 
 ### 10. hook_RN.js
 对于动态注册的native函数，我们需要用hook_RN.js来分析。强烈建议hook_RN.js用spawn模式启动，启动命令为 ./spawn hook_RN.js
-
+当hook_RN.js无法找到native函数时，试试[15. hook_artmethod_register.js](#15-hook_artmethod_registerjs)
 ![](assets/hook_RN.gif)
 
 ### 11. just_trust_me.js
@@ -482,7 +485,7 @@ init_proc的hook实现比较麻烦，这边给一个实现模版，你需要把�
 ### 14. dump_dex.js
 执行./spawn dump_dex.js即可脱壳，针对大部分简单的壳可以脱。ART下引入了dex2oat来对dex进行编译，生成每一个java函数对应的native代码，来提高运行效率。有时候如果不能脱你需求删除/data/app/<package_name>-*/oat/arm64/目录下的所有文件再执行，如果还不能脱就gg了
 ```javascript
-MacBook-Pro-32G-2T:com.shopee.sg stephen256$ ./spawn dump_dex.js
+MacBook-Pro-32G-2T:com.shxpxx.sg stephen256$ ./spawn dump_dex.js
      ____
     / _  |   Frida 14.2.2 - A world-class dynamic instrumentation toolkit
    | (_| |
@@ -492,33 +495,69 @@ MacBook-Pro-32G-2T:com.shopee.sg stephen256$ ./spawn dump_dex.js
    . . . .       exit/quit -> Exit
    . . . .
    . . . .   More info at https://www.frida.re/docs/home/
-Spawning `com.shopee.sg`...
+Spawning `com.shxpxx.sg`...
 _ZN3art11ClassLinker11DefineClassEPNS_6ThreadEPKcmNS_6HandleINS_6mirror11ClassLoaderEEERKNS_7DexFileERKNS9_8ClassDefE 0x7521584e08
 [DefineClass:] 0x7521584e08
-Spawned `com.shopee.sg`. Resuming main thread!
-[MI MAX 3::com.shopee.sg]-> [find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes.dex
-[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes.dex
-[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes2.dex
-[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes2.dex
-[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes3.dex
-[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes3.dex
-[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes4.dex
-[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes4.dex
-[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes5.dex
-[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes5.dex
-[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes6.dex
-[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes6.dex
-[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes7.dex
-[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes7.dex
-[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes8.dex
-[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes8.dex
-[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes9.dex
-[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes9.dex
-[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes10.dex
-[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes10.dex
-[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes11.dex
-[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes11.dex
+Spawned `com.shxpxx.sg`. Resuming main thread!
+[MI MAX 3::com.shxpxx.sg]-> [find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes.dex
+[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes.dex
+[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes2.dex
+[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes2.dex
+[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes3.dex
+[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes3.dex
+[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes4.dex
+[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes4.dex
+[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes5.dex
+[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes5.dex
+[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes6.dex
+[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes6.dex
+[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes7.dex
+[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes7.dex
+[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes8.dex
+[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes8.dex
+[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes9.dex
+[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes9.dex
+[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes10.dex
+[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes10.dex
 ```
+
+### 15. hook_artmethod_register.js
+有时候hook_RN.js无法hook到RegisterNatives方法，那是因为厂商直接自实现了RegisterNatives，方法下沉到了ArtMethod.RegisterNative方法
+先执行./xinitdeploy将扩展的so部署到应用目录，再执行./spawn hook_artmethod_register.js hook ArtMethod RegisterNative
+
+```shell
+MacBook-Pro-32G-2T:com.shxpxx.sg stephen256$ ./xinitdeploy
+copying libext64.so to path: /data/data/com.shxpxx.sg/libext64.so
+copying libext.so to path: /data/data/com.shxpxx.sg/libext.so
+deploying xinit finished.
+MacBook-Pro-32G-2T:com.shxpxx.sg stephen256$ ./spawn hook_artmethod_register.js
+     ____
+    / _  |   Frida 14.2.2 - A world-class dynamic instrumentation toolkit
+   | (_| |
+    > _  |   Commands:
+   /_/ |_|       help      -> Displays the help system
+   . . . .       object?   -> Display information about 'object'
+   . . . .       exit/quit -> Exit
+   . . . .
+   . . . .   More info at https://www.frida.re/docs/home/
+Spawning `com.shxpxx.sg`...
+ArtMethod::PrettyMethod is at  0x7521538e60 _ZN3art9ArtMethod12PrettyMethodEb
+ArtMethod::RegisterNative is at  0x75215391b0 _ZN3art9ArtMethod14RegisterNativeEPKv
+Spawned `com.shxpxx.sg`. Resuming main thread!
+[MI MAX 3::com.shxpxx.sg]-> [ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_lock_acq(int, int, int[]) module_name: libqti_performance.so offset: 0x19f0
+[ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_lock_rel(int) module_name: libqti_performance.so offset: 0x1abc
+[ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_hint(int, java.lang.String, int, int) module_name: libqti_performance.so offset: 0x1ad8
+[ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_get_feedback(int, java.lang.String) module_name: libqti_performance.so offset: 0x1b90
+[ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_io_prefetch_start(int, java.lang.String, java.lang.String) module_name: libqti_performance.so offset: 0x1c24
+[ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_io_prefetch_stop() module_name: libqti_performance.so offset: 0x1e58
+[ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_uxEngine_events(int, int, java.lang.String, int) module_name: libqti_performance.so offset: 0x1f80
+[ArtMethod_RegisterNative] Method_sig: java.lang.String com.qualcomm.qti.Performance.native_perf_uxEngine_trigger(int) module_name: libqti_performance.so offset: 0x2154
+[ArtMethod_RegisterNative] Method_sig: void com.tencent.mmkv.MMKV.onExit() module_name: libmmkv.so offset: 0x1717c
+[ArtMethod_RegisterNative] Method_sig: java.lang.String com.tencent.mmkv.MMKV.cryptKey() module_name: libmmkv.so offset: 0x17180
+[ArtMethod_RegisterNative] Method_sig: boolean com.tencent.mmkv.MMKV.reKey(java.lang.String) module_name: libmmkv.so offset: 0x1727c
+[ArtMethod_RegisterNative] Method_sig: void com.tencent.mmkv.MMKV.checkReSetCryptKey(java.lang.String) module_name: libmmkv.so offset: 0x17478
+```
+
 
 # hooker调试命令行
 
