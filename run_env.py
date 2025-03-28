@@ -98,6 +98,8 @@ dump_dex_jscode = readJs("dump_dex.js")
 
 trace_initproc_jscode = readJs("trace_initproc.js")
 
+hook_artmethod_register_jscode = readJs("hook_artmethod_register.js")
+
 def getPythonLaucher():
     pythonLaucher = os.environ.get("__PYVENV_LAUNCHER__")
     if not pythonLaucher:

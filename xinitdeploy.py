@@ -57,6 +57,9 @@ function writeFileAsBase64Content(filepath, base64) {
             var copyMehtod = FileUtilsClz.copyToFile.overload('java.io.InputStream', 'java.io.File');
             copyMehtod.call(FileUtilsClz, bais, distFilepath);
         }
+        var chmod = new NativeFunction(Module.findExportByName("libc.so", "chmod"), 'int', ['pointer', 'int']);
+        var path = Memory.allocUtf8String(filepath);
+        var result = chmod(path, 0o777);
     } catch(err) {
         console.warn(err);
     }
@@ -161,7 +164,9 @@ def xinitDeploy(packageName):
         for xinitFile in xinitFiles:
             dataBase64 = base64.b64encode(xinitFile.fileData()).decode()
             distPath = "/data/user/0/" + packageName + "/xinit/" + xinitFile.filename
-            info("copying " + xinitFile.filename + " to that path " + distPath + ".")
+            if xinitFile.filename.endswith(".so"):
+                distPath = "/data/data/" + packageName + "/" + xinitFile.filename
+            info("copying " + xinitFile.filename + " to path: " + distPath )
             online_script.exports.write(distPath, dataBase64)
         info("deploying xinit finished.")
     except Exception:

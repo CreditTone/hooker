@@ -186,6 +186,7 @@ def createHookingEnverment(packageName, mainActivity):
         os.popen('chmod 777 ' + packageName +'/kill').readlines()
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
         os.popen('chmod 777 ' + packageName +'/spawn').readlines()
+        os.popen('cp *.so ' + packageName +'/xinit/').readlines()
         createFile(packageName + "/ssl_log.js", run_env.ssl_log_jscode)
         createFile(packageName + "/url.js", run_env.url_jscode)
         createFile(packageName + "/edit_text.js", run_env.edit_text_jscode)
@@ -199,6 +200,7 @@ def createHookingEnverment(packageName, mainActivity):
         createFile(packageName + "/object_store.js", run_env.object_store_jscode.replace("com.smile.gifmaker", packageName))
         createFile(packageName + "/just_trust_me.js", run_env.just_trust_me_jscode.replace("com.smile.gifmaker", packageName))
         createFile(packageName + "/just_trust_me_okhttp_hook_finder.js", run_env.just_trust_me_okhttp_hook_finder_jscode.replace("com.smile.gifmaker", packageName))
+        createFile(packageName + "/hook_artmethod_register.js", run_env.hook_artmethod_register_jscode.replace("com.smile.gifmaker", packageName))
         createFile(packageName + "/trace_initproc.js", run_env.trace_initproc_jscode)
 
 def hookJs(target, hookCmdArg, savePath = None):
