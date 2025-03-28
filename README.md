@@ -55,7 +55,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [10. hook_RN.js](#10-hook_RNjs)
     * [11. just_trust_me.js](#11-just_trust_mejs)
     * [13. trace_iniproc.js](#13-trace_init_procjs)
-    * 
+    * [14. dump_dex.js](#14-dump_dexjs)
     
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a---打印activity栈)
@@ -478,6 +478,47 @@ jadx打开某资讯apk发现okhttp3如下
 ### 13. trace_init_proc.js
 init_proc的hook实现比较麻烦，这边给一个实现模版，你需要把脚本中init_proc函数的startAddr、endAddr补充上，somodule是你so的名字，这样你就可以trace init_proc了
 ![trace_init_proc.png](assets/trace_init_proc.png)
+
+### 14. dump_dex.js
+执行./spawn dump_dex.js即可脱壳，针对大部分简单的壳可以脱。ART下引入了dex2oat来对dex进行编译，生成每一个java函数对应的native代码，来提高运行效率。有时候如果不能脱你需求删除/data/app/<package_name>-*/oat/arm64/目录下的所有文件再执行，如果还不能脱就gg了
+```javascript
+MacBook-Pro-32G-2T:com.shopee.sg stephen256$ ./spawn dump_dex.js
+     ____
+    / _  |   Frida 14.2.2 - A world-class dynamic instrumentation toolkit
+   | (_| |
+    > _  |   Commands:
+   /_/ |_|       help      -> Displays the help system
+   . . . .       object?   -> Display information about 'object'
+   . . . .       exit/quit -> Exit
+   . . . .
+   . . . .   More info at https://www.frida.re/docs/home/
+Spawning `com.shopee.sg`...
+_ZN3art11ClassLinker11DefineClassEPNS_6ThreadEPKcmNS_6HandleINS_6mirror11ClassLoaderEEERKNS_7DexFileERKNS9_8ClassDefE 0x7521584e08
+[DefineClass:] 0x7521584e08
+Spawned `com.shopee.sg`. Resuming main thread!
+[MI MAX 3::com.shopee.sg]-> [find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes.dex
+[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes.dex
+[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes2.dex
+[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes2.dex
+[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes3.dex
+[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes3.dex
+[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes4.dex
+[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes4.dex
+[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes5.dex
+[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes5.dex
+[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes6.dex
+[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes6.dex
+[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes7.dex
+[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes7.dex
+[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes8.dex
+[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes8.dex
+[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes9.dex
+[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes9.dex
+[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes10.dex
+[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes10.dex
+[find dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes11.dex
+[dump dex]: /data/data/com.shopee.sg/files/dump_dex_com.shopee.sg/classes11.dex
+```
 
 # hooker调试命令行
 
