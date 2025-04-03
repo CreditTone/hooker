@@ -100,6 +100,10 @@ trace_initproc_jscode = readJs("trace_initproc.js")
 
 hook_artmethod_register_jscode = readJs("hook_artmethod_register.js")
 
+find_anit_frida_so_jscode = readJs("find_anit_frida_so.js")
+
+hook_jni_method_trace_jscode = readJs("hook_jni_method_trace.js")
+
 def getPythonLaucher():
     pythonLaucher = os.environ.get("__PYVENV_LAUNCHER__")
     if not pythonLaucher:

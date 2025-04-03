@@ -59,6 +59,8 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [13. trace_iniproc.js](#13-trace_init_procjs)
     * [14. dump_dex.js](#14-dump_dexjs)
     * [15. hook_artmethod_register.js](#15-hook_artmethod_registerjs)
+    * [16. find_anit_frida_so.js](#16-find_anit_frida_sojs)
+    * [17. hook_jni_method_trace.js](#17-hook_jni_method_tracejs)
     
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a---打印activity栈)
@@ -558,6 +560,12 @@ Spawned `com.shxpxx.sg`. Resuming main thread!
 [ArtMethod_RegisterNative] Method_sig: void com.tencent.mmkv.MMKV.checkReSetCryptKey(java.lang.String) module_name: libmmkv.so offset: 0x17478
 ```
 
+### 16. find_anit_frida_so.js
+某些可恶的app会对frida进行反调试，用这个可以对反调试的so进行找出。原理是谁最后一个被加载，谁就是坏淫
+![find_anti_frida_so.png](assets/find_anti_frida_so.png)
+
+### 17. hook_jni_method_trace.js
+Native层调java时追踪一些方法，用于确定so层的调用栈，hook的地方比较多，打印有些凌乱，你需要根据自身需求精简打印和增加更多打印的信息
 
 # hooker调试命令行
 
