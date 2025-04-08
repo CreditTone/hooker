@@ -56,10 +56,10 @@ function trace_initproc() {
             if (module != null && !hasAlreadyHooked) {
                 hasAlreadyHooked = true;
                 console.log(somodule + " base address:", module.base);
-                var targetAddress = module.base.add(0x1360C);
-                startAddr = targetAddress;
-                endAddr = module.base.add(0x13A90);
-                console.log(`init_proc func starts at ${startAddr} ends at ${endAddr}`);
+                var targetAddress = module.base.add(startAddr);
+                var absolutStartAddr = targetAddress;
+                var absolutEndAddr = module.base.add(endAddr);
+                console.log(`init_proc func starts at ${absolutStartAddr} ends at ${absolutEndAddr}`);
                 Interceptor.attach(targetAddress, {
                     onEnter: function(args) {
                         console.log(`init_proc called at ${targetAddress}`);
@@ -69,7 +69,7 @@ function trace_initproc() {
                                 var instruction;
                                 while ((instruction = iterator.next()) !== null) {
                                     var addr = instruction.address;
-                                    if (addr.compare(startAddr) >= 0 && addr.compare(endAddr) <= 0) {
+                                    if (addr.compare(absolutStartAddr) >= 0 && addr.compare(absolutEndAddr) <= 0) {
                                         console.log("[EXEC] 0x" + (addr - module.base).toString(16) + ": " + instruction.toString());
                                     }
                                     iterator.keep();
