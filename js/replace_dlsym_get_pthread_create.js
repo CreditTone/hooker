@@ -11,7 +11,7 @@ var my_pthread_create = new NativeCallback(function (thread_ptr, attr_ptr, start
     console.log("    start_routine:  " + start_routine);
     console.log("    arg_ptr:        " + arg_ptr);
     var find_module = Process.findModuleByAddress(start_routine);
-    console.log("这里调用了pthread_create，此处你可以去so完成硬改| 找BLR X8 NOP掉即可 |--> Module: " + find_module.name + " offset:" + start_routine.sub(find_module.base));
+    console.log("这是pthread_create传入的函数地址，你可以再去hook这个函数看看BLR X8指令的位置，然后NOP掉--> Module: " + find_module.name + " offset:" + start_routine.sub(find_module.base));
     // 你可以选择真的创建一个线程（高级场景），或者只打印/屏蔽掉
     // 此处直接返回成功状态
     return 0;
@@ -39,4 +39,3 @@ Interceptor.attach(Module.getExportByName(null, "dlsym"), {
         }
     }
 });
-
