@@ -204,6 +204,7 @@ def createHookingEnverment(packageName, mainActivity):
         createFile(packageName + "/trace_initproc.js", run_env.trace_initproc_jscode)
         createFile(packageName + "/find_anit_frida_so.js", run_env.find_anit_frida_so_jscode)
         createFile(packageName + "/hook_jni_method_trace.js", run_env.hook_jni_method_trace_jscode)
+        createFile(packageName + "/replace_dlsym_get_pthread_create.js", run_env.replace_dlsym_get_pthread_create_jscode)
 
 def hookJs(target, hookCmdArg, savePath = None):
     online_session = None

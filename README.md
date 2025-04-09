@@ -19,6 +19,8 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 
 #### [hook art_method](#15-hook_artmethod_registerjs)
 
+#### [libmsaoaidsec.so replace_pthread_create](#18-replace_dlsym_get_pthread_createjs)
+
 #### [内部探测类实现由radar做复杂的操作] (https://github.com/CreditTone/radar4hooker)
 
 # 锦囊妙计
@@ -74,6 +76,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [15. hook_artmethod_register.js](#15-hook_artmethod_registerjs)
     * [16. find_anit_frida_so.js](#16-find_anit_frida_sojs)
     * [17. hook_jni_method_trace.js](#17-hook_jni_method_tracejs)
+    * [18. replace_dlsym_get_pthread_create.js](#18-replace_dlsym_get_pthread_createjs)
     
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a---打印activity栈)
@@ -571,6 +574,11 @@ Spawned `com.shxpxx.sg`. Resuming main thread!
 
 ### 17. hook_jni_method_trace.js
 Native层调java时追踪一些方法，用于确定so层的调用栈，hook的地方比较多，打印有些凌乱，你需要根据自身需求精简打印和增加更多打印的信息
+
+### 18. replace_dlsym_get_pthread_create.js
+libmsaoaidsec.so版本有很多，而且在很多app中广泛存在。大致分为2类一个是通过got表导入了pthread_create函数创建了反调试线程，这个你直接去ida so搜索pthread_create函数NOP。第二是用dlsym动态加载libc.so库来获取pthread_create函数指针，这个我们直接用frida hook dlsym函数就可以劫持
+我预计，将来厂商可能会下沉到svc或者通过其他so来启动线程，到那时候我们再说。这边先给了通用实现，专门用来对抗dlsym版本的libmsaoaidsec.so
+![replace_pthread_create.png](assets/replace_pthread_create.png)
 
 # hooker调试命令行
 
