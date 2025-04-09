@@ -33,12 +33,11 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 * Unidbg有时不好用，不要忽略了手机天然的执行环境
 * 
 * MobSF对分析app指纹收集有一定帮助
-* 
+
 
 目录
 =================
 
-* [hooker和frida、objection有什么不同](#hooker和frida-objection有什么不同)
 * [hooker环境部署](#环境部署)
     * [1. git clone项目](#1-git-clone项目)
     * [2. 安装依赖](#2-安装依赖)
@@ -609,7 +608,10 @@ Native层调java时追踪一些方法，用于确定so层的调用栈，hook的�
 ![](assets/j0.png)
 ![](assets/j1.png)
 ![](assets/j2.png)
-此脚本参考[RequestEncryptUtils.js](com.ss.android.ugc.aweme/com.bytedance.frameworks.core.encrypt.RequestEncryptUtils.js "RequestEncryptUtils.js")
+
+生成指定方法的hook脚本
+j java.lang.System:loadLibrary
+![img.png](img.png)
 
 hooker生成脚本和objection生成脚本优势对比
 
