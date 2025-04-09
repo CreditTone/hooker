@@ -609,7 +609,8 @@ Native层调java时追踪一些方法，用于确定so层的调用栈，hook的�
 ![](assets/j1.png)
 ![](assets/j2.png)
 
-生成指定方法的hook脚本
+### j - 生成指定类方法的hook脚本
+生成指定方法的hook脚本，j [类名]:[方法名]
 j java.lang.System:loadLibrary
 ![](assets/j_method.png)
 
