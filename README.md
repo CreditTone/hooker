@@ -10,7 +10,7 @@
 
 hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供统一化的脚本包管理方式、通杀脚本、自动化生成hook脚本、内存漫游探测activity和service、frida版JustTrustMe。
 
-# 快速定位
+# 最近更新
 ##### [自动化生成frida hook脚本](#j---生成指定类的hook脚本)
 
 #### [内存抓包printAndCloneOkhttp3Request(javaObject)](#9-printAndCloneOkhttp3Request)
@@ -20,6 +20,20 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 #### [hook art_method](#15-hook_artmethod_registerjs)
 
 #### [内部探测类实现由radar做复杂的操作] (https://github.com/CreditTone/radar4hooker)
+
+# 锦囊妙计
+* 某音抓包，他把setCTXCustomVerify函数放到了另外一个so，只要spawn hook就可以提取到
+* 
+* 如何验证一个函数与手机/用户环境无关？拿两台手机登录不同的帐号，如果调用结果一致就是环境无关函数
+* 
+*  目前（2025-04-09） libmsaoaidsec.so 采用了动态dlsym加载pthread_create函数，需要hook dlsym打印堆栈找到调用的地方
+* 
+* 可以用lsposed去实现动态加载dex把服务启动起来
+* 
+* Unidbg有时不好用，不要忽略了手机天然的执行环境
+* 
+* MobSF对分析app指纹收集有一定帮助
+* 
 
 目录
 =================
@@ -101,16 +115,8 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [2. 方式一覆盖核心文件到你的hooker](#2-方式一覆盖核心文件到你的hooker)
     * [3. 方式二覆盖你的应用工作目录到最新hooker](#3-方式二覆盖你的应用工作目录到最新hooker)
 
-# hooker和frida、objection有什么不同
-- 职责不同：frida注重打造调试引擎、objection注重将frida的api简单封装一下让你好快速上手frida。而hooker是重新站在一个安卓应用开发和安卓逆向工程师的角度去打造的更加专业Android逆向工作台，重新定义了逆向android的工作方式。
-- 封装不同：frida是基于gumjs（V8）、C/C++封装的调试引擎，用于动态Hook跟踪、拦截和主动调用函数等。hooker是基于frida作为引擎和自己打造的Dex库（radar）调用Android Framework层代码完成的。
-- 交互方式不一样：frida和objection只有attach上才能操作各种指令，而hooker提供shell命令行交互式让你可以通过jadx进行动静结合分析。
-- 更注提供重Android逆向思路和线索：frida和objection没有对任何Android Freamwork层的hook和能主动调用代码点位进行封装，这使得难以有逆向思路。而hooker的几乎所有命令都是围绕Android Freamwork进行封装，让一个即使没有Android开发经验的人也能快速找到逆向分析思路。
-- hook脚本产出方式不一样：frida你需要先进行很多语法方面的学习，才能完成对各种类的各种方法进行frida脚本的编写。hooker不需要你了解frida语法细节，比如你只需通过j okhttp3.OkHttpClient:newCall 就可以生成一个hook okhttp3.OkHttpClient类的newCall方法的脚本, 即使对于任何一个被混淆的类操作也是如此。（你应该把更多的时间和精力放在逆向思路上，而不是熟悉某些语法上。）
-- 提供操作原生AndroidUI功能：你可以./attach每个app目录下的android_ui.js脚本，它提供了通过ViewId、ViewText找到Android原生的View并点击，或者你想强制打开某个Activity（比如某个界面只有会员才能进入，这时候你就可以采用Android"原生代码"打开的方式）。
 
 # 环境部署
-前言：hooker仅支持在Linux和MacOS下运行，并且现在和将来都不会支持windows操作系统！windows做开发是没有灵魂的！
 
 ### 1. git clone项目
 ```shell
