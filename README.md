@@ -611,7 +611,7 @@ Native层调java时追踪一些方法，用于确定so层的调用栈，hook的�
 
 生成指定方法的hook脚本
 j java.lang.System:loadLibrary
-![img.png](img.png)
+![](assets/j_method.png)
 
 hooker生成脚本和objection生成脚本优势对比
 
