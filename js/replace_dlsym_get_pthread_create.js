@@ -1,4 +1,4 @@
-console.log("欢迎使用hooker出品的原创通用libmsoaidsec.so辅助脚本，此脚本只适用于通过dlsym来获取pthread_create函数的libmsaoaidsec.so样本");
+console.log("此脚本只适用于通过dlsym来获取pthread_create函数的libmsaoaidsec.so样本");
 var pthread_create_ptr = Module.getExportByName(null, "pthread_create");
 
 // 备份原始函数
