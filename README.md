@@ -425,7 +425,7 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 实践文章：https://bbs.pediy.com/thread-267245.htm
 
 ### 10. hook_RN.js
-对于动态注册的native函数，我们需要用hook_RN.js来分析。强烈建议hook_RN.js用spawn模式启动，启动命令为 ./spawn hook_RN.js
+对于动态注册的native函数，我们需要用hook_register_natives.js来分析。建议用spawn模式启动，启动命令为 ./spawn hook_register_natives.js
 当hook_RN.js无法找到native函数时，试试[15. hook_artmethod_register.js](#15-hook_artmethod_registerjs)
 ![](assets/hook_RN.gif)
 
