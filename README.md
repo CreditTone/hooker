@@ -76,6 +76,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [16. find_anit_frida_so.js](#16-find_anit_frida_sojs)
     * [17. hook_jni_method_trace.js](#17-hook_jni_method_tracejs)
     * [18. replace_dlsym_get_pthread_create.js](#18-replace_dlsym_get_pthread_createjs)
+    * [19. find_boringssl_custom_verify_func.js](#19-find_boringssl_custom_verify_funcjs)
     
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a---打印activity栈)
@@ -584,9 +585,9 @@ libmsaoaidsec.so版本有很多，而且在很多app中广泛存在。大致分�
 专门用于查找boringssl的验证函数，boringssl现在学聪明了，验证函数没有了之前的字符串特征。我们需要hook SSL_CTX_set_custom_verify把验证函数找出来，随后进行hook强制返回0
 执行./spawn find_boringssl_custom_verify_func.js之前记得清除某音app所有的数据缓存，因为某些函数只会注册一次。
 ![find_boringssl_custom_verify.png](assets/find_boringssl_custom_verify.png)
-
+找到几个验证函数后，我们再实现hook验证函数强制返回0，如下
 ![hook_verify.png](assets/hook_verify.png)
-
+抓包效果
 ![mouyin_capture_33.9.0.png](assets/mouyin_capture_33.9.0.png)
 
 # hooker调试命令行
