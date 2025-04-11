@@ -21,20 +21,19 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 
 #### [libmsaoaidsec.so replace_pthread_create](#18-replace_dlsym_get_pthread_createjs)
 
+#### [find_boringssl_custom_verify_func](#19-find_boringssl_custom_verify_funcjs)
+
 #### [内部探测类实现由radar做复杂的操作] (https://github.com/CreditTone/radar4hooker)
 
 # 锦囊妙计
 * 某音抓包，他把setCTXCustomVerify函数放到了另外一个so，只要spawn hook就可以提取到
-* 
 * 如何验证一个函数与手机/用户环境无关？拿两台手机登录不同的帐号，如果调用结果一致就是环境无关函数
-* 
 *  目前（2025-04-09） libmsaoaidsec.so 采用了动态dlsym加载pthread_create函数，需要hook dlsym打印堆栈找到调用的地方
-* 
 * 可以用lsposed去实现动态加载dex把服务启动起来
-* 
 * Unidbg有时不好用，不要忽略了手机天然的执行环境
-* 
 * MobSF对分析app指纹收集有一定帮助
+* 让QUIC降级最粗暴的方法就是用iptables禁掉所有的UDP请求（除53端口）
+
 
 
 目录
@@ -579,6 +578,16 @@ Native层调java时追踪一些方法，用于确定so层的调用栈，hook的�
 libmsaoaidsec.so版本有很多，而且在很多app中广泛存在。大致分为2类一个是通过got表导入了pthread_create函数创建了反调试线程，这个你直接去ida so搜索pthread_create函数NOP。第二是用dlsym动态加载libc.so库来获取pthread_create函数指针，这个我们直接用frida hook dlsym函数就可以劫持
 我预计，将来厂商可能会下沉到svc或者通过其他so来启动线程，到那时候我们再说。这边先给了通用实现，专门用来对抗dlsym版本的libmsaoaidsec.so
 ![replace_pthread_create.png](assets/replace_pthread_create.png)
+
+
+### 19. find_boringssl_custom_verify_func.js
+专门用于查找boringssl的验证函数，boringssl现在学聪明了，验证函数没有了之前的字符串特征。我们需要hook SSL_CTX_set_custom_verify把验证函数找出来，随后进行hook强制返回0
+执行./spawn find_boringssl_custom_verify_func.js之前记得清除某音app所有的数据缓存，因为某些函数只会注册一次。
+![find_boringssl_custom_verify.png](assets/find_boringssl_custom_verify.png)
+
+![hook_verify.png](assets/hook_verify.png)
+
+![mouyin_capture_33.9.0.png](assets/mouyin_capture_33.9.0.png)
 
 # hooker调试命令行
 
