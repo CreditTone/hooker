@@ -569,7 +569,7 @@ Spawned `com.shxpxx.sg`. Resuming main thread!
 ```
 
 ### 16. find_anit_frida_so.js
-某些可恶的app会对frida进行反调试，用这个可以对反调试的so进行找出。原理是谁最后一个被加载，谁就是坏淫
+某些可恶的app会对frida进行反调试，用这个可以对反调试的so进行找出。原理是谁最后一个被加载，然后app出现了崩溃，谁就是坏人
 ![find_anti_frida_so.png](assets/find_anti_frida_so.png)
 
 ### 17. hook_jni_method_trace.js
@@ -582,8 +582,9 @@ libmsaoaidsec.so版本有很多，而且在很多app中广泛存在。大致分�
 
 
 ### 19. find_boringssl_custom_verify_func.js
-专门用于查找boringssl的验证函数，boringssl现在学聪明了，验证函数没有了之前的字符串特征。我们需要hook SSL_CTX_set_custom_verify把验证函数找出来，随后进行hook强制返回0
-执行./spawn find_boringssl_custom_verify_func.js之前记得清除某音app所有的数据缓存，因为某些函数只会注册一次。
+专门用于查找boringssl的验证函数，boringssl现在学聪明了，验证函数没有了之前的字符串特征。我们需要hook SSL_CTX_set_custom_verify把验证函数找出来，随后进行hook强制返回0。
+
+执行./spawn find_boringssl_custom_verify_func.js 之前记得清除某音app所有的数据缓存，因为某些函数只会注册一次。
 ![find_boringssl_custom_verify.png](assets/find_boringssl_custom_verify.png)
 
 找到几个验证函数后，我们再实现hook验证函数强制返回0，如下
