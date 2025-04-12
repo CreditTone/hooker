@@ -187,6 +187,7 @@ def createHookingEnverment(packageName, mainActivity):
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
         os.popen('chmod 777 ' + packageName +'/spawn').readlines()
         os.popen('cp *.so ' + packageName +'/xinit/').readlines()
+        createFile(packageName + "/empty.js", "")
         createFile(packageName + "/ssl_log.js", run_env.ssl_log_jscode)
         createFile(packageName + "/url.js", run_env.url_jscode)
         createFile(packageName + "/edit_text.js", run_env.edit_text_jscode)
