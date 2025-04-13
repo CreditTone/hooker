@@ -17,13 +17,13 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 
 #### [trace init_proc函数](#13-trace_init_procjs)
 
-#### [hook art_method](#15-hook_artmethod_registerjs)
+#### [更底层的方式hookNative函数注册](#15-hook_artmethod_registerjs)
 
-#### [libmsaoaidsec.so replace_pthread_create](#18-replace_dlsym_get_pthread_createjs)
+#### [对抗dlsym版本的libmsaoaidsec.so](#18-replace_dlsym_get_pthread_createjs)
 
-#### [find_boringssl_custom_verify_func](#19-find_boringssl_custom_verify_funcjs)
+#### [查找boringssl验证函数](#19-find_boringssl_custom_verify_funcjs)  [某短视频33.x.0过boringssl检测抓包方案](https://www.52pojie.cn/thread-2023645-1-1.html)
 
-#### [内部探测类实现由radar做复杂的操作] (https://github.com/CreditTone/radar4hooker)
+#### [radar.dex项目](https://github.com/CreditTone/radar4hooker)
 
 # 锦囊妙计
 * 某音抓包，他把setCTXCustomVerify函数放到了另外一个so，只要spawn hook就可以提取到
