@@ -31,7 +31,7 @@ function hook_dlopen(){
     })
 }
 
-const targetLibrary = 'libttboringssl.so';
+const targetLibrary = somodule;
 const targetFunction = 'SSL_CTX_set_custom_verify';
 const functionOffset = 0x47FB0; // 函数偏移量
 
