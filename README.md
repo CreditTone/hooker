@@ -21,6 +21,8 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 
 #### [更底层的方式hookNative函数注册](#15-hook_artmethod_registerjs)
 
+#### [frida反调试so查找](#16-find_anit_frida_sojs)
+
 #### [对抗dlsym版本的libmsaoaidsec.so](#18-replace_dlsym_get_pthread_createjs)
 
 #### [查找boringssl验证函数](#19-find_boringssl_custom_verify_funcjs)  [某短视频33.x.0过boringssl检测抓包方案](https://www.52pojie.cn/thread-2023645-1-1.html)
