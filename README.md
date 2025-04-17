@@ -30,7 +30,6 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 #### [radar.dex项目](https://github.com/CreditTone/radar4hooker)
 
 # 锦囊妙计
-* 某音抓包，他把setCTXCustomVerify函数放到了另外一个so，只要spawn hook就可以提取到
 * 如何验证一个函数与手机/用户环境无关？拿两台手机登录不同的帐号，如果调用结果一致就是环境无关函数
 *  目前（2025-04-09） libmsaoaidsec.so 采用了动态dlsym加载pthread_create函数，需要hook dlsym打印堆栈找到调用的地方
 * 可以用lsposed去实现动态加载dex把服务启动起来
