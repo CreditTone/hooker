@@ -92,6 +92,8 @@ just_trust_me_jscode = readJs("just_trust_me.js")
 
 just_trust_me_okhttp_hook_finder_jscode = readJs("just_trust_me_okhttp_hook_finder.js")
 
+just_trust_me_for_ios_jscode = readJs("just_trust_me_for_ios.js")
+
 hook_RN_jscode = readJs("hook_RN.js")
 
 dump_dex_jscode = readJs("dump_dex.js")
