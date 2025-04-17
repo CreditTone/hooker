@@ -11,7 +11,9 @@
 hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供统一化的脚本包管理方式、通杀脚本、自动化生成hook脚本、内存漫游探测activity和service、frida版JustTrustMe。
 
 # 最近更新
-##### [自动化生成frida hook脚本](#j---生成指定类的hook脚本)
+#### [just_trust_me.js boringssl unpinning](#11-just_trust_mejs)
+
+#### [自动化生成frida hook脚本](#j---生成指定类的hook脚本)
 
 #### [内存抓包printAndCloneOkhttp3Request(javaObject)](#9-printAndCloneOkhttp3Request)
 
@@ -178,11 +180,10 @@ stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示
 ```shell
 stephen@ubuntu:~/hooker$ adb shell #进入手机命令行界面
 sailfish:/ $ su #进入root权限命令行模式
-sailfish:/ $ sh /sdcard/mobile-deploy/deploy.sh 6666  #deploy.sh启动失败的同样可以尝试deploy2.sh                                                   
+sailfish:/ $ cd /sdcard/mobile-deploy/
+sailfish:/ $ sh deploy2.sh                                             
 disable android firewall.
-set firda_server_bind_port to 6666
 start frida-server
-start network adb.
 deploy successfull.
 stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示已经正常部署。
 ```
@@ -430,7 +431,7 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 ![](assets/hook_RN.gif)
 
 ### 11. just_trust_me.js
-frida版本的just_trust_me。如果你需要bypass sslpinning请执行./spawn just_trust_me.js
+frida版本的just_trust_me，支持boringssl unpinning。执行./spawn just_trust_me.js
 
 下面以Twitter为例，启动just_trust_me.js
 启动演示
