@@ -11,7 +11,7 @@
 hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供统一化的脚本包管理方式、通杀脚本、自动化生成hook脚本、内存漫游探测activity和service、frida版JustTrustMe。
 
 # 最近更新
-#### [just_trust_me.js boringssl unpinning](#11-just_trust_mejs)
+#### [frida版just_trust_me 最新支持boringssl unpinning](#11-just_trust_mejs)
 
 #### [自动化生成frida hook脚本](#j---生成指定类的hook脚本)
 
