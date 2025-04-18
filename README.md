@@ -155,28 +155,10 @@ List of devices attached
 FA77C0301476	device
 ```
 
-
-### 4. 手机开发环境部署
+### 4. frida-server部署
 如果你的手机已经启动了frida-server，可以忽略这步。
 
 注意:部分手机出现部署之后adb连不上的问题，那请使用deploy2.sh。
-
-```shell
-#以piexl2为例
-stephen@ubuntu:~/hooker$ adb push mobile-deploy/ /sdcard/
-stephen@ubuntu:~/hooker$ adb shell #进入手机命令行界面
-sailfish:/ $ su #进入root权限命令行模式
-sailfish:/ $ sh /sdcard/mobile-deploy/deploy.sh                                                            
-disable android firewall.
-start frida-server
-start network adb.
-deploy successfull.
-stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示已经正常部署。
-```
-![部署演示](assets/hooker-deploy.gif)
-***
-
-### 5. 指定fridaserver端口的手机开发环境部署
 
 ```shell
 stephen@ubuntu:~/hooker$ adb shell #进入手机命令行界面
@@ -186,19 +168,20 @@ sailfish:/ $ sh deploy2.sh
 disable android firewall.
 start frida-server
 deploy successfull.
-stephen@ubuntu:~/hooker$ #如果你看到你的adb命令被弹出来了，表示已经正常部署。
+sailfish:/ $ exit
+stephen@ubuntu:~/hooker$ 
 ```
+![部署演示](assets/hooker-deploy.gif)
 ***
 
 注意：自定义frida server端口的开发环境必须走host:post的方式调试，因为usb默认找27042端口。所以请务必[更改本地.hooker_driver文件](#远程frida支持)，否则hooker无法正常工作。
 
-### 6. 部署之后手机的增强功能
-- 1.关闭iptables防火墙，解决部分手机默认防火墙开启的问题
-- 2.启动frida-server，如果你的手机是arm64他将优先启动arm64位的frida-server
-- 3.在/data/mobile-deploy目录生成tools_env.rc 当你有内网穿透和网络服务转发、编辑文件、检测网络方面的需求时可以执行source /data/mobile-deploy/tools_env.rc，它将临时生成vi、telnet、frpc、tcpforward、ll命令以便你进行更便捷的开发，如图
+### 5. 部署之后手机的增强功能
+- 1.启动frida-server，如果你的手机是arm64他将优先启动arm64位的frida-server
+- 2.在/data/mobile-deploy目录生成tools_env.rc 当你有内网穿透和网络服务转发、编辑文件、检测网络方面的需求时可以执行source /data/mobile-deploy/tools_env.rc，它将临时生成vi、telnet、frpc、tcpforward、ll命令以便你进行更便捷的开发，如图
 ![部署演示](assets/tools_env.gif)
 ***
-- 4.启动网络adb，即你可以直接通过远程adb调试手机。例如:adb connect 192.168.0.105
+- 3.启动网络adb，即你可以直接通过远程adb调试手机。例如:adb connect 192.168.0.105
 ![部署演示](assets/remote_adb.gif)
 ***
 
