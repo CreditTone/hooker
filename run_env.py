@@ -110,6 +110,8 @@ replace_dlsym_get_pthread_create_jscode = readJs("replace_dlsym_get_pthread_crea
 
 find_boringssl_custom_verify_func_jscode = readJs("find_boringssl_custom_verify_func.js")
 
+get_device_info_jscode = readJs("get_device_info.js")
+
 def getPythonLaucher():
     pythonLaucher = os.environ.get("__PYVENV_LAUNCHER__")
     if not pythonLaucher:

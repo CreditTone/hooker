@@ -27,7 +27,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 
 #### [查找boringssl验证函数](#19-find_boringssl_custom_verify_funcjs)
 
-#### [radar.dex项目](https://github.com/CreditTone/radar4hooker)
+#### [获取设备指纹信息](#20-get_device_infojs)
 
 # 锦囊妙计
 * 如何验证一个函数与手机/用户环境无关？拿两台手机登录不同的帐号，如果调用结果一致就是环境无关函数
@@ -80,6 +80,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [17. hook_jni_method_trace.js](#17-hook_jni_method_tracejs)
     * [18. replace_dlsym_get_pthread_create.js](#18-replace_dlsym_get_pthread_createjs)
     * [19. find_boringssl_custom_verify_func.js](#19-find_boringssl_custom_verify_funcjs)
+    * [20. get_device_info.js](#20-get_device_infojs)
     
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a---打印activity栈)
@@ -578,6 +579,21 @@ libmsaoaidsec.so版本有很多，而且在很多app中广泛存在。大致分�
 
 抓包效果
 ![mouyin_capture_33.9.0.png](assets/mouyin_capture_33.9.0.png)
+
+### 20. get_device_info.js
+获取设备指纹信息，包括Android ID、IMEI、FINGERPRINT、已安装app、传感器、基带版本等等几十个设备指纹。用于当你想快速了解当前设备的指纹信息时使用
+打开任意一个app，附加调试后进入到attch命令行模式
+./attach get_device_info.js
+![get_device_info_attach.png](assets/get_device_info_attach.png)
+这里有4个方法供你使用，输入任意一个方法即可获取相应信息
+#### getBasicInfo()，获取基本设备信息 包括品牌、厂商、型号、主板、硬件、系统版本、内存信息、存储信息、电池信息、Android ID、IMEI、FINGERPRINT等
+#### getInstalledPackages()，获取每个已安装apk的应用名称、包名、是否系统应用 
+#### getSensos()，获取每个传感器的名称、厂商、功耗、精度、最小延迟等
+#### getSystemInfo()，获取是否已root、开机时长、Java运行时信息、内核信息、DRM信息
+![get_device_info_functions.png](assets/get_device_info_functions.png)
+
+
+
 
 # hooker调试命令行
 

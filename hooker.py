@@ -203,6 +203,7 @@ def createHookingEnverment(packageName, mainActivity):
         createFile(packageName + "/just_trust_me_okhttp_hook_finder_for_android.js", run_env.just_trust_me_okhttp_hook_finder_jscode.replace("com.smile.gifmaker", packageName))
         createFile(packageName + "/just_trust_me_for_ios.js", run_env.just_trust_me_for_ios_jscode.replace("com.smile.gifmaker", packageName))
         createFile(packageName + "/hook_artmethod_register.js", run_env.hook_artmethod_register_jscode.replace("com.smile.gifmaker", packageName))
+        createFile(packageName + "/get_device_info.js", run_env.get_device_info_jscode.replace("com.smile.gifmaker", packageName))
         createFile(packageName + "/trace_initproc.js", run_env.trace_initproc_jscode)
         createFile(packageName + "/find_anit_frida_so.js", run_env.find_anit_frida_so_jscode)
         createFile(packageName + "/hook_jni_method_trace.js", run_env.hook_jni_method_trace_jscode)
