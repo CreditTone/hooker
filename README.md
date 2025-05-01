@@ -427,6 +427,8 @@ frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
 ### 11. just_trust_me.js
 frida版本的just_trust_me，支持boringssl unpinning。执行./spawn just_trust_me.js
 
+windowsn用户配置just_trust_me.js执行环境看[windows临时使用hooker js脚本方案](#6-windows临时使用hooker-js脚本方案)
+
 下面以Twitter为例，启动just_trust_me.js
 启动演示
 ![](assets/strat_just_trust_me.gif)
