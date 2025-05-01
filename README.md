@@ -191,7 +191,7 @@ stephen@ubuntu:~/hooker$
 ### 6. windows临时使用hooker js脚本方案
 - 手动把radar.dex文件拷贝到/data/user/0/{package}/目录下，adb push radar.dex /data/user/0/{package}/
 - adb进入到手机终端chmod 777 /data/user/0/{package}/radar.dex
-- 如脚本中有package_name变量则要改成要调试的app的包名，比如我要调试的包名是com.xx.xxxxx.xxx.axxme，我要使用的脚本是just_trust_me.js，则 var package_name = "com.xx.xxxxx.xxx.axxme";
+- 如脚本中有package_name变量则要改成要调试app包名，比如我要调试的包名是com.xx.xxxxx.xxx.axxme，我要使用的脚本是just_trust_me.js，则 var package_name = "com.xx.xxxxx.xxx.axxme";
 - 使用：frida -U -f com.xx.xxxxx.xxx.axxme -l just_trust_me.js
 ***
 
