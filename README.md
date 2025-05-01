@@ -11,6 +11,8 @@
 hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供统一化的脚本包管理方式、通杀脚本、自动化生成hook脚本、内存漫游探测activity和service、frida版JustTrustMe。
 
 # 最近更新
+#### [windows使用临时使用hooker js脚本方案](#6-windows使用临时使用hooker-js脚本方案)
+
 #### [frida版just_trust_me 最新支持boringssl unpinning](#11-just_trust_mejs)
 
 #### [自动化生成frida hook脚本](#j---生成指定类的hook脚本)
@@ -46,9 +48,9 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [1. git clone项目](#1-git-clone项目)
     * [2. 安装依赖](#2-安装依赖)
     * [3. 手机连接adb](#3-手机连接adb)
-    * [4. 手机开发环境部署](#4-手机开发环境部署)
-    * [5. 指定fridaserver端口的手机开发环境部署](#5-指定fridaserver端口的手机开发环境部署)
-    * [6. 部署之后手机的增强功能](#6-部署之后手机的增强功能)
+    * [4. frida-server部署](#4-frida-server部署)
+    * [5. 部署之后手机的增强功能](#5-部署之后手机的增强功能)
+    * [6. windows使用临时使用hooker js脚本方案](#6-windows使用临时使用hooker-js脚本方案)
 * [快速开始](#快速开始)
     * [1. 查看可调试进程](#1-查看可调试进程)
     * [2. attach一个应用](#2-attach一个应用)
@@ -184,6 +186,13 @@ stephen@ubuntu:~/hooker$
 ***
 - 3.启动网络adb，即你可以直接通过远程adb调试手机。例如:adb connect 192.168.0.105
 ![部署演示](assets/remote_adb.gif)
+***
+
+### 6. windows使用临时使用hooker js脚本方案
+- 手动把radar.dex文件拷贝到/data/user/0/{package}/目录下
+- chmod 777 /data/user/0/{package}/radar.dex
+- 如脚本中有package_name变量则要改成要调试的app的包名，比如我要调试的包名是com.xx.xxxxx.xxx.axxme，我要使用的脚本是just_trust_me.js，则 var package_name = "com.xx.xxxxx.xxx.axxme";
+- 使用：frida -U -f com.xx.xxxxx.xxx.axxme -l just_trust_me.js
 ***
 
 
