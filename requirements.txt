@@ -25,5 +25,5 @@ tabulate==0.8.9
 terminaltables==3.1.0
 urllib3==1.26.5
 wcwidth==0.2.5
-Werkzeug==1.0.1
+Werkzeug==3.0.6
 adbutils==1.2.11
