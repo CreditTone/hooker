@@ -14,6 +14,8 @@ import base64
 import time
 import colorful
 import platform
+import threading
+import adbutils
 from run_env import xinitPyScript
 
 
@@ -159,10 +161,27 @@ def onlyCheckHookingEnverment(target):
         print(traceback.format_exc())  
     finally:
         detach(online_session)
+        
 
+def copyApk2Local(device, apkPath, localPath):
+    device.sync.pull(apkPath, localPath)
+    print(f"Working directory create successful")
+        
+    
+    
 def createHookingEnverment(packageName, mainActivity):
     if not os.path.exists(packageName):
         os.makedirs(packageName)
+        print(f"Creating working directory: {packageName}")
+        device = adbutils.adb.device()
+        apkPathRaw = device.shell(f"pm path {packageName}")
+        match = re.search(r'package:(.*\.apk)', apkPathRaw)
+        apkPath = None
+        if match:
+            apkPath = match.group(1).strip()
+            thread = threading.Thread(target=copyApk2Local, args=(device, apkPath, f"./{packageName}/base.apk",))
+            thread.start()
+        print(f"Generating frida shortcut command...")
         os.makedirs(packageName+"/xinit")
         shellPrefix = "#!/bin/bash\nHOOKER_DRIVER=$(cat ../.hooker_driver)\n"
         logHooking = shellPrefix + "echo \"hooking $1\" > log\ndate | tee -ai log\n" + "frida $HOOKER_DRIVER -l $1 " + packageName + " | tee -ai log"
@@ -187,6 +206,7 @@ def createHookingEnverment(packageName, mainActivity):
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
         os.popen('chmod 777 ' + packageName +'/spawn').readlines()
         os.popen('cp *.so ' + packageName +'/xinit/').readlines()
+        print(f"Generating built-in frida script...")
         createFile(packageName + "/empty.js", "")
         createFile(packageName + "/ssl_log.js", run_env.ssl_log_jscode)
         createFile(packageName + "/url.js", run_env.url_jscode)
@@ -209,6 +229,10 @@ def createHookingEnverment(packageName, mainActivity):
         createFile(packageName + "/hook_jni_method_trace.js", run_env.hook_jni_method_trace_jscode)
         createFile(packageName + "/replace_dlsym_get_pthread_create.js", run_env.replace_dlsym_get_pthread_create_jscode)
         createFile(packageName + "/find_boringssl_custom_verify_func.js", run_env.find_boringssl_custom_verify_func_jscode)
+        if apkPath:
+            print(f"Copying APK {apkPath} to working directory please waiting for a few seconds")
+        else:
+            print(f"Working directory create successful")
 
 def hookJs(target, hookCmdArg, savePath = None):
     online_session = None
