@@ -31,6 +31,8 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 
 #### [获取设备指纹信息](#20-get_device_infojs)
 
+#### [apk_shell_scanner查壳脚本](#21-apk_shell_scannerjs)
+
 # 锦囊妙计
 * 如何验证一个函数与手机/用户环境无关？拿两台手机登录不同的帐号，如果调用结果一致就是环境无关函数
 *  目前（2025-04-09） libmsaoaidsec.so 采用了动态dlsym加载pthread_create函数，需要hook dlsym打印堆栈找到调用的地方
@@ -83,7 +85,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [18. replace_dlsym_get_pthread_create.js](#18-replace_dlsym_get_pthread_createjs)
     * [19. find_boringssl_custom_verify_func.js](#19-find_boringssl_custom_verify_funcjs)
     * [20. get_device_info.js](#20-get_device_infojs)
-    
+    * [21. apk_shell_scanner.js](#21-apk_shell_scannerjs)
 * [hooker调试命令行](#hooker调试命令行)
     * [a-打印Activity栈](#a---打印activity栈)
     * [b-打印Service栈](#b---打印Service栈)
@@ -604,7 +606,14 @@ libmsaoaidsec.so版本有很多，而且在很多app中广泛存在。大致分�
 ![get_device_info_functions.png](assets/get_device_info_functions.png)
 
 
+### 21. apk_shell_scanner.js
+查壳脚本，动态识别加载的共享库（.so）或特征文件。支持多种主流壳类型，包括：娜迦、爱加密、爱加密企业版、梆梆免费版、梆梆企业版、360加固保、通付盾、网秦、百度加固、阿里聚安全、腾讯加固、腾讯御安全、网易易盾、APKProtect、几维安全、顶像科技、盛大加固、瑞星加固。
 
+./attach apk_shell_scanner.js
+
+如检测到壳将输出: This app is protected by {爱加密}.
+
+如未检测到壳将输出：This app is not protected or uses an unknown protection scheme.
 
 # hooker调试命令行
 

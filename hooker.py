@@ -229,6 +229,7 @@ def createHookingEnverment(packageName, mainActivity):
         createFile(packageName + "/hook_jni_method_trace.js", run_env.hook_jni_method_trace_jscode)
         createFile(packageName + "/replace_dlsym_get_pthread_create.js", run_env.replace_dlsym_get_pthread_create_jscode)
         createFile(packageName + "/find_boringssl_custom_verify_func.js", run_env.find_boringssl_custom_verify_func_jscode)
+        createFile(packageName + "/apk_shell_scanner.js", run_env.apk_shell_scanner_jscode)
         if apkPath:
             print(f"Copying APK {apkPath} to working directory please waiting for a few seconds")
         else:

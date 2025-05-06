@@ -112,6 +112,8 @@ find_boringssl_custom_verify_func_jscode = readJs("find_boringssl_custom_verify_
 
 get_device_info_jscode = readJs("get_device_info.js")
 
+apk_shell_scanner_jscode = readJs("apk_shell_scanner.js")
+
 def getPythonLaucher():
     pythonLaucher = os.environ.get("__PYVENV_LAUNCHER__")
     if not pythonLaucher:
