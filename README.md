@@ -33,6 +33,8 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 
 #### [apk_shell_scanner查壳脚本](#21-apk_shell_scannerjs)
 
+#### [用iptables + redsocks为指定app配置代理](#7-%E7%94%A8-iptables--redsocks-%E4%B8%BA%E6%8C%87%E5%AE%9Aapp%E9%85%8D%E7%BD%AE%E4%BB%A3%E7%90%86)
+
 # 锦囊妙计
 * 如何验证一个函数与手机/用户环境无关？拿两台手机登录不同的帐号，如果调用结果一致就是环境无关函数
 *  目前（2025-04-09） libmsaoaidsec.so 采用了动态dlsym加载pthread_create函数，需要hook dlsym打印堆栈找到调用的地方
@@ -40,7 +42,6 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 * Unidbg有时不好用，不要忽略了手机天然的执行环境
 * MobSF对分析app指纹收集有一定帮助
 * 让QUIC降级最粗暴的方法就是用iptables禁掉所有的UDP请求（除53端口）
-
 
 
 目录
@@ -53,7 +54,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [4. frida-server部署](#4-frida-server部署)
     * [5. 部署之后手机的增强功能](#5-部署之后手机的增强功能)
     * [6. windows临时使用hooker js脚本方案](#6-windows临时使用hooker-js脚本方案)
-    * [7. 用iptables + redsocks为指定app配置代理](#7-用-iptables-redsocks-为指定app配置代理)
+    * [7. 用iptables + redsocks为指定app配置代理](#7-%E7%94%A8-iptables--redsocks-%E4%B8%BA%E6%8C%87%E5%AE%9Aapp%E9%85%8D%E7%BD%AE%E4%BB%A3%E7%90%86)
 * [快速开始](#快速开始)
     * [1. 查看可调试进程](#1-查看可调试进程)
     * [2. attach一个应用](#2-attach一个应用)
@@ -167,6 +168,7 @@ FA77C0301476	device
 注意:部分手机出现部署之后adb连不上的问题，那请使用deploy2.sh。
 
 ```shell
+stephen@ubuntu:~/hooker$ adb push mobile-deploy /sdcard/ #将mobile-deploy整个文件夹推送到手机/sdcard/
 stephen@ubuntu:~/hooker$ adb shell #进入手机命令行界面
 sailfish:/ $ su #进入root权限命令行模式
 sailfish:/ $ cd /sdcard/mobile-deploy/
@@ -206,7 +208,7 @@ stephen@ubuntu:~/hooker$
 - ./redsocks -c redsocks.conf 启动redsocks
 - dumpsys package 包名 | grep userId= 获取app的uid，比如我的uid是10196
 - iptables -t nat -A OUTPUT -p tcp -m owner --uid-owner 10196 -j REDIRECT --to-ports 12345 将出口为443端口的请求重定向到本地的12345也就是redsocks
-这样你的app就看不到你设置代理，也看不到你开启VPN
+- 完成
 
 # 快速开始
 
