@@ -53,6 +53,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [4. frida-server部署](#4-frida-server部署)
     * [5. 部署之后手机的增强功能](#5-部署之后手机的增强功能)
     * [6. windows临时使用hooker js脚本方案](#6-windows临时使用hooker-js脚本方案)
+    * [7. 用iptables + redsocks为指定app配置代理](#7-用-iptables-redsocks-为指定app配置代理)
 * [快速开始](#快速开始)
     * [1. 查看可调试进程](#1-查看可调试进程)
     * [2. attach一个应用](#2-attach一个应用)
@@ -197,6 +198,15 @@ stephen@ubuntu:~/hooker$
 - 使用：frida -U -f com.xx.xxxxx.xxx.axxme -l just_trust_me.js
 ***
 
+### 7. 用 iptables + redsocks 为指定app配置代理
+如果app有检测系统代理、VPN，但是你手上又没有设备来做虚拟WIFI抓包。那么iptables + redsocks 为指定app配置代理这个方案是个不错的选择。
+- 将mobile-deploy目录中busybox-armv7m、redsocks、redsocks.conf文件拷贝到/data/local/tmp/目录下
+- cd /data/local/tmp/ && chmod +x busybox-armv7m && chmod +x redsocks
+- ./busybox-armv7m vi redsocks.conf ，将ip、port改成你的抓包代理，type 默认为socks5 如果你的代理是http就改成http
+- ./redsocks -c redsocks.conf 启动redsocks
+- dumpsys package 包名 | grep userId= 获取app的uid，比如我的uid是10196
+- iptables -t nat -A OUTPUT -p tcp -m owner --uid-owner 10196 -j REDIRECT --to-ports 12345 将出口为443端口的请求重定向到本地的12345也就是redsocks
+这样你的app就看不到你设置代理，也看不到你开启VPN
 
 # 快速开始
 
@@ -690,7 +700,7 @@ hooker高级应用
 在hooker根目录中有一个radar.dex，这是为操作java类的增强库。
 
 ## 脚本的内置函数
-脚本是frida的核心，一个脚本不能只做打印堆栈信息的事情。我们还要进一步深挖脚本的潜在价值。比如我们改变被hook对象的内部成员变量的值、直接调用对象的方法、patch我们的dex。所以在hooker生成的每个脚本当中，我还内置了你可能需要用到的方法用于定制脚本。下面我就开始介绍这些方法的作用吧。
+脚本是frida的核心，一个脚本不能只做打印堆栈信息的事情。我们还要进一步深挖脚本的潜在价值。比如我们改变被hook对象的内部成员变量的值、直接调用对象的方法、patch我们的dex。所以在hooker生成的每个脚本当中，我还内置了你可能需要用到的方法用于定制脚本。下面我就开始介绍这些方法的作用。
 
 ### 1. loadDexfile(dexfile)
 加载一个dex文件到app进程中。dexfile是dex在手机上绝对路径，调用此方法必须保证dex文件用户和组权限对app进程的可见性。
@@ -793,7 +803,7 @@ topActivityStartActivity先获取栈顶的Activity实例，然后调用实例的
 滑动屏幕。x,y传数字表示按下坐标，upStepLength的绝对值是步长表示滑动的长度。当upStepLength为正数的时候表示要向上滑动，当upStepLength为负数的时候表示向下滑动。
 
 ### 10. viewTree()
-获取json格式的view树
+获取json格式的view树。hooker的viewTree会探测View绑定的OnClickListener，这点是UIAutomatorView没有的
 
 ![](assets/android_ui_view_tree2.gif)
 ![](assets/android_ui_view_tree.png)
