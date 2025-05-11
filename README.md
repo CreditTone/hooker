@@ -413,9 +413,6 @@ MacBook-Pro-32G-2T:com.ss.xxxxxx.xxx.xxxme stephen256$ python3 pull_so.py libttb
 拉取成功
 ```
 
-![](assets/kill.gif)
-
-
 ### 7. disable_sslpinning
 快速关闭ssl pinning，此命令基于objection源码实现和[frida版just_trust_me](#11-just_trust_mejs)互补。当just_trust_me失效的时候，可以使用disable_sslpinning。反之，使用[just_trust_me](#11-just_trust_mejs)。
 
