@@ -65,7 +65,7 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
     * [3. spawn](#3-spawn)
     * [4. objection](#4-objection)
     * [5. xinitdeploy](#5-xinitdeploy)
-    * [6. kill](#6-kill)
+    * [6. pull_so.py](#6-pull_sopy)
     * [7. disable_sslpinning](#7-disable_sslpinning)
 * [应用工作目录的通杀脚本](#应用工作目录的通杀脚本)
     * [1. url.js](#1-urljs)
@@ -208,7 +208,8 @@ stephen@ubuntu:~/hooker$
 - ./redsocks -c redsocks.conf 启动redsocks
 - dumpsys package 包名 | grep userId= 获取app的uid，比如我的uid是10196
 - iptables -t nat -A OUTPUT -p tcp -m owner --uid-owner 10196 -j REDIRECT --to-ports 12345 将出口为443端口的请求重定向到本地的12345也就是redsocks
-- 完成
+- iptables -t nat -L OUTPUT -n -v --line-numbers 查看规则
+- iptables -t nat -D OUTPUT {line-number} 删除规则
 
 # 快速开始
 
@@ -277,8 +278,13 @@ stephen@ubuntu:~/hooker$ ./hooker
   929  通话管理                           com.android.server.telecom                                   
 14807  阿里巴巴                           com.alibaba.wireless                                         
 Enter the need to attach package.
-: com.ss.android.ugc.aweme  #在此处输入进程的Identifier即可调试应用
+: com.ss.android.ugc.aweme #在此处输入进程的Identifier即可调试，如本地没有工作目录将创建工作目录
 It's com.ss.android.ugc.aweme that you have attached app.
+Creating working directory: com.ss.android.ugc.aweme
+Generating frida shortcut command...
+Generating built-in frida script...
+Copying APK /data/app/com.ss.android.ugc.aweme-5bQ57JTpbelG6s7meqRGZA==/base.apk to working directory please waiting for a few seconds
+Working directory create successful
 --------------------------------------------------
 Please enter e, s, j, c or ex command.
 a: Discovering activities.
@@ -306,24 +312,41 @@ ex: Exit to the upper layer. eg:'ex'
 应用工作目录的意义在于提供一个的地方存放和管理frida脚本和快捷命令。hooker在你第一次调试应用时会创建应用工作目录，并初始化一些通杀脚本和快捷命令。
 
 ```shell
-stephen@ubuntu:~/hooker/com.ss.android.ugc.aweme$ ls -l
-total 784
--rw-rw-r-- 1 stephen stephen   7662 3月  16 20:55 activity_events.js
--rw-rw-r-- 1 stephen stephen   5790 3月  16 20:55 android_ui.js
--rwxrwxrwx 1 stephen stephen    102 8月   3  2020 attach
--rw-rw-r-- 1 stephen stephen   2242 8月   3  2020 click.js
--rw-rw-r-- 1 stephen stephen  12687 3月  23 22:23 com.bytedance.frameworks.core.encrypt.RequestEncryptUtils.js
--rw-rw-r-- 1 stephen stephen   4322 8月   3  2020 edit_text.js
--rwxrwxrwx 1 stephen stephen    159 8月   3  2020 hooking
--rwxrwxrwx 1 stephen stephen    101 8月   3  2020 kill
--rw-rw-r-- 1 stephen stephen 709448 3月  18 22:11 log
--rwxrwxr-x 1 stephen stephen     99 3月  16 20:55 objection
--rw-rw-r-- 1 stephen stephen   1226 3月  16 20:55 object_store.js
--rw-rw-r-- 1 stephen stephen   2553 3月  16 20:55 spider.py
--rw-rw-r-- 1 stephen stephen   2371 8月   3  2020 text_view.js
--rw-rw-r-- 1 stephen stephen   4789 3月  16 20:55 url.js
-drwxrwxr-x 2 stephen stephen   4096 3月  25 21:21 xinit
--rwxrwxr-x 1 stephen stephen   5552 3月  16 20:55 xinitdeploy
+MacBook-Pro-32G-2T:com.ss.android.ugc.aweme stephen256$ ll
+total 593784
+-rw-r--r--  1 stephen256  staff       7666  5 11 23:34 activity_events.js
+-rw-r--r--  1 stephen256  staff       5790  5 11 23:34 android_ui.js
+-rw-r--r--  1 stephen256  staff       6256  5 11 23:34 apk_shell_scanner.js
+-rwxrwxrwx  1 stephen256  staff        102  5 11 23:34 attach
+-rw-r--r--  1 stephen256  staff  300485284  5 11 23:35 base.apk
+-rw-r--r--  1 stephen256  staff       2242  5 11 23:34 click.js
+-rwxrwxrwx  1 stephen256  staff        371  5 11 23:34 disable_sslpinning
+-rw-r--r--  1 stephen256  staff       5836  5 11 23:34 dump_dex.js
+-rw-r--r--  1 stephen256  staff       4322  5 11 23:34 edit_text.js
+-rw-r--r--  1 stephen256  staff          0  5 11 23:34 empty.js
+-rw-r--r--  1 stephen256  staff        634  5 11 23:34 find_anit_frida_so.js
+-rw-r--r--  1 stephen256  staff       3016  5 11 23:34 find_boringssl_custom_verify_func.js
+-rw-r--r--  1 stephen256  staff      24229  5 11 23:34 get_device_info.js
+-rw-r--r--  1 stephen256  staff       2525  5 11 23:34 hook_artmethod_register.js
+-rw-r--r--  1 stephen256  staff      14229  5 11 23:34 hook_jni_method_trace.js
+-rw-r--r--  1 stephen256  staff       2108  5 11 23:34 hook_register_natives.js
+-rwxrwxrwx  1 stephen256  staff        159  5 11 23:34 hooking
+-rw-r--r--  1 stephen256  staff       3281  5 11 23:34 just_trust_me_for_ios.js
+-rw-r--r--  1 stephen256  staff       3177  5 11 23:34 just_trust_me_okhttp_hook_finder_for_android.js
+-rw-r--r--  1 stephen256  staff      36248  5 11 23:34 just_trust_me.js
+-rw-r--r--  1 stephen256  staff       4495  5 11 23:34 keystore_dump.js
+-rwxrwxrwx  1 stephen256  staff        101  5 11 23:34 kill
+-rw-r--r--  1 stephen256  staff       1526  5 11 23:34 object_store.js
+-rwxrwxrwx  1 stephen256  staff         99  5 11 23:34 objection
+-rw-r--r--  1 stephen256  staff       1701  5 11 23:34 pull_so.py
+-rw-r--r--  1 stephen256  staff       2353  5 11 23:34 replace_dlsym_get_pthread_create.js
+-rwxrwxrwx  1 stephen256  staff        117  5 11 23:34 spawn
+-rw-r--r--  1 stephen256  staff        768  5 11 23:34 ssl_log.js
+-rw-r--r--  1 stephen256  staff       2371  5 11 23:34 text_view.js
+-rw-r--r--  1 stephen256  staff       3725  5 11 23:34 trace_initproc.js
+-rw-r--r--  1 stephen256  staff       4789  5 11 23:34 url.js
+drwxr-xr-x  4 stephen256  staff        128  5 11 23:34 xinit
+-rwxrwxrwx  1 stephen256  staff       5843  5 11 23:34 xinitdeploy
 ```
 
 # 应用工作目录的命令
@@ -374,14 +397,22 @@ xinitdeploy是用于部署资源的命令，它会把xinit目录下所放的文�
 ![](assets/xinitdeploy.gif)
 ![](assets/xinit_files.png)
 
-### 6. kill
-./kill会杀掉应用的主进程和所有子进程
 
+### 6. pull_so.py
+提效工具，快捷将so文件从手机中pull到工作目录
 ```shell
-#!/bin/bash
-HOOKER_DRIVER=$(cat ../.hooker_driver)
-frida-kill $HOOKER_DRIVER com.ss.android.ugc.aweme
+MacBook-Pro-32G-2T:com.ss.xxxxxx.xxx.xxxme stephen256$ python3 pull_so.py libttboringssl.so
+正在从设备中拉取: /data/app/com.ss.xxxxxx.xxx.xxxme-5bQ57JTpbelG6s7meqRGZA==/lib/arm64/libttboringssl.so 到本地: /Users/stephen256/Downloads/hooker/com.ss.android.ugc.aweme/libttboringssl.so
+拉取成功
 ```
+
+如需自定义so名称，在后面追加自定义文件名即可
+```shell
+MacBook-Pro-32G-2T:com.ss.xxxxxx.xxx.xxxme stephen256$ python3 pull_so.py libttboringssl.so libttboringssl_34.2.0.so
+正在从设备中拉取: /data/app/com.ss.xxxxxx.xxx.xxxme-5bQ57JTpbelG6s7meqRGZA==/lib/arm64/libttboringssl.so 到本地: /Users/stephen256/Downloads/hooker/com.ss.android.ugc.aweme/libttboringssl_34.2.0.so
+拉取成功
+```
+
 ![](assets/kill.gif)
 
 

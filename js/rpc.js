@@ -43,12 +43,15 @@ function checkFile(filepath, checkLength) {
 
 //可能会超时 为了防止这个发生，可以在函数 setImmediate 中给你的脚本添加一层包装
 rpc.exports = {
-    loaddex: function(checkClassName, dexPath) {
+    loadradardex: function() {
         Java.perform(function() {
-            if (!classExists(checkClassName)) {
-                Java.openClassFile(dexPath).load();
+            if (!classExists("gz.radar.ClassRadar")) {
+                var context = Java.use("android.app.ActivityThread").currentApplication().getApplicationContext();
+                var packageName = context.getPackageName();
+                Java.openClassFile('/data/user/0/'+packageName+'/radar.dex').load();
             }
         });
+
     },
     containsclass: function(className) {
         var result = false;

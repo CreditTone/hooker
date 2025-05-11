@@ -21,27 +21,43 @@ from run_env import xinitPyScript
 
 warn = colorful.red
 info = colorful.yellow
+device = adbutils.adb.device()
 
-def readRadarDexfile():
-    f = open("radar.dex","rb")
-    data = f.read()
-    f.close()
-    return data
 
-def checkRadarDex(packageName, online_script):
-    radarClass = "gz.radar.ClassRadar"
-    if online_script.exports.containsclass(radarClass):
-        return
-    data = readRadarDexfile()
+def copyApk2Local(apkPath, localPath):
+    device.sync.pull(apkPath, localPath)
+    print(f"Working directory create successful")
+
+def pushFile2Local(filepath, localPath):
+    device.sync.push(filepath, localPath)
+    print(f"push {filepath} to {localPath} successful")
+
+def get_remote_file_length(package_name, file_path):
+    # 检查文件是否存在
+    check_cmd = f"ls {file_path}"
+    result = device.shell(check_cmd).strip()
+    if "No such file" in result or "Permission denied" in result:
+        return None
+    # 检查文件是否存在并获取长度
+    check_cmd = f"ls -l {file_path}"
+    result = device.shell(check_cmd).strip()
+    if "No such file" in result or "Permission denied" in result or not result:
+        return None
+    try:
+        # ls -l 输出格式通常为: -rw-rw---- 1 u0_a123 u0_a123 2592 2024-05-11 14:00 radar.dex
+        parts = result.split()
+        if len(parts) >= 5 and parts[4].isdigit():
+            return int(parts[4])
+        else:
+            return 0
+    except Exception:
+        return 0
+
+def checkRadarDex(packageName):
     radarDexPath = '/data/user/0/'+packageName+'/radar.dex';
-    if not online_script.exports.checkfile(radarDexPath, len(data)):
-        radarDexBase64 = base64.b64encode(data).decode()
-        #info("update radar.dex......"+str(len(radarDexBase64)))
-        online_script.exports.write(radarDexPath, radarDexBase64)
-        time.sleep(1)
-    online_script.exports.loaddex('gz.radar.ClassRadar', radarDexPath)
-    if not online_script.exports.containsclass(radarClass):
-        warn("injecting radar.dex failure.")
+    if os.path.getsize("radar.dex") != get_remote_file_length(packageName, radarDexPath):
+        print("更新radar.dex")
+        pushFile2Local("radar.dex", radarDexPath)
 
 def on_message(message, data):
     pass
@@ -98,8 +114,7 @@ def attach(target):
         online_script = online_session.create_script(run_env.rpc_jscode)
         online_script.on('message', on_message)
         online_script.load()
-        checkRadarDex(packageName, online_script)
-        createHookingEnverment(packageName, online_script.exports.mainactivity())
+        online_script.exports.loadradardex()
     except Exception:
         warn(traceback.format_exc())   
     return online_session,online_script,packageName
@@ -162,24 +177,70 @@ def onlyCheckHookingEnverment(target):
     finally:
         detach(online_session)
         
+pull_so_python_code = """
+import adbutils
+import argparse
+import os
 
-def copyApk2Local(device, apkPath, localPath):
-    device.sync.pull(apkPath, localPath)
-    print(f"Working directory create successful")
-        
+# 命令行参数解析
+parser = argparse.ArgumentParser(description="从设备中提取指定 .so 文件")
+parser.add_argument("so_name", help="要提取的 .so 文件名（如 libnative-lib.so）")
+parser.add_argument("output_name", nargs='?', help="输出保存的文件名（可选）")
+
+args = parser.parse_args()
+so_name = args.so_name
+output_name = args.output_name if args.output_name else so_name
+
+# 连接设备
+adb = adbutils.AdbClient(host="127.0.0.1", port=5037)
+device = adb.device()
+
+# 应用包名
+package_name = "com.smile.gifmaker"
+
+# 获取 APK 安装目录
+cmd = f"pm path {package_name}"
+result = device.shell(cmd).strip()
+if not result.startswith("package:"):
+    raise RuntimeError(f"未找到包 {package_name}，pm path 返回：{result}")
+
+apk_path = result.replace("package:", "")
+base_dir = apk_path.rsplit('/', 1)[0]  # e.g., /data/app/com.example.app-abc123==
+
+# 构造 lib 目录路径
+lib_root = f"{base_dir}/lib/"
+abi_dirs = device.shell(f"ls {lib_root}").strip().splitlines()
+
+# 遍历所有 ABI 目录，查找 so 文件
+found = False
+for abi in abi_dirs:
+    full_lib_dir = f"{lib_root}{abi}/"
+    file_list = device.shell(f"ls -1 {full_lib_dir}").strip().splitlines()
+    file_list
     
-    
-def createHookingEnverment(packageName, mainActivity):
+    if so_name in file_list:
+        remote_path = f"{full_lib_dir}{so_name}"
+        local_path = os.path.abspath(output_name)
+        print(f"正在从设备中拉取: {remote_path} 到本地: {local_path}")
+        device.sync.pull(remote_path, local_path)
+        print("拉取成功")
+        found = True
+        break
+
+if not found:
+    print(f"未找到 {so_name}，请确认它是否存在于任何 ABI 子目录中")
+"""
+
+def createHookingEnverment(packageName):
     if not os.path.exists(packageName):
         os.makedirs(packageName)
         print(f"Creating working directory: {packageName}")
-        device = adbutils.adb.device()
         apkPathRaw = device.shell(f"pm path {packageName}")
         match = re.search(r'package:(.*\.apk)', apkPathRaw)
         apkPath = None
         if match:
             apkPath = match.group(1).strip()
-            thread = threading.Thread(target=copyApk2Local, args=(device, apkPath, f"./{packageName}/base.apk",))
+            thread = threading.Thread(target=copyApk2Local, args=(apkPath, f"./{packageName}/base.apk",))
             thread.start()
         print(f"Generating frida shortcut command...")
         os.makedirs(packageName+"/xinit")
@@ -188,15 +249,14 @@ def createHookingEnverment(packageName, mainActivity):
         attach_shell = shellPrefix + "frida $HOOKER_DRIVER -l $1 " + packageName
         spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER --no-pause -f {packageName} -l $1"
         xinitPyScript = run_env.xinitPyScript + "xinitDeploy('"+packageName+"')"
-        spiderPyScript = run_env.spiderPyScript.replace("{appPackageName}", packageName).replace("{mainActivity}", mainActivity) 
-        disableSslPinningPyScript = run_env.disableSslPinningPyScript.replace("{appPackageName}", packageName) 
+        disableSslPinningPyScript = run_env.disableSslPinningPyScript.replace("{appPackageName}", packageName)
         createFile(packageName+"/hooking", logHooking)
         createFile(packageName+"/attach", attach_shell)
         createFile(packageName+"/spawn", spawn_shell)
         createFile(packageName+"/xinitdeploy", xinitPyScript)
         createFile(packageName+"/disable_sslpinning", disableSslPinningPyScript)
-        createFile(packageName+"/spider.py", spiderPyScript)
         createFile(packageName + "/kill", shellPrefix + "frida-kill $HOOKER_DRIVER "+packageName)
+        createFile(packageName + "/pull_so.py", pull_so_python_code.replace("com.smile.gifmaker", packageName))
         createFile(packageName+"/objection", shellPrefix + "objection -d -g "+packageName+" explore")
         os.popen('chmod 777 ' + packageName +'/hooking').readlines()
         os.popen('chmod 777 ' + packageName +'/attach').readlines()
@@ -436,8 +496,10 @@ if __name__ == '__main__':
     #初始化应用目录
     if genarateEnv and packageName:
         run_env.init(packageName)
-        onlyCheckHookingEnverment(packageName)
-    
+        checkRadarDex(packageName)
+        createHookingEnverment(packageName)
+        sys.exit(2);
+
     if e != None:
         existsClass(packageName, e)
     elif findclassesClassRegex:
