@@ -6,11 +6,13 @@
 本项目无意协助任何非法用途，包括但不限于绕过版权保护、修改应用功能或获取未经授权的数据。
 请确保在使用本项目工具时遵守相关法律法规，并仅用于个人学习或研究目的。
 
-### 欢迎使用hooker逆向工作台
+# 欢迎使用hooker逆向工作台
 
 hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供统一化的脚本包管理方式、通杀脚本、自动化生成hook脚本、内存漫游探测activity和service、frida版JustTrustMe、boringssl unpinning全网app通杀
 
-# 最近更新
+联系邮箱:1273568669@qq.com
+
+### 最近更新
 #### [windows临时使用hooker js脚本方案](#6-windows临时使用hooker-js脚本方案)
 
 #### [frida版just_trust_me 最新支持boringssl unpinning](#11-just_trust_mejs)

@@ -1,4 +1,3 @@
-console.log("此脚本只适用于通过dlsym来获取pthread_create函数的libmsaoaidsec.so样本");
 var pthread_create_ptr = Module.getExportByName(null, "pthread_create");
 
 // 备份原始函数
@@ -39,3 +38,75 @@ Interceptor.attach(Module.getExportByName(null, "dlsym"), {
         }
     }
 });
+
+// clone(Linux下线程创建使用的系统调用)、pthread create 的相关库函数pthread join 等。这些函数也可能涉及线程的创建和管理，可以间接达到相同的效果。
+// var clone = Module.findExportByName('libc.so', 'clone');
+// Interceptor.attach(clone, {
+//     onEnter: function(args) {
+//         // args[3] 子线程的栈地址。如果这个值为 0，可能意味着没有指定栈地址
+//         if(args[3] != 0){
+//             var callerAddress = args[3].add(96).readPointer()
+//             var find_module = Process.findModuleByAddress(callerAddress);
+//             if (find_module && find_module.name.indexOf("libmsaoaidsec.so") !== -1) {
+//                 // console.log('\nBacktrace:\n' + Thread.backtrace(this.context, Backtracer.ACCURATE)
+//                 //     .map(DebugSymbol.fromAddress).join('\n'));
+//                 console.log("hook_clone invoke Module: " + find_module.name + " offset:" + callerAddress.sub(find_module.base));
+//                 // 👇 替换返回值为我们自定义的 pthread_create
+//                 args[3] = ptr(my_pthread_create);
+//             }
+//         }
+//     },
+//     onLeave: function(retval) {
+//     }
+// });
+//
+// function anti_check_frida_feature() {
+//     var pt_strstr = Module.findExportByName("libc.so", 'strstr');
+//     var pt_strcmp = Module.findExportByName("libc.so", 'strcmp');
+//
+//     Interceptor.attach(pt_strstr, {
+//         onEnter: function (args) {
+//             var str1 = args[0].readCString();
+//             var str2 = args[1].readCString();
+//             if (
+//                 str2.indexOf("REJECT") !== -1 ||
+//                 str2.indexOf("tmp") !== -1 ||
+//                 str2.indexOf("frida") !== -1 ||
+//                 str2.indexOf("gum-js-loop") !== -1 ||
+//                 str2.indexOf("gmain") !== -1 ||
+//                 str2.indexOf("linjector") !== -1
+//             ) {
+//                 //console.log("strstr-->", str1, str2);
+//                 this.hook = true;
+//             }
+//         }, onLeave: function (retval) {
+//             if (this.hook) {
+//                 retval.replace(0);
+//             }
+//         }
+//     });
+//
+//     Interceptor.attach(pt_strcmp, {
+//         onEnter: function (args) {
+//             var str1 = args[0].readCString();
+//             var str2 = args[1].readCString();
+//             if (
+//                 str2.indexOf("REJECT") !== -1 ||
+//                 str2.indexOf("tmp") !== -1 ||
+//                 str2.indexOf("frida") !== -1 ||
+//                 str2.indexOf("gum-js-loop") !== -1 ||
+//                 str2.indexOf("gmain") !== -1 ||
+//                 str2.indexOf("linjector") !== -1
+//             ) {
+//                 //console.log("strcmp-->", str1, str2);
+//                 this.hook = true;
+//             }
+//         }, onLeave: function (retval) {
+//             if (this.hook) {
+//                 retval.replace(0);
+//             }
+//         }
+//     })
+// }
+//
+// setImmediate(anti_check_frida_feature)
