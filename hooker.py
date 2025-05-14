@@ -86,6 +86,22 @@ def getPidMap():
         pidMap[result.group(1)] = result.group(2)
     return pidMap
 
+def get_min_pid_by_name(session, process_name):
+    # 获取所有进程
+    processes = session.enumerate_processes()
+    # 存储符合条件的进程 ID
+    matching_pids = []
+    for process in processes:
+        # 如果进程名包含目标进程名
+        if process_name in process.name:
+            matching_pids.append(process.pid)
+    # 如果找到符合条件的进程，返回最小的进程 ID
+    if matching_pids:
+        return min(matching_pids)
+    else:
+        # 如果没有找到匹配的进程，返回 None
+        return None
+
 #target可以是pid或者packageName    
 def attach(target):
     packageName = target
@@ -103,18 +119,20 @@ def attach(target):
             rdev = frida.get_remote_device()
         else:
             rdev = frida.get_usb_device(1000)
+        
         #print(f"attach {target}")
         if is_number(target):
             pid = int(target)
             online_session = frida.core.Session(rdev._impl.attach(pid))
         else:
-            online_session = rdev.attach(target)
+            min_pid = get_min_pid_by_name(rdev, target)
+            online_session = rdev.attach(int(min_pid))
         if online_session == None:
             warn("attaching fail to " + target)
         online_script = online_session.create_script(run_env.rpc_jscode)
         online_script.on('message', on_message)
         online_script.load()
-        online_script.exports.loadradardex()
+        online_script.exports_sync.loadradardex()
     except Exception:
         warn(traceback.format_exc())   
     return online_session,online_script,packageName
@@ -129,7 +147,7 @@ def existsClass(target,className):
     online_script = None
     try:
         online_session,online_script,_ = attach(target);
-        info(online_script.exports.containsclass(className))
+        info(online_script.exports_sync.containsclass(className))
     except Exception:
         warn(traceback.format_exc())  
     finally:    
@@ -140,7 +158,7 @@ def findclasses(target, classRegex):
     online_script = None
     try:
         online_session,online_script,_ = attach(target);
-        info(online_script.exports.findclasses(classRegex));
+        info(online_script.exports_sync.findclasses(classRegex));
     except Exception:
         warn(traceback.format_exc())  
     finally:    
@@ -151,7 +169,7 @@ def findclasses2(target, className):
     online_script = None
     try:
         online_session,online_script,_ = attach(target);
-        info(online_script.exports.findclasses2(className));
+        info(online_script.exports_sync.findclasses2(className));
     except Exception:
         warn(traceback.format_exc())  
     finally:    
@@ -247,7 +265,7 @@ def createHookingEnverment(packageName):
         shellPrefix = "#!/bin/bash\nHOOKER_DRIVER=$(cat ../.hooker_driver)\n"
         logHooking = shellPrefix + "echo \"hooking $1\" > log\ndate | tee -ai log\n" + "frida $HOOKER_DRIVER -l $1 " + packageName + " | tee -ai log"
         attach_shell = shellPrefix + "frida $HOOKER_DRIVER -l $1 " + packageName
-        spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER --no-pause -f {packageName} -l $1"
+        spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER -f {packageName} -l $1"
         xinitPyScript = run_env.xinitPyScript + "xinitDeploy('"+packageName+"')"
         disableSslPinningPyScript = run_env.disableSslPinningPyScript.replace("{appPackageName}", packageName)
         createFile(packageName+"/hooking", logHooking)
@@ -302,7 +320,7 @@ def hookJs(target, hookCmdArg, savePath = None):
     try:
         ganaretoionJscode = ""
         online_session,online_script,packageName = attach(target);
-        appversion = online_script.exports.appversion();
+        appversion = online_script.exports_sync.appversion();
         classes = hookCmdArg.split(",")
         for classN in classes:
             spaceSpatrater = classN.find(":")
@@ -311,7 +329,7 @@ def hookJs(target, hookCmdArg, savePath = None):
             if spaceSpatrater > 0:
                 className = classN[:spaceSpatrater]
                 toSpace = classN[spaceSpatrater+1:]
-            jscode = online_script.exports.hookjs(className, toSpace);
+            jscode = online_script.exports_sync.hookjs(className, toSpace);
             ganaretoionJscode += ("\n//"+classN+"\n")
             ganaretoionJscode += jscode
         
@@ -322,12 +340,12 @@ def hookJs(target, hookCmdArg, savePath = None):
             savePath = packageName+"/"+savePath;
         if len(ganaretoionJscode):
             ganaretoionJscode = run_env.loadxinit_dexfile_template_jscode.replace("{PACKAGENAME}", packageName) + "\n" + ganaretoionJscode
-            warpExtraInfo = "//crack by " + packageName + " " + appversion + "\n"
+            warpExtraInfo = "//cracked by " + packageName + " " + appversion + "\n"
             warpExtraInfo += "//"+hookCmdArg + "\n"
             warpExtraInfo += run_env.base_jscode
             warpExtraInfo += ganaretoionJscode
             createFile(savePath, warpExtraInfo)
-            info("Hooking js code have generated. Path is " + savePath+".")
+            info("frida hook script:" + savePath)
         else:
             warn("Not found any classes by pattern "+hookCmdArg+".")
     except Exception:
@@ -344,7 +362,7 @@ def hookStr(target, keyword):
         jscode = jscode.replace("惊雷", keyword)
         savePath = packageName+"/str_"+keyword+".js";
         createFile(savePath, jscode)
-        info("Hooking js code have generated. Path is " + savePath+".")
+        info("frida hook script:" + savePath)
     except Exception:
         print(traceback.format_exc())  
     finally:
@@ -372,7 +390,7 @@ def printActivitys(target):
     online_script = None
     try:
         online_session,online_script,_ = attach(target);
-        info(online_script.exports.activitys())
+        info(online_script.exports_sync.activitys())
     except Exception:
         print(traceback.format_exc())  
     finally:
@@ -383,7 +401,7 @@ def printServices(target):
     online_script = None
     try:
         online_session,online_script,_ = attach(target);
-        info(online_script.exports.services())
+        info(online_script.exports_sync.services())
     except Exception:
         print(traceback.format_exc())  
     finally:
@@ -394,7 +412,7 @@ def printObject(target, objectId):
     online_script = None
     try:
         online_session,online_script,_ = attach(target);
-        info(online_script.exports.objectinfo(objectId))
+        info(online_script.exports_sync.objectinfo(objectId))
     except Exception:
         print(traceback.format_exc())  
     finally:
@@ -405,7 +423,7 @@ def object2Explain(target, objectId):
     online_script = None
     try:
         online_session,online_script,_ = attach(target);
-        info(online_script.exports.objecttoexplain(objectId))
+        info(online_script.exports_sync.objecttoexplain(objectId))
     except Exception:
         print(traceback.format_exc())  
     finally:
@@ -416,7 +434,7 @@ def printView(target, viewId):
     online_script = None
     try:
         online_session,online_script,_ = attach(target);
-        report = online_script.exports.viewinfo(viewId)
+        report = online_script.exports_sync.viewinfo(viewId)
         info(report);
     except Exception:
         print(traceback.format_exc())  
@@ -430,7 +448,7 @@ def printModuleName(target, moduleName):
     online_script = None
     try:
         online_session,online_script,_ = attach(target);
-        info(online_script.exports.so(moduleName))
+        info(online_script.exports_sync.so(moduleName))
     except Exception:
         print(traceback.format_exc())
     finally:
@@ -508,8 +526,6 @@ if __name__ == '__main__':
         findclasses2(packageName, findclasses2ClassName)
     elif JhookLine:
         hookJs(packageName, JhookLine, out)
-    elif KhookLine != None:
-        hookStr(packageName, KhookLine)
     elif LhookLine != None:
         hookParma(packageName, LhookLine)
     elif activity:

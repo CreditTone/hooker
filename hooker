@@ -21,12 +21,7 @@ do
 		echo "d: Object2Explain. eg:'d {objectId}'"
 		echo "v: Discovering view. eg:'v {viewId}'"
 		echo "e: Determines whether a class exists. eg:'e android.app.Application'"
-		echo "s: Discovering classes by a class'regex. eg:'s com.tencent.mm.Message.*'"
-		echo "t: Discovering offspring classes by a class'name. eg:'t com.tencent.mm.BasicActivity'"
 		echo "j: Generating hooked js. eg:'j okhttp3.Request\$Builder:build'"
-		echo "k: Generating hooked the string generation js with a keyword. eg:'k {YourKeyword}'"
-		echo "l: Generating hooked the param generation js with a param keyword. eg:'l {YourKeyword}'"
-		echo "m: Discovering so module."
 		echo "ex: Exit to the upper layer. eg:'ex'"
 		read -p ": " op
 		if [[ $op = ex ]] || [[ $op = exit ]]; then

@@ -100,7 +100,7 @@ function generateFridaMethodOverload(clzVarName, radarMethod) {
     overloadJs += ".implementation = function(";
     var paramsJs = "";
     for (var j = 0; j < radarMethod.paramsNum.value; j++) {
-        paramsJs += "v" + j;
+        paramsJs += radarMethod.parameterNames.value[j];
         if (j < (radarMethod.paramsNum.value - 1)) {
             paramsJs += ",";
         }
