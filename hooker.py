@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 '''
 Created on 2020年3月23日
 
@@ -16,47 +18,129 @@ import colorful
 import platform
 import threading
 import adbutils
+import hashlib
 from run_env import xinitPyScript
 
+from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.completion import NestedCompleter
+from wcwidth import wcswidth
+from _warnings import warn
 
 warn = colorful.red
 info = colorful.yellow
-device = adbutils.adb.device()
+current_identifier = None
+current_identifier_name = None
+current_identifier_pid = None
+frida_device = None
+adb_device = None
 
+def _init():
+    global frida_device
+    global adb_device
+    adb_device = adbutils.adb.device()
+    if frida_device:
+        return
+    remoteDriver = run_env.getRemoteDriver() #ip:port
+    if remoteDriver:
+        frida_device = frida.get_device_manager().add_remote_device(remoteDriver)
+    else:
+        frida_device = frida.get_usb_device(1000)
+
+_init();
+
+def ensure_app_in_foreground(package_name):
+    # 获取当前正在运行的所有进程
+    proc_map = {}
+    apps = frida_device.enumerate_applications()
+    for app in sorted(apps, key=lambda x: x.pid or 0):
+        if app.pid != 0:  # 只列出运行中的
+            proc_map[app.identifier] = (app.pid, app.name)
+    is_running = package_name in proc_map
+    # 获取当前前台 activity
+    foreground_output = adb_device.shell("dumpsys activity activities | grep mResumedActivity")
+    is_foreground = package_name in foreground_output
+    if is_running:
+        if is_foreground:
+            info(f"✅ App {package_name} is already in the foreground")
+        else:
+            info(f"📲 App {package_name} is running in the background, bringing it to the foreground...")
+            # 通过 am 启动主 Activity，会自动 bring 到前台
+            adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
+        return proc_map[package_name][0], proc_map[package_name][1]
+    else:
+        info(f"🚀 App {package_name} is not running, starting it now...")
+        #adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
+        shell_result = adb_device.shell(f"dumpsys package {package_name} | grep -A 1 MAIN | grep {package_name}").strip()
+        m = re.search(r"\s+([^\s]+)\s+filter", shell_result)
+        if m:
+            main_activity = m.group(1)
+            print(f"am start -n {main_activity}")
+            adb_device.shell(f"am start -n {main_activity}")
+        else:
+            adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
+        for j in range(100):
+            time.sleep(0.5)
+            if package_name in adb_device.shell("dumpsys activity activities | grep mResumedActivity"):
+                break
+        apps = frida_device.enumerate_applications()
+        for app in sorted(apps, key=lambda x: x.pid or 0):
+            if app.pid != 0 and app.identifier == package_name:
+                return app.pid, app.name
+    return None
 
 def copyApk2Local(apkPath, localPath):
-    device.sync.pull(apkPath, localPath)
-    print(f"Working directory create successful")
+    adb_device.sync.pull(apkPath, localPath)
+    info(f"Working directory create successful")
 
 def pushFile2Local(filepath, localPath):
-    device.sync.push(filepath, localPath)
-    print(f"push {filepath} to {localPath} successful")
+    adb_device.sync.push(filepath, localPath)
+    info(f"push {filepath} to {localPath} successful")
 
-def get_remote_file_length(package_name, file_path):
+def get_remote_file_md5(package_name, file_path):
     # 检查文件是否存在
     check_cmd = f"ls {file_path}"
-    result = device.shell(check_cmd).strip()
+    result = adb_device.shell(check_cmd).strip()
     if "No such file" in result or "Permission denied" in result:
-        return None
+        #warn("No such file")
+        return ""
     # 检查文件是否存在并获取长度
-    check_cmd = f"ls -l {file_path}"
-    result = device.shell(check_cmd).strip()
+    check_cmd = f"md5sum {file_path}"
+    result = adb_device.shell(check_cmd).strip()
     if "No such file" in result or "Permission denied" in result or not result:
-        return None
+        #warn("No such file2")
+        return ""
     try:
-        # ls -l 输出格式通常为: -rw-rw---- 1 u0_a123 u0_a123 2592 2024-05-11 14:00 radar.dex
-        parts = result.split()
-        if len(parts) >= 5 and parts[4].isdigit():
-            return int(parts[4])
+        # 56cf2745f4884b4dfcc1e193d0118c05  radar.dex
+        m = re.search("[\w]{32}", result)
+        if m:
+            return m.group()
         else:
-            return 0
+            return ""
     except Exception:
-        return 0
-
+        return ""
+    
+def get_local_file_md5(filepath, chunk_size=8192):
+    md5 = hashlib.md5()
+    try:
+        with open(filepath, 'rb') as f:
+            while True:
+                chunk = f.read(chunk_size)
+                if not chunk:
+                    break
+                md5.update(chunk)
+        return md5.hexdigest()
+    except FileNotFoundError:
+        warn(f"File Not Found: {filepath}")
+        return None
+    
 def checkRadarDex(packageName):
     radarDexPath = '/data/user/0/'+packageName+'/radar.dex';
-    if os.path.getsize("radar.dex") != get_remote_file_length(packageName, radarDexPath):
-        print("更新radar.dex")
+    local_md5 = get_local_file_md5("radar.dex")
+    remote_md5 = get_remote_file_md5(packageName, radarDexPath)
+    #print(f"local_md5:{local_md5} remote_md5:{remote_md5}")
+    if local_md5 != remote_md5:
+        info(f"update radar.dex into {radarDexPath}")
         pushFile2Local("radar.dex", radarDexPath)
 
 def on_message(message, data):
@@ -76,19 +160,9 @@ def is_number(s):
         pass
     return False
 
-def getPidMap():
-    pidMap = {}
-    lines = os.popen("frida-ps -U").readlines();
-    for line in lines:
-        result = re.search("(\d+)\s+([a-z\d\.]+)($|:)", line.strip())
-        if not result:
-            continue
-        pidMap[result.group(1)] = result.group(2)
-    return pidMap
-
-def get_min_pid_by_name(session, process_name):
+def _get_min_pid_by_name(process_name):
     # 获取所有进程
-    processes = session.enumerate_processes()
+    processes = frida_device.enumerate_processes()
     # 存储符合条件的进程 ID
     matching_pids = []
     for process in processes:
@@ -102,40 +176,18 @@ def get_min_pid_by_name(session, process_name):
         # 如果没有找到匹配的进程，返回 None
         return None
 
-#target可以是pid或者packageName    
-def attach(target):
-    packageName = target
-    if is_number(target):#pid
-        packageName = getPidMap()[target]
+def attach():
+    global frida_device
     online_session = None
     online_script = None
-    rdev = None
-    remoteDriver = run_env.getRemoteDriver() #ip:port
-    try:
-        if remoteDriver:
-            rdev = frida.get_device_manager().add_remote_device(remoteDriver)
-        elif platform.system().find("Windows") != -1:
-            warn("推荐使用linux或mac操作系统获得更好的兼容性.")
-            rdev = frida.get_remote_device()
-        else:
-            rdev = frida.get_usb_device(1000)
-        
-        #print(f"attach {target}")
-        if is_number(target):
-            pid = int(target)
-            online_session = frida.core.Session(rdev._impl.attach(pid))
-        else:
-            min_pid = get_min_pid_by_name(rdev, target)
-            online_session = rdev.attach(int(min_pid))
-        if online_session == None:
-            warn("attaching fail to " + target)
-        online_script = online_session.create_script(run_env.rpc_jscode)
-        online_script.on('message', on_message)
-        online_script.load()
-        online_script.exports_sync.loadradardex()
-    except Exception:
-        warn(traceback.format_exc())   
-    return online_session,online_script,packageName
+    online_session = frida_device.attach(current_identifier_pid)
+    if online_session == None:
+        warn("attaching fail to " + target)
+    online_script = online_session.create_script(run_env.rpc_jscode)
+    online_script.on('message', on_message)
+    online_script.load()
+    online_script.exports_sync.loadradardex()
+    return online_session, online_script
     
 
 def detach(online_session):
@@ -157,7 +209,7 @@ def findclasses(target, classRegex):
     online_session = None
     online_script = None
     try:
-        online_session,online_script,_ = attach(target);
+        online_session, online_script,_ = attach(target);
         info(online_script.exports_sync.findclasses(classRegex));
     except Exception:
         warn(traceback.format_exc())  
@@ -168,7 +220,7 @@ def findclasses2(target, className):
     online_session = None
     online_script = None
     try:
-        online_session,online_script,_ = attach(target);
+        online_session, online_script,_ = attach(target);
         info(online_script.exports_sync.findclasses2(className));
     except Exception:
         warn(traceback.format_exc())  
@@ -250,22 +302,23 @@ if not found:
 """
 
 def createHookingEnverment(packageName):
+    global frida_device
     if not os.path.exists(packageName):
         os.makedirs(packageName)
-        print(f"Creating working directory: {packageName}")
-        apkPathRaw = device.shell(f"pm path {packageName}")
+        info(f"Creating working directory: {packageName}")
+        apkPathRaw = adb_device.shell(f"pm path {packageName}")
         match = re.search(r'package:(.*\.apk)', apkPathRaw)
         apkPath = None
         if match:
             apkPath = match.group(1).strip()
             thread = threading.Thread(target=copyApk2Local, args=(apkPath, f"./{packageName}/base.apk",))
             thread.start()
-        print(f"Generating frida shortcut command...")
+        info(f"Generating frida shortcut command...")
         os.makedirs(packageName+"/xinit")
         shellPrefix = "#!/bin/bash\nHOOKER_DRIVER=$(cat ../.hooker_driver)\n"
-        logHooking = shellPrefix + "echo \"hooking $1\" > log\ndate | tee -ai log\n" + "frida $HOOKER_DRIVER -l $1 " + packageName + " | tee -ai log"
-        attach_shell = shellPrefix + "frida $HOOKER_DRIVER -l $1 " + packageName
-        spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER -f {packageName} -l $1"
+        logHooking = shellPrefix + "echo \"hooking $1\" > log\ndate | tee -ai log\n" + "frida $HOOKER_DRIVER -l $1 -N " + packageName + " | tee -ai log"
+        attach_shell = shellPrefix + "frida $HOOKER_DRIVER -l $1 -N " + packageName
+        spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER -f -N {packageName} -l $1"
         xinitPyScript = run_env.xinitPyScript + "xinitDeploy('"+packageName+"')"
         disableSslPinningPyScript = run_env.disableSslPinningPyScript.replace("{appPackageName}", packageName)
         createFile(packageName+"/hooking", logHooking)
@@ -284,7 +337,7 @@ def createHookingEnverment(packageName):
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
         os.popen('chmod 777 ' + packageName +'/spawn').readlines()
         os.popen('cp *.so ' + packageName +'/xinit/').readlines()
-        print(f"Generating built-in frida script...")
+        info(f"Generating built-in frida script...")
         createFile(packageName + "/empty.js", "")
         createFile(packageName + "/ssl_log.js", run_env.ssl_log_jscode)
         createFile(packageName + "/url.js", run_env.url_jscode)
@@ -309,30 +362,30 @@ def createHookingEnverment(packageName):
         createFile(packageName + "/find_boringssl_custom_verify_func.js", run_env.find_boringssl_custom_verify_func_jscode)
         createFile(packageName + "/apk_shell_scanner.js", run_env.apk_shell_scanner_jscode)
         if apkPath:
-            print(f"Copying APK {apkPath} to working directory please waiting for a few seconds")
+            info(f"Copying APK {apkPath} to working directory please waiting for a few seconds")
         else:
-            print(f"Working directory create successful")
+            info(f"Working directory create successful")
 
-def hookJs(target, hookCmdArg, savePath = None):
+def hook_js(hookCmdArg, savePath = None):
     online_session = None
     online_script = None
-    packageName = None
+    packageName = current_identifier
     try:
         ganaretoionJscode = ""
-        online_session,online_script,packageName = attach(target);
+        online_session, online_script = attach();
         appversion = online_script.exports_sync.appversion();
-        classes = hookCmdArg.split(",")
-        for classN in classes:
-            spaceSpatrater = classN.find(":")
-            className = classN
-            toSpace = "*"
-            if spaceSpatrater > 0:
-                className = classN[:spaceSpatrater]
-                toSpace = classN[spaceSpatrater+1:]
-            jscode = online_script.exports_sync.hookjs(className, toSpace);
-            ganaretoionJscode += ("\n//"+classN+"\n")
-            ganaretoionJscode += jscode
-        
+        spaceSpatrater = hookCmdArg.find(":")
+        className = hookCmdArg
+        toSpace = "*"
+        if spaceSpatrater > 0:
+            className = hookCmdArg[:spaceSpatrater]
+            toSpace = hookCmdArg[spaceSpatrater+1:]
+        if not online_script.exports_sync.containsclass(className):
+            warn(f"Class Not Found {className}")
+            return
+        jscode = online_script.exports_sync.hookjs(className, toSpace);
+        ganaretoionJscode += ("\n//"+hookCmdArg+"\n")
+        ganaretoionJscode += jscode
         if savePath == None:
             defaultFilename = hookCmdArg.replace(".", "_").replace(":", "_").replace("$", "_").replace("__", "_") + ".js"
             savePath = packageName+"/"+defaultFilename;
@@ -340,12 +393,12 @@ def hookJs(target, hookCmdArg, savePath = None):
             savePath = packageName+"/"+savePath;
         if len(ganaretoionJscode):
             ganaretoionJscode = run_env.loadxinit_dexfile_template_jscode.replace("{PACKAGENAME}", packageName) + "\n" + ganaretoionJscode
-            warpExtraInfo = "//cracked by " + packageName + " " + appversion + "\n"
+            warpExtraInfo = f"//cracked by {current_identifier_name} {appversion}\n"
             warpExtraInfo += "//"+hookCmdArg + "\n"
             warpExtraInfo += run_env.base_jscode
             warpExtraInfo += ganaretoionJscode
             createFile(savePath, warpExtraInfo)
-            info("frida hook script:" + savePath)
+            info("frida hook script: " + savePath)
         else:
             warn("Not found any classes by pattern "+hookCmdArg+".")
     except Exception:
@@ -353,194 +406,165 @@ def hookJs(target, hookCmdArg, savePath = None):
     finally:    
         detach(online_session)
         
-def hookStr(target, keyword):
-    online_session = None
-    packageName = None
-    try:
-        online_session,_,packageName = attach(target);
-        jscode = io.open('./js/string_hooker.js','r',encoding= 'utf8').read()
-        jscode = jscode.replace("惊雷", keyword)
-        savePath = packageName+"/str_"+keyword+".js";
-        createFile(savePath, jscode)
-        info("frida hook script:" + savePath)
-    except Exception:
-        print(traceback.format_exc())  
-    finally:
-        detach(online_session)
-        
-        
-def hookParma(target, keyword):
-    online_session = None
-    packageName = None
-    try:
-        online_session,_,packageName = attach(target);
-        jscode = io.open('./js/param_hook.js','r',encoding= 'utf8').read()
-        jscode = jscode.replace("NStokensig", keyword)
-        savePath = packageName+"/param_"+keyword+".js";
-        createFile(savePath, jscode)
-        info("Hooking js code have generated. Path is " + savePath+".")
-    except Exception:
-        print(traceback.format_exc())  
-    finally:
-        detach(online_session)
-        
 
-def printActivitys(target):
+def print_activitys():
     online_session = None
     online_script = None
     try:
-        online_session,online_script,_ = attach(target);
+        online_session,online_script = attach();
         info(online_script.exports_sync.activitys())
     except Exception:
         print(traceback.format_exc())  
     finally:
         detach(online_session)
         
-def printServices(target):
+def print_services():
     online_session = None
     online_script = None
     try:
-        online_session,online_script,_ = attach(target);
+        online_session, online_script = attach();
         info(online_script.exports_sync.services())
     except Exception:
         print(traceback.format_exc())  
     finally:
         detach(online_session)
 
-def printObject(target, objectId):
+def print_object(objectId):
     online_session = None
     online_script = None
     try:
-        online_session,online_script,_ = attach(target);
+        online_session, online_script = attach();
         info(online_script.exports_sync.objectinfo(objectId))
     except Exception:
         print(traceback.format_exc())  
     finally:
         detach(online_session)
         
-def object2Explain(target, objectId):
+def object_to_explain(objectId):
     online_session = None
     online_script = None
     try:
-        online_session,online_script,_ = attach(target);
+        online_session, online_script = attach();
         info(online_script.exports_sync.objecttoexplain(objectId))
     except Exception:
         print(traceback.format_exc())  
     finally:
         detach(online_session)
 
-def printView(target, viewId):
+def print_view(viewId):
     online_session = None
     online_script = None
     try:
-        online_session,online_script,_ = attach(target);
+        online_session, online_script = attach();
         report = online_script.exports_sync.viewinfo(viewId)
         info(report);
     except Exception:
         print(traceback.format_exc())  
     finally:
         detach(online_session)
+
+cmd_session = PromptSession()
+
+def entry_debug_mode():    
+    completer = NestedCompleter.from_nested_dict({
+        'show': {
+            'activity': None,
+            'service': None,
+            'object': None,
+        },
+        'hook': None,
+        'exit': None,
+    })
+    
+    def handle_command(cmd):
+        if cmd.startswith("show ") and " activity" in cmd:
+            print_activitys()
+            return True
+        elif cmd.startswith("show ") and " service" in cmd:
+            print_services()
+            return True
+        elif cmd.startswith("show ") and " object" in cmd:
+            m = re.search(r"show\s+object\s+([\w]+)", cmd)
+            if m:
+                object_to_explain(m.group(1))
+            return True
+        elif cmd.startswith("hook "):
+            m = re.search(r"hook\s+([^\s]+)", cmd)
+            if m:
+                info("Generating frida script, please wait for a few seconds")
+                hook_js(m.group(1), None)
+            else:
+                warn(f"Can not parse class and method: {cmd}")
+            return True
+        return False
+    help_text = (
+        "help >\n"
+        "show activity \n"
+        "\tobtains the information of the activity stack\n"
+        "show service\n"
+        "\tobtains the servic stack information\n"
+        "show object \n"
+        "\tviews the internal information of the object according to objectId\n"
+        "hook {className}:{method}\n"
+        "\tGenerate frida hook script for example: hook okhttp3.Request$Builder:addHeader"
+    )
+    print(help_text)
+    hooker_cmd = ""
+    while True:
+        try:
+            hooker_cmd = cmd_session.prompt('hooker > ', completer=completer)
+            if hooker_cmd == 'exit' or hooker_cmd == 'quit':
+                break
+            is_handled = handle_command(hooker_cmd)
+            if not is_handled and hooker_cmd:
+                warn(f"hooker command not found: {hooker_cmd}")
+                print(help_text)
+                continue
+            elif not hooker_cmd.strip():
+                continue
+            print(help_text)
+        except (EOFError, KeyboardInterrupt):
+            break        
+
+
+
+def pad_display(text, width):
+    """按显示宽度对齐文本"""
+    text = str(text)
+    padding = width - wcswidth(text)
+    return text + ' ' * max(padding, 0)
+
+def list_third_party_apps():
+    identifier_list = []
+    apps = frida_device.enumerate_applications()
+    print(f"{pad_display('PID', 6)}\t{pad_display('APP', 10)}\t{pad_display('IDENTIFIER', 35)}\tEXIST_REVERSE_DIRECTORY")
+    for app in sorted(apps, key=lambda x: x.pid or 0):
+        if app.pid is not None:  # 只列出运行中的
+            reverse_directory_exist = os.path.isdir(app.identifier)
+            print(f"{pad_display(app.pid, 6)}\t{pad_display(app.name, 10)}\t{pad_display(app.identifier, 35)}\t{'✅' if reverse_directory_exist else '❌'}")
+            identifier_list.append(app.identifier)
+    return identifier_list
         
-
-
-def printModuleName(target, moduleName):
-    online_session = None
-    online_script = None
+while True:
     try:
-        online_session,online_script,_ = attach(target);
-        info(online_script.exports_sync.so(moduleName))
-    except Exception:
-        print(traceback.format_exc())
-    finally:
-        detach(online_session)
-
-if __name__ == '__main__':
-    try:    
-        opts, args = getopt.getopt(sys.argv[1:], "hp:x:a:b:c:d:v:s:t:l:e:j:k:l:g:o:m:",[])
-    except getopt.GetoptError:    
-        sys.exit(2);
-    #这个packageName可以是进程名也可以是进程号
-    packageName = None
-    e = None
-    findclassesClassRegex = None
-    findclasses2ClassName = None
-    JhookLine = None
-    KhookLine = None
-    LhookLine = None
-    genarateEnv = False
-    out = None
-    activity = False
-    service = False
-    objectId = None
-    object2ExplainObjectId = None
-    viewId = None
-    moduleName = False
-    #print(opts)
-    for op, value in opts:    
-        if op in ("-p", "--package"):
-            packageName = value  
-        elif op in ("-s", "--scan"):      
-            findclassesClassRegex = value
-        elif op in ("-t"):      
-            findclasses2ClassName = value
-        elif op in ("-e", "--exist"):       
-            e = value
-        elif op in ("-j", "--hookjs"):     
-            JhookLine = value
-        elif op in ("-k", "--hookstr"):     
-            KhookLine = value
-        elif op in ("-l"):     
-            LhookLine = value
-        elif op in ("-g"):     
-            genarateEnv = True;
-        elif op in ("-o", "--out"):
-            out = value;
-        elif op in ("-a"):
-            activity = True;
-        elif op in ("-b"):
-            service = True;
-        elif op in ("-c"):
-            objectId = value;
-        elif op in ("-d"):
-            object2ExplainObjectId = value;
-        elif op in ("-v"):
-            viewId = value;
-        elif op in ("-m"):
-            moduleName = value;
-    if packageName == None:
-        warn("packageName is none")
+        identifier_list = list_third_party_apps()
+        print("Please enter the identifier that needs to be reversed")
+        identifier = cmd_session.prompt('hooker(Identifier): ', completer=WordCompleter(identifier_list, ignore_case=False, match_middle=True, WORD=True))  
+        if identifier == 'exit' or identifier == 'quit':
+            info('Bye!')
+            sys.exit(2);
+            break
+        if identifier not in identifier_list:
+            warn("The application does not exist. Please enter an existing application")
+            continue
+        current_identifier = identifier
+        if not os.path.isdir(identifier):
+            run_env.init(current_identifier)
+            createHookingEnverment(current_identifier)
+        checkRadarDex(current_identifier)
+        current_identifier_pid, current_identifier_name = ensure_app_in_foreground(current_identifier)
+        entry_debug_mode()
+    except (EOFError, KeyboardInterrupt):
         sys.exit(2);
     
-    #初始化应用目录
-    if genarateEnv and packageName:
-        run_env.init(packageName)
-        checkRadarDex(packageName)
-        createHookingEnverment(packageName)
-        sys.exit(2);
 
-    if e != None:
-        existsClass(packageName, e)
-    elif findclassesClassRegex:
-        findclasses(packageName, findclassesClassRegex)
-    elif findclasses2ClassName:
-        findclasses2(packageName, findclasses2ClassName)
-    elif JhookLine:
-        hookJs(packageName, JhookLine, out)
-    elif LhookLine != None:
-        hookParma(packageName, LhookLine)
-    elif activity:
-        printActivitys(packageName)
-    elif service:
-        printServices(packageName)
-    elif objectId:
-        printObject(packageName, objectId)
-    elif object2ExplainObjectId:
-        object2Explain(packageName, object2ExplainObjectId)
-    elif viewId:
-        printView(packageName, viewId)
-    elif moduleName:
-        printModuleName(packageName, moduleName)
-    elif not genarateEnv:
-        warn(opts)
-        sys.exit(2);
-    
