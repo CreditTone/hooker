@@ -5,6 +5,38 @@ Created on 2020年3月23日
 
 @author: stephen
 '''
+from _warnings import warn
+
+default_frida_server_arm = "frida-server-16.7.19-android-arm"
+default_frida_server_arm64 = "frida-server-16.7.19-android-arm64"
+
+def withColor(string, fg, bg=49):
+    print("\33[0m\33[%d;%dm%s\33[0m" % (fg, bg, string))
+#front color
+Red = 1
+Green = 2
+Yellow = 3
+Blue = 4
+Magenta = 5
+Cyan = 6
+White = 7
+ 
+def red(string):
+    return withColor(string, Red+30) # Red
+def green(string):
+    return withColor(string, Green+30) # Green
+def yellow(string):
+    return withColor(string, Yellow+30) # Yellow
+def blue(string):
+    return withColor(string, Blue+30) # Blue
+def magenta(string):
+    return withColor(string, Magenta+30) # Magenta
+def cyan(string):
+    return withColor(string, Cyan+30) # Cyan
+def white(string):
+    return withColor(string, White+30) # White
+
+
 import frida, sys
 import os
 import io
@@ -14,7 +46,6 @@ import traceback
 import run_env
 import base64
 import time
-import colorful
 import platform
 import threading
 import adbutils
@@ -25,20 +56,143 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.completion import NestedCompleter
 from wcwidth import wcswidth
-from _warnings import warn
 
-warn = colorful.red
-info = colorful.yellow
+warn = red
+info = yellow
+
+adb_device = None
+
+def _init_adb_device():
+    global adb_device
+    adb_device = adbutils.adb.device()
+_init_adb_device()
+
+def run_su_command(cmd, not_read=False):
+    print("run_su_command:", cmd)
+    conn = adb_device.shell(["su", "-c", cmd], stream=True)
+    try:
+        if not_read:
+            time.sleep(1)
+            return
+        output = conn.read_until_close()
+        return output.strip()
+    finally:
+        try:
+            conn.close()
+        except Exception as e:
+            pass
+
+#初始化frida运行环境
+def is_frida_working_via_attach(target_package="com.android.systemui"):
+    try:
+        __device = frida.get_usb_device(timeout=3)  # or use add_remote_device(ip)
+        pid = __device.get_process(target_package).pid  # 先确认包是否存在
+        _session = __device.attach(pid)
+        _session.detach()
+        return True
+    except frida.ServerNotRunningError:
+        return False
+    except frida.ProcessNotFoundError:
+        #info("⚠️ 找不到进程，说明包名可能错误，但 frida 正常")
+        return True  # 仍然说明 frida-server 已连通
+    except frida.TimedOutError:
+        #info("❌ 连接超时，frida-server 可能未运行或设备未连接")
+        return False
+    except Exception as e:
+        #print("其他异常:", e)
+        return False
+
+def check_file_exists(path):
+    result = adb_device.shell(f"test -f {path} && echo exists || echo missing")
+    return result.strip() == "exists"
+
+def check_dir_exists(path):
+    result = adb_device.shell(f"[ -d {path} ] && echo exists || echo not_exists")
+    return result.strip() == "exists"
+
+def get_cpu_arch():
+    abi = adb_device.shell("getprop ro.product.cpu.abi").strip()
+    if "arm64" in abi:
+        return "arm64"
+    elif "armeabi" in abi:
+        return "arm"
+    elif "x86_64" in abi:
+        return "x86_64"
+    elif "x86" in abi:
+        return "x86"
+    return "arm64"
+
+def choose_frida_server():
+    cpu_arch = get_cpu_arch()
+    if "arm64" == cpu_arch:
+        return default_frida_server_arm64
+    elif "arm" == cpu_arch:
+        return default_frida_server_arm
+    info("For simulator, please start frida-server manually first. Thank you")
+    sys.exit(2)
+    
+def pull_file_to_local(remote_file, local_path):
+    adb_device.sync.pull(remote_file, local_path)
+    #info(f"Working directory create successful")
+    info(f"pull {remote_file} to {local_path} successful")
+
+def push_file_to_remote(local_path, remote_path):
+    # info(f"push {local_path} to {remote_path}")
+    adb_device.sync.push(local_path, remote_path)
+    info(f"push {local_path} to {remote_path} successful")
+    
+def is_root():
+    return "system" in run_su_command("ls /data/")
+
+def ensure_root():
+    if is_root():
+        return True
+    else:
+        try:
+            adb_device.root()  # adbutils 内置封装
+            if is_root():
+                info("Switched to root successfully ✅")
+                return True
+            else:
+                info("❌ Failed to switch: device does not support root")
+                return False
+        except Exception as e:
+            info(f"❌ Failed to switch to root: {e}")
+            return False
+
+
+# 自动化部署frida-server    
+if not is_frida_working_via_attach():
+    if not ensure_root():
+        info("❌ Cannot auto-deploy frida-server. Please start frida-server manually and try again.")
+        sys.exit(2)
+    frida_server_file = choose_frida_server()
+    remote_frida_server_file = f"/data/mobile-deploy/{frida_server_file}"
+    if not check_dir_exists("/data/mobile-deploy/"):
+        run_su_command("mkdir /data/mobile-deploy/")
+    if not check_file_exists(remote_frida_server_file):
+        push_file_to_remote(f"mobile-deploy/{frida_server_file}", "/sdcard/")
+        run_su_command(f"mv /sdcard/{frida_server_file} {remote_frida_server_file}")
+        run_su_command(f"chmod +x {remote_frida_server_file}")
+    run_su_command(f"cd /data/mobile-deploy/ && ./{choose_frida_server()} > /sdcard/f_server.log 2>&1 &", True)
+    success = False
+    for index in range(20):
+        if is_frida_working_via_attach():
+            info("frida-server started successfully ✅")
+            success = True
+            break
+        time.sleep(0.5)
+    if not success:
+        info("❌ Failed to start frida-server automatically. Please start it manually and try again.")
+        sys.exit(2)
+        
 current_identifier = None
 current_identifier_name = None
 current_identifier_pid = None
 frida_device = None
-adb_device = None
 
-def _init():
+def _init_frida_device():
     global frida_device
-    global adb_device
-    adb_device = adbutils.adb.device()
     if frida_device:
         return
     remoteDriver = run_env.getRemoteDriver() #ip:port
@@ -47,7 +201,7 @@ def _init():
     else:
         frida_device = frida.get_usb_device(1000)
 
-_init();
+_init_frida_device()
 
 def ensure_app_in_foreground(package_name):
     # 获取当前正在运行的所有进程
@@ -89,26 +243,12 @@ def ensure_app_in_foreground(package_name):
                 return app.pid, app.name
     return None
 
-def copyApk2Local(apkPath, localPath):
-    adb_device.sync.pull(apkPath, localPath)
-    info(f"Working directory create successful")
-
-def pushFile2Local(filepath, localPath):
-    adb_device.sync.push(filepath, localPath)
-    info(f"push {filepath} to {localPath} successful")
-
-def get_remote_file_md5(package_name, file_path):
-    # 检查文件是否存在
-    check_cmd = f"ls {file_path}"
-    result = adb_device.shell(check_cmd).strip()
-    if "No such file" in result or "Permission denied" in result:
-        #warn("No such file")
-        return ""
+def get_remote_file_md5(file_path):
     # 检查文件是否存在并获取长度
     check_cmd = f"md5sum {file_path}"
-    result = adb_device.shell(check_cmd).strip()
+    result = run_su_command(check_cmd).strip()
     if "No such file" in result or "Permission denied" in result or not result:
-        #warn("No such file2")
+        #warn("No such file")
         return ""
     try:
         # 56cf2745f4884b4dfcc1e193d0118c05  radar.dex
@@ -134,14 +274,18 @@ def get_local_file_md5(filepath, chunk_size=8192):
         warn(f"File Not Found: {filepath}")
         return None
     
-def checkRadarDex(packageName):
+def check_radar_dex(packageName):
     radarDexPath = '/data/user/0/'+packageName+'/radar.dex';
     local_md5 = get_local_file_md5("radar.dex")
-    remote_md5 = get_remote_file_md5(packageName, radarDexPath)
+    remote_md5 = get_remote_file_md5(radarDexPath)
+    sdcard_remote_md5 = get_remote_file_md5("/sdcard/radar.dex")
+    #先把radar.dex拷贝到sdcard，后期更新radar.dex直接从sdcard拷过去
+    if local_md5 != sdcard_remote_md5:
+        push_file_to_remote("radar.dex", "/sdcard/")
     #print(f"local_md5:{local_md5} remote_md5:{remote_md5}")
     if local_md5 != remote_md5:
         info(f"update radar.dex into {radarDexPath}")
-        pushFile2Local("radar.dex", radarDexPath)
+        run_su_command(f"cp /sdcard/radar.dex {radarDexPath}", True)
 
 def on_message(message, data):
     pass
@@ -311,7 +455,7 @@ def createHookingEnverment(packageName):
         apkPath = None
         if match:
             apkPath = match.group(1).strip()
-            thread = threading.Thread(target=copyApk2Local, args=(apkPath, f"./{packageName}/base.apk",))
+            thread = threading.Thread(target=pull_file_to_local, args=(apkPath, f"./{packageName}/base.apk",))
             thread.start()
         info(f"Generating frida shortcut command...")
         os.makedirs(packageName+"/xinit")
@@ -320,12 +464,10 @@ def createHookingEnverment(packageName):
         attach_shell = shellPrefix + "frida $HOOKER_DRIVER -l $1 -N " + packageName
         spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER -f -N {packageName} -l $1"
         xinitPyScript = run_env.xinitPyScript + "xinitDeploy('"+packageName+"')"
-        disableSslPinningPyScript = run_env.disableSslPinningPyScript.replace("{appPackageName}", packageName)
         createFile(packageName+"/hooking", logHooking)
         createFile(packageName+"/attach", attach_shell)
         createFile(packageName+"/spawn", spawn_shell)
         createFile(packageName+"/xinitdeploy", xinitPyScript)
-        createFile(packageName+"/disable_sslpinning", disableSslPinningPyScript)
         createFile(packageName + "/kill", shellPrefix + "frida-kill $HOOKER_DRIVER "+packageName)
         createFile(packageName + "/pull_so.py", pull_so_python_code.replace("com.smile.gifmaker", packageName))
         createFile(packageName+"/objection", shellPrefix + "objection -d -g "+packageName+" explore")
@@ -550,8 +692,8 @@ while True:
         identifier_list = list_third_party_apps()
         print("Please enter the identifier that needs to be reversed")
         identifier = cmd_session.prompt('hooker(Identifier): ', completer=WordCompleter(identifier_list, ignore_case=False, match_middle=True, WORD=True))  
-        if identifier == 'exit' or identifier == 'quit':
-            info('Bye!')
+        if identifier == 'exit' or identifier == 'exit()' or identifier == 'quit':
+            info('ByeBye!')
             sys.exit(2);
             break
         if identifier not in identifier_list:
@@ -561,7 +703,7 @@ while True:
         if not os.path.isdir(identifier):
             run_env.init(current_identifier)
             createHookingEnverment(current_identifier)
-        checkRadarDex(current_identifier)
+        check_radar_dex(current_identifier)
         current_identifier_pid, current_identifier_name = ensure_app_in_foreground(current_identifier)
         entry_debug_mode()
     except (EOFError, KeyboardInterrupt):

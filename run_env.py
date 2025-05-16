@@ -122,7 +122,6 @@ def getPythonLaucher():
         
 
 xinitPyScript = "#! " + getPythonLaucher() + "\n\n" + readFile("xinitdeploy.py")
-disableSslPinningPyScript = "#! " + getPythonLaucher() + "\n\n" + readFile("disable_sslpinning.py")
 
 def getRemoteDriver():
     text = readFile(".hooker_driver")

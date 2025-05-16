@@ -37,13 +37,16 @@ hooker是一个基于frida实现的逆向工具包。为逆向开发人员提供
 
 #### [用iptables + redsocks为指定app配置代理](#7-%E7%94%A8-iptables--redsocks-%E4%B8%BA%E6%8C%87%E5%AE%9Aapp%E9%85%8D%E7%BD%AE%E4%BB%A3%E7%90%86)
 
-# 锦囊妙计
+### 锦囊妙计（爬虫）
 * 如何验证一个函数与手机/用户环境无关？拿两台手机登录不同的帐号，如果调用结果一致就是环境无关函数
 *  目前（2025-04-09） libmsaoaidsec.so 采用了动态dlsym加载pthread_create函数，需要hook dlsym打印堆栈找到调用的地方
 * 可以用lsposed去实现动态加载dex把服务启动起来
 * Unidbg有时不好用，不要忽略了手机天然的执行环境
 * MobSF对分析app指纹收集有一定帮助
 * 让QUIC降级最粗暴的方法就是用iptables禁掉所有的UDP请求（除53端口）
+
+### 锦囊妙计（安全）
+* 判断手机是否安装面具执行su -c id，uid=0(root) gid=0(root) groups=0(root) context=u:r:magisk:s0
 
 
 目录
