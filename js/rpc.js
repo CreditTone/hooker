@@ -48,7 +48,7 @@ rpc.exports = {
             if (!classExists("gz.radar.ClassRadar")) {
                 var context = Java.use("android.app.ActivityThread").currentApplication().getApplicationContext();
                 var packageName = context.getPackageName();
-                Java.openClassFile('/data/user/0/'+packageName+'/radar.dex').load();
+                Java.openClassFile('/data/local/tmp/radar.dex').load();
             }
         });
 

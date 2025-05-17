@@ -112,7 +112,7 @@ function fastTojson(javaObject) {
     return JSONClz.toJSONString(javaObject);
 };
 
-loadDexfile('/data/user/0/com.smile.gifmaker/radar.dex');
+loadDexfile('/data/local/tmp/radar.dex');
 
 Java.perform(function() {
     var radarAndroidClz = Java.use("gz.radar.Android");

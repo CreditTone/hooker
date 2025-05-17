@@ -24,9 +24,9 @@ function hook_ArtMethodRegister() {
     }
     var module_libext = null;
     if (Process.arch === "arm64") {
-        module_libext = Module.load("/data/data/com.smile.gifmaker/libext64.so");
+        module_libext = Module.load("/data/data/com.smile.gifmaker/files/libext64.so");
     } else if (Process.arch === "arm") {
-        module_libext = Module.load("/data/data/com.smile.gifmaker/libext.so");
+        module_libext = Module.load("/data/data/com.smile.gifmaker/files/libext.so");
     }
     if (module_libext != null) {
         var addr_PrettyMethod = module_libext.findExportByName("PrettyMethod");

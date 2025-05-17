@@ -188,7 +188,9 @@ if not is_frida_working_via_attach():
         
 current_identifier = None
 current_identifier_name = None
+current_identifier_version = None
 current_identifier_pid = None
+current_identifier_install_path = None
 frida_device = None
 
 def _init_frida_device():
@@ -204,6 +206,8 @@ def _init_frida_device():
 _init_frida_device()
 
 def ensure_app_in_foreground(package_name):
+    appinfo = adb_device.package_info(package_name)
+    appinstall_path = appinfo["path"].rsplit("/", 1)[0]
     # 获取当前正在运行的所有进程
     proc_map = {}
     apps = frida_device.enumerate_applications()
@@ -221,7 +225,7 @@ def ensure_app_in_foreground(package_name):
             info(f"📲 App {package_name} is running in the background, bringing it to the foreground...")
             # 通过 am 启动主 Activity，会自动 bring 到前台
             adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
-        return proc_map[package_name][0], proc_map[package_name][1]
+        return proc_map[package_name][0], proc_map[package_name][1], appinfo["version_name"], appinstall_path
     else:
         info(f"🚀 App {package_name} is not running, starting it now...")
         #adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
@@ -240,7 +244,7 @@ def ensure_app_in_foreground(package_name):
         apps = frida_device.enumerate_applications()
         for app in sorted(apps, key=lambda x: x.pid or 0):
             if app.pid != 0 and app.identifier == package_name:
-                return app.pid, app.name
+                return app.pid, app.name, appinfo["version_name"], appinstall_path
     return None
 
 def get_remote_file_md5(file_path):
@@ -274,18 +278,27 @@ def get_local_file_md5(filepath, chunk_size=8192):
         warn(f"File Not Found: {filepath}")
         return None
     
-def check_radar_dex(packageName):
-    radarDexPath = '/data/user/0/'+packageName+'/radar.dex';
-    local_md5 = get_local_file_md5("radar.dex")
-    remote_md5 = get_remote_file_md5(radarDexPath)
-    sdcard_remote_md5 = get_remote_file_md5("/sdcard/radar.dex")
+def check_dependency_files():
+    compara_and_update_file("mobile-deploy/radar.dex", "/data/local/tmp/radar.dex")
+    compara_and_update_file("mobile-deploy/libext64.so", f"/data/data/{current_identifier}/files/libext64.so")
+    compara_and_update_file("mobile-deploy/libext.so", f"/data/data/{current_identifier}/files/libext.so")
+             
+def compara_and_update_file(local_file, remote_file):
+    local_md5 = get_local_file_md5(local_file)
+    filename = remote_file.split("/")[-1]
+    sdcard_remote_md5 = get_remote_file_md5(f"/sdcard/{filename}")
     #先把radar.dex拷贝到sdcard，后期更新radar.dex直接从sdcard拷过去
     if local_md5 != sdcard_remote_md5:
-        push_file_to_remote("radar.dex", "/sdcard/")
+        push_file_to_remote(local_file, "/sdcard/")
+    remote_md5 = get_remote_file_md5(remote_file)
     #print(f"local_md5:{local_md5} remote_md5:{remote_md5}")
     if local_md5 != remote_md5:
-        info(f"update radar.dex into {radarDexPath}")
-        run_su_command(f"cp /sdcard/radar.dex {radarDexPath}", True)
+        info(f"update {filename} into {remote_file}")
+        run_su_command(f"cp /sdcard/{filename} {remote_file}", True)
+        run_su_command(f"chmod 777 {remote_file}", True)
+        
+
+    
 
 def on_message(message, data):
     pass
@@ -392,6 +405,8 @@ def onlyCheckHookingEnverment(target):
         detach(online_session)
         
 pull_so_python_code = """
+#!/usr/bin/env python3
+
 import adbutils
 import argparse
 import os
@@ -445,40 +460,36 @@ if not found:
     print(f"未找到 {so_name}，请确认它是否存在于任何 ABI 子目录中")
 """
 
-def createHookingEnverment(packageName):
+def create_working_dir_enverment():
+    global current_identifier
     global frida_device
+    global current_identifier_name
+    global current_identifier_version
+    packageName = current_identifier
     if not os.path.exists(packageName):
         os.makedirs(packageName)
         info(f"Creating working directory: {packageName}")
-        apkPathRaw = adb_device.shell(f"pm path {packageName}")
-        match = re.search(r'package:(.*\.apk)', apkPathRaw)
-        apkPath = None
-        if match:
-            apkPath = match.group(1).strip()
-            thread = threading.Thread(target=pull_file_to_local, args=(apkPath, f"./{packageName}/base.apk",))
-            thread.start()
         info(f"Generating frida shortcut command...")
         os.makedirs(packageName+"/xinit")
         shellPrefix = "#!/bin/bash\nHOOKER_DRIVER=$(cat ../.hooker_driver)\n"
         logHooking = shellPrefix + "echo \"hooking $1\" > log\ndate | tee -ai log\n" + "frida $HOOKER_DRIVER -l $1 -N " + packageName + " | tee -ai log"
         attach_shell = shellPrefix + "frida $HOOKER_DRIVER -l $1 -N " + packageName
-        spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER -f -N {packageName} -l $1"
+        spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER -f {packageName} -l $1"
         xinitPyScript = run_env.xinitPyScript + "xinitDeploy('"+packageName+"')"
         createFile(packageName+"/hooking", logHooking)
         createFile(packageName+"/attach", attach_shell)
         createFile(packageName+"/spawn", spawn_shell)
         createFile(packageName+"/xinitdeploy", xinitPyScript)
         createFile(packageName + "/kill", shellPrefix + "frida-kill $HOOKER_DRIVER "+packageName)
-        createFile(packageName + "/pull_so.py", pull_so_python_code.replace("com.smile.gifmaker", packageName))
+        createFile(packageName + "/pull_so", pull_so_python_code.replace("com.smile.gifmaker", packageName))
         createFile(packageName+"/objection", shellPrefix + "objection -d -g "+packageName+" explore")
         os.popen('chmod 777 ' + packageName +'/hooking').readlines()
         os.popen('chmod 777 ' + packageName +'/attach').readlines()
         os.popen('chmod 777 ' + packageName +'/xinitdeploy').readlines()
-        os.popen('chmod 777 ' + packageName +'/disable_sslpinning').readlines()
         os.popen('chmod 777 ' + packageName +'/kill').readlines()
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
         os.popen('chmod 777 ' + packageName +'/spawn').readlines()
-        os.popen('cp *.so ' + packageName +'/xinit/').readlines()
+        os.popen('chmod 777 ' + packageName +'/pull_so').readlines()
         info(f"Generating built-in frida script...")
         createFile(packageName + "/empty.js", "")
         createFile(packageName + "/ssl_log.js", run_env.ssl_log_jscode)
@@ -503,10 +514,9 @@ def createHookingEnverment(packageName):
         createFile(packageName + "/replace_dlsym_get_pthread_create.js", run_env.replace_dlsym_get_pthread_create_jscode)
         createFile(packageName + "/find_boringssl_custom_verify_func.js", run_env.find_boringssl_custom_verify_func_jscode)
         createFile(packageName + "/apk_shell_scanner.js", run_env.apk_shell_scanner_jscode)
-        if apkPath:
-            info(f"Copying APK {apkPath} to working directory please waiting for a few seconds")
-        else:
-            info(f"Working directory create successful")
+        #info(f"Copying APK {current_identifier_install_path}/base.apk to working directory please waiting for a few seconds")
+        pull_file_to_local(f"{current_identifier_install_path}/base.apk", f"./{packageName}/{current_identifier_name}_{current_identifier_version}.apk")
+        info(f"Working directory create successful")
 
 def hook_js(hookCmdArg, savePath = None):
     online_session = None
@@ -609,32 +619,40 @@ cmd_session = PromptSession()
 
 def entry_debug_mode():    
     completer = NestedCompleter.from_nested_dict({
-        'show': {
-            'activity': None,
-            'service': None,
-            'object': None,
-        },
+        'activitys': None,
+        'a': None,
+        'services': None,
+        'b': None,
+        'object': None,
+        'c': None,
+        'view': None,
+        'v': None,
         'hook': None,
+        'j': None,
+        'scanshell': None,
+        'proxy_http': None,
+        'proxy_socks5': None,
         'exit': None,
     })
     
     def handle_command(cmd):
-        if cmd.startswith("show ") and " activity" in cmd:
+        cmd = cmd.strip()
+        if cmd.startswith("activitys") or "a" == cmd:
             print_activitys()
             return True
-        elif cmd.startswith("show ") and " service" in cmd:
+        elif cmd.startswith("services") or "b" == cmd:
             print_services()
             return True
-        elif cmd.startswith("show ") and " object" in cmd:
-            m = re.search(r"show\s+object\s+([\w]+)", cmd)
+        elif (cmd.startswith("object ") or cmd.startswith("c ")) and re.search(r"(object|c)\s+([\w]+)", cmd):
+            m = re.search(r"(object|c)\s+([\w]+)", cmd)
             if m:
-                object_to_explain(m.group(1))
+                object_to_explain(m.group(2))
             return True
-        elif cmd.startswith("hook "):
-            m = re.search(r"hook\s+([^\s]+)", cmd)
+        elif (cmd.startswith("hook ") or cmd.startswith("j ")) and re.search(r"(hook|j)\s+([\w]+)", cmd):
+            m = re.search(r"(hook|j)\s+([\w]+)", cmd)
             if m:
                 info("Generating frida script, please wait for a few seconds")
-                hook_js(m.group(1), None)
+                hook_js(m.group(2), None)
             else:
                 warn(f"Can not parse class and method: {cmd}")
             return True
@@ -679,16 +697,18 @@ def pad_display(text, width):
 def list_third_party_apps():
     identifier_list = []
     apps = frida_device.enumerate_applications()
-    print(f"{pad_display('PID', 6)}\t{pad_display('APP', 10)}\t{pad_display('IDENTIFIER', 35)}\tEXIST_REVERSE_DIRECTORY")
+    print(f"{pad_display('PID', 6)}\t{pad_display('APP', 20)}\t{pad_display('IDENTIFIER', 35)}\tEXIST_REVERSE_DIRECTORY")
     for app in sorted(apps, key=lambda x: x.pid or 0):
         if app.pid is not None:  # 只列出运行中的
             reverse_directory_exist = os.path.isdir(app.identifier)
-            print(f"{pad_display(app.pid, 6)}\t{pad_display(app.name, 10)}\t{pad_display(app.identifier, 35)}\t{'✅' if reverse_directory_exist else '❌'}")
+            print(f"{pad_display(app.pid, 6)}\t{pad_display(app.name, 20)}\t{pad_display(app.identifier, 35)}\t{'✅' if reverse_directory_exist else '❌'}")
             identifier_list.append(app.identifier)
     return identifier_list
         
 while True:
     try:
+        info("hooker Let's enjoy reverse engineering together")
+        info("-----------------------------------------------------------------------------------------------")
         identifier_list = list_third_party_apps()
         print("Please enter the identifier that needs to be reversed")
         identifier = cmd_session.prompt('hooker(Identifier): ', completer=WordCompleter(identifier_list, ignore_case=False, match_middle=True, WORD=True))  
@@ -699,12 +719,16 @@ while True:
         if identifier not in identifier_list:
             warn("The application does not exist. Please enter an existing application")
             continue
+        # global current_identifier_pid
+        # global current_identifier
+        # global current_identifier_name
+        # global current_identifier_version
         current_identifier = identifier
+        current_identifier_pid, current_identifier_name, current_identifier_version, current_identifier_install_path  = ensure_app_in_foreground(current_identifier)
         if not os.path.isdir(identifier):
             run_env.init(current_identifier)
-            createHookingEnverment(current_identifier)
-        check_radar_dex(current_identifier)
-        current_identifier_pid, current_identifier_name = ensure_app_in_foreground(current_identifier)
+            create_working_dir_enverment()
+        check_dependency_files()
         entry_debug_mode()
     except (EOFError, KeyboardInterrupt):
         sys.exit(2);

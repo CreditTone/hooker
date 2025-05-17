@@ -12,7 +12,7 @@ function checkLoadDex(className, dexfile) {
         }
     });
 };
-loadDexfile('/data/user/0/com.smile.gifmaker/radar.dex');
+loadDexfile('/data/local/tmp/radar.dex');
 function classExists(className) {
     var exists = false;
     try {
