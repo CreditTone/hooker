@@ -41,6 +41,11 @@ import frida, sys
 import os
 import io
 import re
+import stat
+import pwd
+import grp
+import time
+import json
 import getopt
 import traceback
 import run_env
@@ -55,7 +60,10 @@ from run_env import xinitPyScript
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.completion import NestedCompleter
+from prompt_toolkit.patch_stdout import patch_stdout
 from wcwidth import wcswidth
+
+cmd_session = PromptSession()
 
 warn = red
 info = yellow
@@ -205,6 +213,32 @@ def _init_frida_device():
 
 _init_frida_device()
 
+def start_app(package_name):
+    shell_result = adb_device.shell(f"dumpsys package {package_name} | grep -A 1 MAIN | grep {package_name}").strip()
+    m = re.search(r"\s+([^\s]+)\s+filter", shell_result)
+    if m:
+        main_activity = m.group(1)
+        print(f"am start -n {main_activity}")
+        adb_device.shell(f"am start -n {main_activity}")
+    else:
+        adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
+    for j in range(100):
+        time.sleep(0.5)
+        if package_name in adb_device.shell("dumpsys activity activities | grep mResumedActivity"):
+            break
+    apps = frida_device.enumerate_applications()
+    for app in sorted(apps, key=lambda x: x.pid or 0):
+        if app.pid != 0 and app.identifier == package_name:
+            return app.pid, app.name
+    return None, None
+
+def restart_app(package_name):
+    info(f"restarts {package_name}")
+    adb_device.app_stop(package_name)
+    time.sleep(3)
+    app_pid, app_name = start_app(package_name)
+    current_identifier = app_pid
+
 def ensure_app_in_foreground(package_name):
     appinfo = adb_device.package_info(package_name)
     appinstall_path = appinfo["path"].rsplit("/", 1)[0]
@@ -229,23 +263,8 @@ def ensure_app_in_foreground(package_name):
     else:
         info(f"🚀 App {package_name} is not running, starting it now...")
         #adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
-        shell_result = adb_device.shell(f"dumpsys package {package_name} | grep -A 1 MAIN | grep {package_name}").strip()
-        m = re.search(r"\s+([^\s]+)\s+filter", shell_result)
-        if m:
-            main_activity = m.group(1)
-            print(f"am start -n {main_activity}")
-            adb_device.shell(f"am start -n {main_activity}")
-        else:
-            adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
-        for j in range(100):
-            time.sleep(0.5)
-            if package_name in adb_device.shell("dumpsys activity activities | grep mResumedActivity"):
-                break
-        apps = frida_device.enumerate_applications()
-        for app in sorted(apps, key=lambda x: x.pid or 0):
-            if app.pid != 0 and app.identifier == package_name:
-                return app.pid, app.name, appinfo["version_name"], appinstall_path
-    return None
+        app_pid, app_name = start_app(package_name)
+        return app_pid, app_name, appinfo["version_name"], appinstall_path
 
 def get_remote_file_md5(file_path):
     # 检查文件是否存在并获取长度
@@ -277,6 +296,9 @@ def get_local_file_md5(filepath, chunk_size=8192):
     except FileNotFoundError:
         warn(f"File Not Found: {filepath}")
         return None
+    
+def read_local_file(filename):
+    return io.open(filename,'r',encoding= 'utf8').read()
     
 def check_dependency_files():
     compara_and_update_file("mobile-deploy/radar.dex", "/data/local/tmp/radar.dex")
@@ -333,7 +355,9 @@ def _get_min_pid_by_name(process_name):
         # 如果没有找到匹配的进程，返回 None
         return None
 
-def attach():
+
+
+def attach_rpc():
     global frida_device
     online_session = None
     online_script = None
@@ -345,6 +369,28 @@ def attach():
     online_script.load()
     online_script.exports_sync.loadradardex()
     return online_session, online_script
+
+def spawn(script_file, use_v8=False):
+    if not os.path.isfile(script_file):
+        warn(f"{script_file} File Not found")
+        return
+    script_jscode = read_local_file(script_file)
+    global frida_device
+    current_identifier_pid = frida_device.spawn([current_identifier])
+    online_script = None
+    online_session = frida_device.attach(current_identifier_pid)
+    if online_session == None:
+        warn("attaching fail to " + target)
+        return None, None
+    if use_v8:
+        online_script = online_session.create_script(script_jscode, runtime="v8")
+    else:
+        online_script = online_session.create_script(script_jscode)
+    # online_script.on('message', on_message)
+    online_script.load()
+    frida_device.resume(current_identifier_pid)
+    # sys.stdin.read()
+    return online_session, online_script
     
 
 def detach(online_session):
@@ -355,7 +401,7 @@ def existsClass(target,className):
     online_session = None
     online_script = None
     try:
-        online_session,online_script,_ = attach(target);
+        online_session, online_script,_ = attach_rpc(target);
         info(online_script.exports_sync.containsclass(className))
     except Exception:
         warn(traceback.format_exc())  
@@ -366,7 +412,7 @@ def findclasses(target, classRegex):
     online_session = None
     online_script = None
     try:
-        online_session, online_script,_ = attach(target);
+        online_session, online_script,_ = attach_rpc(target);
         info(online_script.exports_sync.findclasses(classRegex));
     except Exception:
         warn(traceback.format_exc())  
@@ -377,7 +423,7 @@ def findclasses2(target, className):
     online_session = None
     online_script = None
     try:
-        online_session, online_script,_ = attach(target);
+        online_session, online_script,_ = attach_rpc(target);
         info(online_script.exports_sync.findclasses2(className));
     except Exception:
         warn(traceback.format_exc())  
@@ -398,7 +444,7 @@ def createFile(filename, text):
 def onlyCheckHookingEnverment(target):
     online_session = None
     try:
-        online_session,_,_ = attach(target);
+        online_session,_,_ = attach_rpc(target);
     except Exception:
         print(traceback.format_exc())  
     finally:
@@ -477,14 +523,14 @@ def create_working_dir_enverment():
         spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER --runtime=v8 -f {packageName} -l $1"
         xinitPyScript = run_env.xinitPyScript + "xinitDeploy('"+packageName+"')"
         createFile(packageName+"/hooking", logHooking)
-        createFile(packageName+"/attach", attach_shell)
+        createFile(packageName+"/attach_rpc", attach_shell)
         createFile(packageName+"/spawn", spawn_shell)
         createFile(packageName+"/xinitdeploy", xinitPyScript)
         createFile(packageName + "/kill", shellPrefix + "frida-kill $HOOKER_DRIVER "+packageName)
         createFile(packageName + "/pull_so", pull_so_python_code.replace("com.smile.gifmaker", packageName))
         createFile(packageName+"/objection", shellPrefix + "objection -d -g "+packageName+" explore")
         os.popen('chmod 777 ' + packageName +'/hooking').readlines()
-        os.popen('chmod 777 ' + packageName +'/attach').readlines()
+        os.popen('chmod 777 ' + packageName +'/attach_rpc').readlines()
         os.popen('chmod 777 ' + packageName +'/xinitdeploy').readlines()
         os.popen('chmod 777 ' + packageName +'/kill').readlines()
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
@@ -524,7 +570,7 @@ def hook_js(hookCmdArg, savePath = None):
     packageName = current_identifier
     try:
         ganaretoionJscode = ""
-        online_session, online_script = attach();
+        online_session, online_script = attach_rpc();
         appversion = online_script.exports_sync.appversion();
         spaceSpatrater = hookCmdArg.find(":")
         className = hookCmdArg
@@ -563,7 +609,7 @@ def print_activitys():
     online_session = None
     online_script = None
     try:
-        online_session,online_script = attach();
+        online_session,online_script = attach_rpc();
         info(online_script.exports_sync.activitys())
     except Exception:
         print(traceback.format_exc())  
@@ -574,7 +620,7 @@ def print_services():
     online_session = None
     online_script = None
     try:
-        online_session, online_script = attach();
+        online_session, online_script = attach_rpc();
         info(online_script.exports_sync.services())
     except Exception:
         print(traceback.format_exc())  
@@ -585,7 +631,7 @@ def print_object(objectId):
     online_session = None
     online_script = None
     try:
-        online_session, online_script = attach();
+        online_session, online_script = attach_rpc();
         info(online_script.exports_sync.objectinfo(objectId))
     except Exception:
         print(traceback.format_exc())  
@@ -596,7 +642,7 @@ def object_to_explain(objectId):
     online_session = None
     online_script = None
     try:
-        online_session, online_script = attach();
+        online_session, online_script = attach_rpc();
         info(online_script.exports_sync.objecttoexplain(objectId))
     except Exception:
         print(traceback.format_exc())  
@@ -607,31 +653,92 @@ def print_view(viewId):
     online_session = None
     online_script = None
     try:
-        online_session, online_script = attach();
+        online_session, online_script = attach_rpc();
         report = online_script.exports_sync.viewinfo(viewId)
         info(report);
     except Exception:
         print(traceback.format_exc())  
     finally:
         detach(online_session)
+        
 
-cmd_session = PromptSession()
+def list_working_dir():
+    path = current_identifier
+    info(f"-------------------------list working dir hooker/{path}-------------------------")
+    def format_mode(mode):
+        is_dir = 'd' if stat.S_ISDIR(mode) else '-'
+        perms = ''
+        for who in ['USR', 'GRP', 'OTH']:
+            for what in ['R', 'W', 'X']:
+                perms += (what.lower() if mode & getattr(stat, f'S_I{what}{who}') else '-')
+        return is_dir + perms
+    explain = {}
+    with open('assets/explain.json', 'r', encoding='utf-8') as f:
+        explain = json.load(f)
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            full_path = os.path.join(root, name)
+            try:
+                st = os.lstat(full_path)
+                mode = format_mode(st.st_mode)
+                n_links = st.st_nlink
+                uid_name = pwd.getpwuid(st.st_uid).pw_name
+                gid_name = grp.getgrgid(st.st_gid).gr_name
+                size = st.st_size
+                mtime = time.strftime('%b %d %H:%M', time.localtime(st.st_mtime))
+                script_info = f"{full_path}"
+                if name in explain:
+                    script_info += f"\nexplain:{explain[name]}\n"
+                print(script_info)
+            except Exception as e:
+                print(f"Error reading {full_path}: {e}")
+                
+def just_trust_me():
+    online_session = None
+    online_script = None
+    try:
+        online_session, online_script = spawn(f"{current_identifier}/just_trust_me.js", True)
+        info("just_trust_me.js starts successful")
+        info("CTRL + C to exit")
+        while True:
+            try:
+                with patch_stdout():
+                    text = cmd_session.prompt("CTRL + C to exit > ", handle_sigint=True)
+            except KeyboardInterrupt:
+                break  # 继续循环而不是退出
+            except EOFError:
+                print("Exiting...")
+                break
+    except Exception:
+        print(traceback.format_exc())  
+    finally:
+        detach(online_session)
+        info("just_trust_me.js exits successful")
+        restart_app(current_identifier)
+        
+
+
 
 def entry_debug_mode():    
     completer = NestedCompleter.from_nested_dict({
         'activitys': None,
         'a': None,
         'services': None,
-        'b': None,
+        's': None,
         'object': None,
-        'c': None,
+        'o': None,
         'view': None,
         'v': None,
-        'hook': None,
-        'j': None,
+        'generatescript': None,
+        'gs': None,
         'scanshell': None,
-        'proxy_http': None,
-        'proxy_socks5': None,
+        'ss': None,
+        'proxy': None,
+        'justtrustme': None,
+        'trust': None,
+        'ls': None,
+        'restart': None,
+        'current_identifier_pid': None,
         'exit': None,
     })
     
@@ -640,16 +747,33 @@ def entry_debug_mode():
         if cmd.startswith("activitys") or "a" == cmd:
             print_activitys()
             return True
-        elif cmd.startswith("services") or "b" == cmd:
+        elif cmd.startswith("services") or "s" == cmd:
             print_services()
             return True
-        elif (cmd.startswith("object ") or cmd.startswith("c ")) and re.search(r"(object|c)\s+([\w]+)", cmd):
-            m = re.search(r"(object|c)\s+([\w]+)", cmd)
+        elif (cmd.startswith("object ") or cmd.startswith("o ")) and re.search(r"(object|o)\s+([^\s]+)", cmd):
+            m = re.search(r"(object|o)\s+([^\s]+)", cmd)
             if m:
-                object_to_explain(m.group(2))
+                print_object(m.group(2))
             return True
-        elif (cmd.startswith("hook ") or cmd.startswith("j ")) and re.search(r"(hook|j)\s+([\w]+)", cmd):
-            m = re.search(r"(hook|j)\s+([\w]+)", cmd)
+        elif (cmd.startswith("view ") or cmd.startswith("v ")) and re.search(r"(view|v)\s+([^\s]+)", cmd):
+            m = re.search(r"(view|v)\s+([^\s]+)", cmd)
+            if m:
+                print_view(m.group(2))
+            return True
+        elif cmd == "ls":
+            list_working_dir()
+            return True
+        elif cmd == "justtrustme" or cmd == "trust":
+            just_trust_me()
+            return True
+        elif cmd == "restart":
+            restart_app(current_identifier)
+            return True
+        elif cmd == "current_identifier_pid":
+            info(current_identifier_pid)
+            return True
+        elif (cmd.startswith("generatescript ") or cmd.startswith("gs ")) and re.search(r"(generatescript|gs)\s+([^\s]+)", cmd):
+            m = re.search(r"(generatescript|gs)\s+([^\s]+)", cmd)
             if m:
                 info("Generating frida script, please wait for a few seconds")
                 hook_js(m.group(2), None)
@@ -672,7 +796,7 @@ def entry_debug_mode():
     hooker_cmd = ""
     while True:
         try:
-            hooker_cmd = cmd_session.prompt('hooker > ', completer=completer)
+            hooker_cmd = cmd_session.prompt(f'{current_identifier_name} > ', completer=completer)
             if hooker_cmd == 'exit' or hooker_cmd == 'quit':
                 break
             is_handled = handle_command(hooker_cmd)
