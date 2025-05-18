@@ -474,7 +474,7 @@ def create_working_dir_enverment():
         shellPrefix = "#!/bin/bash\nHOOKER_DRIVER=$(cat ../.hooker_driver)\n"
         logHooking = shellPrefix + "echo \"hooking $1\" > log\ndate | tee -ai log\n" + "frida $HOOKER_DRIVER -l $1 -N " + packageName + " | tee -ai log"
         attach_shell = shellPrefix + "frida $HOOKER_DRIVER -l $1 -N " + packageName
-        spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER -f {packageName} -l $1"
+        spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER --runtime=v8 -f {packageName} -l $1"
         xinitPyScript = run_env.xinitPyScript + "xinitDeploy('"+packageName+"')"
         createFile(packageName+"/hooking", logHooking)
         createFile(packageName+"/attach", attach_shell)
