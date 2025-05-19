@@ -5,10 +5,38 @@ Created on 2020年3月23日
 
 @author: stephen
 '''
-from _warnings import warn
+
 
 default_frida_server_arm = "frida-server-16.7.19-android-arm"
 default_frida_server_arm64 = "frida-server-16.7.19-android-arm64"
+
+
+import frida, sys
+import os
+import io
+import re
+import stat
+import pwd
+import grp
+import time
+import json
+import getopt
+import traceback
+import run_env
+import base64
+import time
+import platform
+import threading
+import adbutils
+import hashlib
+import shutil
+from run_env import xinitPyScript
+
+from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.completion import NestedCompleter
+from prompt_toolkit.patch_stdout import patch_stdout
+from wcwidth import wcswidth
 
 def withColor(string, fg, bg=49):
     print("\33[0m\33[%d;%dm%s\33[0m" % (fg, bg, string))
@@ -36,32 +64,20 @@ def cyan(string):
 def white(string):
     return withColor(string, White+30) # White
 
+def print_js_file(filenames :list):
+    if not filenames:
+        return
+    GREEN = "\033[32m"
+    RESET = "\033[0m"
+    columns, _ = shutil.get_terminal_size()
+    # 计算每个字段宽度
+    max_len = max(len(name) for name in filenames) + 2
+    items_per_line = max(1, columns // max_len)
+    # 输出带颜色的文件名
+    for i in range(0, len(filenames), items_per_line):
+        line = "".join(f"{GREEN}{name.ljust(max_len)}{RESET}" for name in filenames[i:i + items_per_line])
+        print(line)
 
-import frida, sys
-import os
-import io
-import re
-import stat
-import pwd
-import grp
-import time
-import json
-import getopt
-import traceback
-import run_env
-import base64
-import time
-import platform
-import threading
-import adbutils
-import hashlib
-from run_env import xinitPyScript
-
-from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import WordCompleter
-from prompt_toolkit.completion import NestedCompleter
-from prompt_toolkit.patch_stdout import patch_stdout
-from wcwidth import wcswidth
 
 cmd_session = PromptSession()
 
@@ -365,30 +381,56 @@ def _get_min_pid_by_name(process_name):
 
 
 
-def attach_rpc():
+def attach_rpc(use_v8=False):
     global frida_device
     online_session = None
     online_script = None
     online_session = frida_device.attach(current_identifier_pid)
     if online_session == None:
-        warn("attaching fail to " + target)
-    online_script = online_session.create_script(run_env.rpc_jscode)
+        warn("attaching fail to device")
+        return None, None
+    if use_v8:
+        online_script = online_session.create_script(run_env.rpc_jscode, runtime="v8")
+    else:
+        online_script = online_session.create_script(run_env.rpc_jscode)
     online_script.on('message', on_message)
     online_script.load()
     online_script.exports_sync.loadradardex()
     return online_session, online_script
 
+def attach(script_file, use_v8=False):
+    if not os.path.isfile(script_file):
+        warn(f"attach {script_file} File Not found")
+        return None, None
+    script_jscode = read_local_file(script_file)
+    global frida_device
+    online_session = None
+    online_script = None
+    online_session = frida_device.attach(current_identifier_pid)
+    if online_session == None:
+        warn("attaching fail to device")
+        return None, None
+    if use_v8:
+        #info("use v8 js engine")
+        online_script = online_session.create_script(script_jscode, runtime="v8")
+    else:
+        online_script = online_session.create_script(script_jscode)
+    online_script.on('message', on_message)
+    online_script.load()
+    #sys.stdin.read()
+    return online_session, online_script
+
 def spawn(script_file, use_v8=False):
     if not os.path.isfile(script_file):
         warn(f"{script_file} File Not found")
-        return
+        return None, None
     script_jscode = read_local_file(script_file)
     global frida_device
     current_identifier_pid = frida_device.spawn([current_identifier])
     online_script = None
     online_session = frida_device.attach(current_identifier_pid)
     if online_session == None:
-        warn("attaching fail to " + target)
+        warn("attaching fail to device")
         return None, None
     if use_v8:
         online_script = online_session.create_script(script_jscode, runtime="v8")
@@ -397,7 +439,7 @@ def spawn(script_file, use_v8=False):
     # online_script.on('message', on_message)
     online_script.load()
     frida_device.resume(current_identifier_pid)
-    # sys.stdin.read()
+    sys.stdin.read()
     return online_session, online_script
     
 
@@ -438,7 +480,7 @@ def findclasses2(target, className):
     finally:    
         detach(online_session)        
 
-def createFile(filename, text):
+def create_workingdir_file(filename, text):
     file = None
     try:
         file = open(filename, mode='w+')
@@ -449,15 +491,6 @@ def createFile(filename, text):
         if file != None:
             file.close()
             
-def onlyCheckHookingEnverment(target):
-    online_session = None
-    try:
-        online_session,_,_ = attach_rpc(target);
-    except Exception:
-        print(traceback.format_exc())  
-    finally:
-        detach(online_session)
-        
 pull_so_python_code = """
 #!/usr/bin/env python3
 
@@ -527,16 +560,16 @@ def create_working_dir_enverment():
         os.makedirs(packageName+"/xinit")
         shellPrefix = "#!/bin/bash\nHOOKER_DRIVER=$(cat ../.hooker_driver)\n"
         logHooking = shellPrefix + "echo \"hooking $1\" > log\ndate | tee -ai log\n" + "frida $HOOKER_DRIVER -l $1 -N " + packageName + " | tee -ai log"
-        attach_shell = shellPrefix + "frida $HOOKER_DRIVER -l $1 -N " + packageName
+        attach_shell = shellPrefix + "frida $HOOKER_DRIVER -l $1 -n " + packageName
         spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER --runtime=v8 -f {packageName} -l $1"
         xinitPyScript = run_env.xinitPyScript + "xinitDeploy('"+packageName+"')"
-        createFile(packageName+"/hooking", logHooking)
-        createFile(packageName+"/attach_rpc", attach_shell)
-        createFile(packageName+"/spawn", spawn_shell)
-        createFile(packageName+"/xinitdeploy", xinitPyScript)
-        createFile(packageName + "/kill", shellPrefix + "frida-kill $HOOKER_DRIVER "+packageName)
-        createFile(packageName + "/pull_so", pull_so_python_code.replace("com.smile.gifmaker", packageName))
-        createFile(packageName+"/objection", shellPrefix + "objection -d -g "+packageName+" explore")
+        create_workingdir_file(packageName+"/hooking", logHooking)
+        create_workingdir_file(packageName+"/attach_rpc", attach_shell)
+        create_workingdir_file(packageName+"/spawn", spawn_shell)
+        create_workingdir_file(packageName+"/xinitdeploy", xinitPyScript)
+        create_workingdir_file(packageName + "/kill", shellPrefix + "frida-kill $HOOKER_DRIVER "+packageName)
+        create_workingdir_file(packageName + "/pull_so", pull_so_python_code.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName+"/objection", shellPrefix + "objection -d -g "+packageName+" explore")
         os.popen('chmod 777 ' + packageName +'/hooking').readlines()
         os.popen('chmod 777 ' + packageName +'/attach_rpc').readlines()
         os.popen('chmod 777 ' + packageName +'/xinitdeploy').readlines()
@@ -545,31 +578,32 @@ def create_working_dir_enverment():
         os.popen('chmod 777 ' + packageName +'/spawn').readlines()
         os.popen('chmod 777 ' + packageName +'/pull_so').readlines()
         info(f"Generating built-in frida script...")
-        createFile(packageName + "/empty.js", "")
-        createFile(packageName + "/ssl_log.js", run_env.ssl_log_jscode)
-        createFile(packageName + "/url.js", run_env.url_jscode)
-        createFile(packageName + "/edit_text.js", run_env.edit_text_jscode)
-        createFile(packageName + "/text_view.js", run_env.text_view_jscode)
-        createFile(packageName + "/click.js", run_env.click_jscode)
-        createFile(packageName + "/hook_register_natives.js", run_env.hook_RN_jscode)
-        createFile(packageName + "/keystore_dump.js", run_env.keystore_dump_jscode)
-        createFile(packageName + "/dump_dex.js", run_env.dump_dex_jscode)
-        createFile(packageName + "/android_ui.js", run_env.android_ui_jscode.replace("com.smile.gifmaker", packageName))
-        createFile(packageName + "/activity_events.js", run_env.activity_events_jscode.replace("com.smile.gifmaker", packageName))
-        createFile(packageName + "/object_store.js", run_env.object_store_jscode.replace("com.smile.gifmaker", packageName))
-        createFile(packageName + "/just_trust_me.js", run_env.just_trust_me_jscode.replace("com.smile.gifmaker", packageName))
-        createFile(packageName + "/just_trust_me_okhttp_hook_finder_for_android.js", run_env.just_trust_me_okhttp_hook_finder_jscode.replace("com.smile.gifmaker", packageName))
-        createFile(packageName + "/just_trust_me_for_ios.js", run_env.just_trust_me_for_ios_jscode.replace("com.smile.gifmaker", packageName))
-        createFile(packageName + "/hook_artmethod_register.js", run_env.hook_artmethod_register_jscode.replace("com.smile.gifmaker", packageName))
-        createFile(packageName + "/get_device_info.js", run_env.get_device_info_jscode.replace("com.smile.gifmaker", packageName))
-        createFile(packageName + "/trace_initproc.js", run_env.trace_initproc_jscode)
-        createFile(packageName + "/find_anit_frida_so.js", run_env.find_anit_frida_so_jscode)
-        createFile(packageName + "/hook_jni_method_trace.js", run_env.hook_jni_method_trace_jscode)
-        createFile(packageName + "/replace_dlsym_get_pthread_create.js", run_env.replace_dlsym_get_pthread_create_jscode)
-        createFile(packageName + "/find_boringssl_custom_verify_func.js", run_env.find_boringssl_custom_verify_func_jscode)
-        createFile(packageName + "/apk_shell_scanner.js", run_env.apk_shell_scanner_jscode)
+        create_workingdir_file(packageName + "/empty.js", "")
+        create_workingdir_file(packageName + "/ssl_log.js", run_env.ssl_log_jscode)
+        create_workingdir_file(packageName + "/url.js", run_env.url_jscode)
+        create_workingdir_file(packageName + "/edit_text.js", run_env.edit_text_jscode)
+        create_workingdir_file(packageName + "/text_view.js", run_env.text_view_jscode)
+        create_workingdir_file(packageName + "/click.js", run_env.click_jscode)
+        create_workingdir_file(packageName + "/hook_register_natives.js", run_env.hook_RN_jscode)
+        create_workingdir_file(packageName + "/keystore_dump.js", run_env.keystore_dump_jscode)
+        create_workingdir_file(packageName + "/dump_dex.js", run_env.dump_dex_jscode)
+        create_workingdir_file(packageName + "/android_ui.js", run_env.android_ui_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/activity_events.js", run_env.activity_events_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/object_store.js", run_env.object_store_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/just_trust_me.js", run_env.just_trust_me_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/just_trust_me_okhttp_hook_finder_for_android.js", run_env.just_trust_me_okhttp_hook_finder_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/just_trust_me_for_ios.js", run_env.just_trust_me_for_ios_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/hook_artmethod_register.js", run_env.hook_artmethod_register_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/get_device_info.js", run_env.get_device_info_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/trace_initproc.js", run_env.trace_initproc_jscode)
+        create_workingdir_file(packageName + "/find_anit_frida_so.js", run_env.find_anit_frida_so_jscode)
+        create_workingdir_file(packageName + "/hook_jni_method_trace.js", run_env.hook_jni_method_trace_jscode)
+        create_workingdir_file(packageName + "/replace_dlsym_get_pthread_create.js", run_env.replace_dlsym_get_pthread_create_jscode)
+        create_workingdir_file(packageName + "/find_boringssl_custom_verify_func.js", run_env.find_boringssl_custom_verify_func_jscode)
+        create_workingdir_file(packageName + "/apk_shell_scanner.js", run_env.apk_shell_scanner_jscode)
         #info(f"Copying APK {current_identifier_install_path}/base.apk to working directory please waiting for a few seconds")
-        pull_file_to_local(f"{current_identifier_install_path}/base.apk", f"./{packageName}/{current_identifier_name}_{current_identifier_version}.apk")
+        app_name = current_identifier_name.replace(" ", "")
+        pull_file_to_local(f"{current_identifier_install_path}/base.apk", f"./{packageName}/{app_name}_{current_identifier_version}.apk")
         info(f"Working directory create successful")
 
 def hook_js(hookCmdArg, savePath = None):
@@ -578,7 +612,7 @@ def hook_js(hookCmdArg, savePath = None):
     packageName = current_identifier
     try:
         ganaretoionJscode = ""
-        online_session, online_script = attach_rpc();
+        online_session, online_script = attach_rpc(use_v8=True);
         appversion = online_script.exports_sync.appversion();
         spaceSpatrater = hookCmdArg.find(":")
         className = hookCmdArg
@@ -603,7 +637,7 @@ def hook_js(hookCmdArg, savePath = None):
             warpExtraInfo += "//"+hookCmdArg + "\n"
             warpExtraInfo += run_env.base_jscode
             warpExtraInfo += ganaretoionJscode
-            createFile(savePath, warpExtraInfo)
+            create_workingdir_file(savePath, warpExtraInfo)
             info("frida hook script: " + savePath)
         else:
             warn("Not found any classes by pattern "+hookCmdArg+".")
@@ -671,49 +705,29 @@ def print_view(viewId):
         
 
 def list_working_dir():
-    path = current_identifier
-    info(f"-------------------------list working dir hooker/{path}-------------------------")
-    def format_mode(mode):
-        is_dir = 'd' if stat.S_ISDIR(mode) else '-'
-        perms = ''
-        for who in ['USR', 'GRP', 'OTH']:
-            for what in ['R', 'W', 'X']:
-                perms += (what.lower() if mode & getattr(stat, f'S_I{what}{who}') else '-')
-        return is_dir + perms
-    explain = {}
-    with open('assets/explain.json', 'r', encoding='utf-8') as f:
-        explain = json.load(f)
-    for root, dirs, files in os.walk(path):
-        for name in files:
-            full_path = os.path.join(root, name)
-            try:
-                st = os.lstat(full_path)
-                mode = format_mode(st.st_mode)
-                n_links = st.st_nlink
-                uid_name = pwd.getpwuid(st.st_uid).pw_name
-                gid_name = grp.getgrgid(st.st_gid).gr_name
-                size = st.st_size
-                mtime = time.strftime('%b %d %H:%M', time.localtime(st.st_mtime))
-                script_info = f"{full_path}"
-                if name in explain:
-                    script_info += f"\nexplain:{explain[name]}\n"
-                print(script_info)
-            except Exception as e:
-                print(f"Error reading {full_path}: {e}")
+    js_files = {
+        filename: None
+        for filename in os.listdir(current_identifier)
+        if filename.endswith(".js")
+    }
+    print_js_file(list(js_files.keys()))
                 
-def just_trust_me():
+                
+def execute_script(script_file, is_spawn=False):
     online_session = None
     online_script = None
     try:
-        online_session, online_script = spawn(f"{current_identifier}/just_trust_me.js", True)
-        info("just_trust_me.js starts successful")
-        info("CTRL + C to exit")
+        if is_spawn:
+            online_session, online_script = spawn(f"{current_identifier}/{script_file}", True)
+        else:
+            online_session, online_script = attach(f"{current_identifier}/{script_file}", True)
         while True:
             try:
                 with patch_stdout():
-                    text = cmd_session.prompt("CTRL + C to exit > ", handle_sigint=True)
+                    text = cmd_session.prompt("CTRL + C to stop > ", handle_sigint=True)
             except KeyboardInterrupt:
-                break  # 继续循环而不是退出
+                info(f"Tnterrupting {script_file}")
+                break
             except EOFError:
                 print("Exiting...")
                 break
@@ -721,10 +735,13 @@ def just_trust_me():
         print(traceback.format_exc())  
     finally:
         detach(online_session)
-        info("just_trust_me.js exits successful")
-        restart_app(current_identifier)
-
-current_proxy = None
+        info(f"{script_file} exits successful")
+        if is_spawn:
+            restart_app(current_identifier)
+            
+def just_trust_me():
+    execute_script("just_trust_me.js", True)
+        
 
 def un_proxy():
     run_su_command("for i in $(iptables -t nat -L OUTPUT --line-numbers | grep REDIRECT |grep 12345 | awk \"{print \$1}\" | sort -rn); do iptables -t nat -D OUTPUT $i; done")
@@ -799,9 +816,87 @@ def set_proxy(proxy):
         warn(f"Cannot set proxy {proxy}")
         return
     info(f"proxy {proxy} OK")
-
+    
+    
 def entry_debug_mode():    
-    completer = NestedCompleter.from_nested_dict({
+    def handle_command(cmd):
+        cmd = cmd.strip()
+        if cmd.startswith("activitys") or "a" == cmd:
+            print_activitys()
+            return True
+        elif cmd.startswith("services") or "s" == cmd:
+            print_services()
+            return True
+        elif (cmd.startswith("object ") or cmd.startswith("o ")) and re.search(r"(object|o)\s+([^\s]+)", cmd):
+            m = re.search(r"(object|o)\s+([^\s]+)", cmd)
+            if m:
+                print_object(m.group(2))
+                return True
+        elif (cmd.startswith("view ") or cmd.startswith("v ")) and re.search(r"(view|v)\s+([^\s]+)", cmd):
+            m = re.search(r"(view|v)\s+([^\s]+)", cmd)
+            if m:
+                print_view(m.group(2))
+                return True
+        elif cmd == "ls":
+            list_working_dir()
+            return True
+        elif cmd == "justtrustme" or cmd == "trust":
+            just_trust_me()
+            return True
+        elif (cmd.startswith("proxy ") or cmd.startswith("p ")) and re.search(r"(proxy|p)\s+([^\s]+)", cmd):
+            m = re.search(r"(proxy|p)\s+([^\s]+)", cmd)
+            if m:
+                set_proxy(m.group(2))
+                return True
+        elif cmd == "unproxy" or cmd == "up":
+            un_proxy()
+            return True
+        elif cmd.startswith("attach ") and re.search(r"attach\s+([^\s]+)", cmd):
+            m = re.search(r"attach\s+([^\s]+)", cmd)
+            if m:
+                execute_script(m.group(1), False)
+                return True
+        elif cmd.startswith("spawn ") and re.search(r"spawn\s+([^\s]+)", cmd):
+            m = re.search(r"spawn\s+([^\s]+)", cmd)
+            if m:
+                execute_script(m.group(1), True)
+                return True
+        elif cmd == "restart":
+            restart_app(current_identifier)
+            return True
+        elif cmd == "current_identifier_pid":
+            info(current_identifier_pid)
+            return True
+        elif (cmd.startswith("generatescript ") or cmd.startswith("gs ")) and re.search(r"(generatescript|gs)\s+([^\s]+)", cmd):
+            m = re.search(r"(generatescript|gs)\s+([^\s]+)", cmd)
+            if m:
+                info("Generating frida script, please wait for a few seconds")
+                hook_js(m.group(2), None)
+            else:
+                warn(f"Can not parse class and method: {cmd}")
+            return True
+        return False
+    
+    help_text = (
+        "help >\n"
+        "show activity \n"
+        "\tobtains the information of the activity stack\n"
+        "show service\n"
+        "\tobtains the servic stack information\n"
+        "show object \n"
+        "\tviews the internal information of the object according to objectId\n"
+        "hook {className}:{method}\n"
+        "\tGenerate frida hook script for example: hook okhttp3.Request$Builder:addHeader"
+    )
+    print(help_text)
+    hooker_cmd = ""
+    list_working_dir()
+    js_files = {
+        filename: None
+        for filename in os.listdir(current_identifier)
+        if filename.endswith(".js")
+    }
+    debug_completer = NestedCompleter.from_nested_dict({
         'activitys': None,
         'a': None,
         'services': None,
@@ -821,74 +916,15 @@ def entry_debug_mode():
         'justtrustme': None,
         'trust': None,
         'ls': None,
+        'attach': js_files,
+        'spawn': js_files,
         'restart': None,
         'current_identifier_pid': None,
         'exit': None,
     })
-    
-    def handle_command(cmd):
-        cmd = cmd.strip()
-        if cmd.startswith("activitys") or "a" == cmd:
-            print_activitys()
-            return True
-        elif cmd.startswith("services") or "s" == cmd:
-            print_services()
-            return True
-        elif (cmd.startswith("object ") or cmd.startswith("o ")) and re.search(r"(object|o)\s+([^\s]+)", cmd):
-            m = re.search(r"(object|o)\s+([^\s]+)", cmd)
-            if m:
-                print_object(m.group(2))
-            return True
-        elif (cmd.startswith("view ") or cmd.startswith("v ")) and re.search(r"(view|v)\s+([^\s]+)", cmd):
-            m = re.search(r"(view|v)\s+([^\s]+)", cmd)
-            if m:
-                print_view(m.group(2))
-            return True
-        elif cmd == "ls":
-            list_working_dir()
-            return True
-        elif cmd == "justtrustme" or cmd == "trust":
-            just_trust_me()
-            return True
-        elif (cmd.startswith("proxy ") or cmd.startswith("p ")) and re.search(r"(proxy|p)\s+([^\s]+)", cmd):
-            m = re.search(r"(proxy|p)\s+([^\s]+)", cmd)
-            if m:
-                set_proxy(m.group(2))
-            return True
-        elif cmd == "unproxy" or cmd == "up":
-            un_proxy()
-            return True
-        elif cmd == "restart":
-            restart_app(current_identifier)
-            return True
-        elif cmd == "current_identifier_pid":
-            info(current_identifier_pid)
-            return True
-        elif (cmd.startswith("generatescript ") or cmd.startswith("gs ")) and re.search(r"(generatescript|gs)\s+([^\s]+)", cmd):
-            m = re.search(r"(generatescript|gs)\s+([^\s]+)", cmd)
-            if m:
-                info("Generating frida script, please wait for a few seconds")
-                hook_js(m.group(2), None)
-            else:
-                warn(f"Can not parse class and method: {cmd}")
-            return True
-        return False
-    help_text = (
-        "help >\n"
-        "show activity \n"
-        "\tobtains the information of the activity stack\n"
-        "show service\n"
-        "\tobtains the servic stack information\n"
-        "show object \n"
-        "\tviews the internal information of the object according to objectId\n"
-        "hook {className}:{method}\n"
-        "\tGenerate frida hook script for example: hook okhttp3.Request$Builder:addHeader"
-    )
-    print(help_text)
-    hooker_cmd = ""
     while True:
         try:
-            hooker_cmd = cmd_session.prompt(f'{current_identifier_name} > ', completer=completer)
+            hooker_cmd = cmd_session.prompt(f'{current_identifier_name} > ', completer=debug_completer)
             if hooker_cmd == 'exit' or hooker_cmd == 'quit':
                 break
             is_handled = handle_command(hooker_cmd)
