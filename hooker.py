@@ -110,11 +110,11 @@ def is_frida_working_via_attach(target_package="com.android.systemui"):
         #print("其他异常:", e)
         return False
 
-def check_file_exists(path):
+def check_remote_file_exists(path):
     result = adb_device.shell(f"test -f {path} && echo exists || echo missing")
     return result.strip() == "exists"
 
-def check_dir_exists(path):
+def check_remote_dir_exists(path):
     result = adb_device.shell(f"[ -d {path} ] && echo exists || echo not_exists")
     return result.strip() == "exists"
 
@@ -176,9 +176,9 @@ if not is_frida_working_via_attach():
         sys.exit(2)
     frida_server_file = choose_frida_server()
     remote_frida_server_file = f"/data/mobile-deploy/{frida_server_file}"
-    if not check_dir_exists("/data/mobile-deploy/"):
+    if not check_remote_dir_exists("/data/mobile-deploy/"):
         run_su_command("mkdir /data/mobile-deploy/")
-    if not check_file_exists(remote_frida_server_file):
+    if not check_remote_file_exists(remote_frida_server_file):
         push_file_to_remote(f"mobile-deploy/{frida_server_file}", "/sdcard/")
         run_su_command(f"mv /sdcard/{frida_server_file} {remote_frida_server_file}")
         run_su_command(f"chmod +x {remote_frida_server_file}")
@@ -199,6 +199,7 @@ current_identifier_name = None
 current_identifier_version = None
 current_identifier_pid = None
 current_identifier_install_path = None
+current_identifier_uid = None
 frida_device = None
 
 def _init_frida_device():
@@ -218,7 +219,7 @@ def start_app(package_name):
     m = re.search(r"\s+([^\s]+)\s+filter", shell_result)
     if m:
         main_activity = m.group(1)
-        print(f"am start -n {main_activity}")
+        #print(f"am start -n {main_activity}")
         adb_device.shell(f"am start -n {main_activity}")
     else:
         adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
@@ -240,6 +241,13 @@ def restart_app(package_name):
     current_identifier = app_pid
 
 def ensure_app_in_foreground(package_name):
+    uid = None
+    shell_result = adb_device.shell(f"dumpsys package {package_name} | grep userId=").strip()
+    matchx = re.search(r"userId=(\d+)", shell_result)
+    if matchx:
+        uid = int(matchx.group(1))
+    else:
+        warn("UID not found.")
     appinfo = adb_device.package_info(package_name)
     appinstall_path = appinfo["path"].rsplit("/", 1)[0]
     # 获取当前正在运行的所有进程
@@ -259,12 +267,12 @@ def ensure_app_in_foreground(package_name):
             info(f"📲 App {package_name} is running in the background, bringing it to the foreground...")
             # 通过 am 启动主 Activity，会自动 bring 到前台
             adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
-        return proc_map[package_name][0], proc_map[package_name][1], appinfo["version_name"], appinstall_path
+        return proc_map[package_name][0], proc_map[package_name][1], appinfo["version_name"], appinstall_path, uid
     else:
         info(f"🚀 App {package_name} is not running, starting it now...")
         #adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
         app_pid, app_name = start_app(package_name)
-        return app_pid, app_name, appinfo["version_name"], appinstall_path
+        return app_pid, app_name, appinfo["version_name"], appinstall_path, uid
 
 def get_remote_file_md5(file_path):
     # 检查文件是否存在并获取长度
@@ -715,9 +723,82 @@ def just_trust_me():
         detach(online_session)
         info("just_trust_me.js exits successful")
         restart_app(current_identifier)
+
+current_proxy = None
+
+def un_proxy():
+    run_su_command("for i in $(iptables -t nat -L OUTPUT --line-numbers | grep REDIRECT |grep 12345 | awk \"{print \$1}\" | sort -rn); do iptables -t nat -D OUTPUT $i; done")
+    run_su_command("iptables -t nat -F REDSOCKS")
+    run_su_command("iptables -t nat -D OUTPUT -p tcp -j REDSOCKS")
+    run_su_command("iptables -t nat -X REDSOCKS")
+    run_su_command("killall redsocks")
+    run_su_command("pid=$(ps -ef | grep '[r]edsocks' | awk '{print $2}'); [ -n \"$pid\" ] && kill -9 $pid")
+    info("un_proxy OK")
         
-
-
+def set_proxy(proxy):
+    pattern = r'(http|socks5)://(\d{2,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$'
+    m = re.search(pattern, proxy.strip())
+    if not m:
+        warn(f"proxy scheme error: {proxy}")
+        return
+    proxy_type = m.group(1)
+    if proxy_type == "http":
+        proxy_type = "http-relay"
+    proxy_ip = m.group(2)
+    proxy_port = m.group(3)
+    config = (
+        "base {\n"
+        "    log_debug = on;\n"
+        "    log_info = on;\n"
+        "    daemon = on;\n"
+        "    redirector = iptables;\n"
+        "}\n\n"
+    )
+    if proxy_type == "http-relay":
+        config += (
+            "redsocks {\n"
+            "    local_ip = 127.0.0.1;\n"
+            "    local_port = 12345;\n"
+            f"    ip = {proxy_ip};\n"
+            f"    port = {proxy_port};\n"
+            f"    type = http-relay;\n"
+            "}"
+        )
+    else:
+        config += (
+            "redsocks {\n"
+            "    local_ip = 127.0.0.1;\n"
+            "    local_port = 12345;\n"
+            f"    ip = {proxy_ip};\n"
+            f"    port = {proxy_port};\n"
+            f"    type = {proxy_type};\n"
+            "}"
+        )
+    if not check_remote_file_exists("/sdcard/redsocks"):
+        push_file_to_remote(f"mobile-deploy/redsocks", "/sdcard/redsocks")
+    if not check_remote_file_exists("/data/local/tmp/redsocks"):
+        run_su_command(f"cp /sdcard/redsocks /data/local/tmp/redsocks")
+        run_su_command(f"chmod 700 /data/local/tmp/redsocks")
+    un_proxy()
+    adb_device.shell(f"rm -f /data/local/tmp/redsocks.conf")
+    adb_device.shell(f"echo '{config}' > /data/local/tmp/redsocks.conf")
+    time.sleep(1)
+    run_su_command(f"/data/local/tmp/redsocks -c /data/local/tmp/redsocks.conf")
+    if proxy_type == "http-relay":
+        run_su_command(f"iptables -t nat -N REDSOCKS")
+        run_su_command(f"iptables -t nat -A REDSOCKS -d 0.0.0.0/8 -j RETURN")
+        run_su_command(f"iptables -t nat -A REDSOCKS -d 127.0.0.0/8 -j RETURN")
+        run_su_command(f"iptables -t nat -A REDSOCKS -d 192.168.1.0/24 -j RETURN")
+        run_su_command(f"iptables -t nat -A REDSOCKS -p tcp -j REDIRECT --to-ports 12345")
+        # run_su_command(f"iptables -t nat -L -nv")
+        # run_su_command(f"iptables -t nat -A OUTPUT -p tcp  --dport 80 -j REDIRECT --to 12345")
+        # run_su_command(f"iptables -t nat -A OUTPUT -p tcp  --dport 443 -j REDIRECT --to 12345")
+    elif proxy_type.startswith("socks"):
+        run_su_command(f"iptables -t nat -A OUTPUT -p tcp -m owner --uid-owner {current_identifier_uid} -j REDIRECT --to-ports 12345")
+    else:
+        warn(f"Cannot set proxy {proxy}")
+        return
+    info(f"proxy {proxy} OK")
 
 def entry_debug_mode():    
     completer = NestedCompleter.from_nested_dict({
@@ -731,9 +812,12 @@ def entry_debug_mode():
         'v': None,
         'generatescript': None,
         'gs': None,
-        'scanshell': None,
-        'ss': None,
+        'detectshell': None,
+        'ds': None,
         'proxy': None,
+        'p': None,
+        'unproxy': None,
+        'up': None,
         'justtrustme': None,
         'trust': None,
         'ls': None,
@@ -765,6 +849,14 @@ def entry_debug_mode():
             return True
         elif cmd == "justtrustme" or cmd == "trust":
             just_trust_me()
+            return True
+        elif (cmd.startswith("proxy ") or cmd.startswith("p ")) and re.search(r"(proxy|p)\s+([^\s]+)", cmd):
+            m = re.search(r"(proxy|p)\s+([^\s]+)", cmd)
+            if m:
+                set_proxy(m.group(2))
+            return True
+        elif cmd == "unproxy" or cmd == "up":
+            un_proxy()
             return True
         elif cmd == "restart":
             restart_app(current_identifier)
@@ -848,7 +940,7 @@ while True:
         # global current_identifier_name
         # global current_identifier_version
         current_identifier = identifier
-        current_identifier_pid, current_identifier_name, current_identifier_version, current_identifier_install_path  = ensure_app_in_foreground(current_identifier)
+        current_identifier_pid, current_identifier_name, current_identifier_version, current_identifier_install_path, current_identifier_uid  = ensure_app_in_foreground(current_identifier)
         if not os.path.isdir(identifier):
             run_env.init(current_identifier)
             create_working_dir_enverment()
