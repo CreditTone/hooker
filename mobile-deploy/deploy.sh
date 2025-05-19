@@ -1,16 +1,9 @@
-print "disable android firewall."
-iptables -P INPUT ACCEPT
-iptables -P OUTPUT ACCEPT
-iptables -P FORWARD ACCEPT
-ip6tables -P INPUT ACCEPT
-ip6tables -P OUTPUT ACCEPT
-ip6tables -P FORWARD ACCEPT
 cd /sdcard
 dir=/data/mobile-deploy
 if [ ! -d  $dir ]; then
 	mkdir /data/mobile-deploy
 fi
-cp /sdcard/mobile-deploy/hluda-server* /data/mobile-deploy/
+cp /sdcard/mobile-deploy/*server* /data/mobile-deploy/
 cp /sdcard/mobile-deploy/tcpforward* /data/mobile-deploy/
 cp /sdcard/mobile-deploy/frpc* /data/mobile-deploy/
 cp /sdcard/mobile-deploy/busybox* /data/mobile-deploy/
@@ -41,7 +34,7 @@ fi
 
 if [[ $abiType == arm64 ]]; then
 	echo "start frida-server"
-	nohup /data/mobile-deploy/hh64 -l 0.0.0.0:27042 > /data/mobile-deploy/f.log 2>&1 &
+	nohup /data/mobile-deploy/frida-server-16.7.19-android-arm64 -l 0.0.0.0:$firda_server_bind_port > /sdcard/frida-server.log 2>&1 &
 	
 	echo "alias tcpforward=/data/mobile-deploy/tcpforward_linux_arm64" >> /data/mobile-deploy/tools_env.rc
 	
@@ -77,9 +70,6 @@ fi
 
 echo "alias ll='ls -l'" >> /data/mobile-deploy/tools_env.rc
 
-echo "start network adb."
-setprop service.adb.tcp.port 5555
-nohup stop adbd && start adbd > /sdcard/adbd.log 2>&1 &
 echo "deploy successfull."
 
 #如果手机的magisk root的话使用以下命令改为全局debug模式

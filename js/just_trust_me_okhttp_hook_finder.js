@@ -5,7 +5,7 @@ function loadDexfile(dexfile) {
 };
 
 
-loadDexfile('/data/user/0/com.smile.gifmaker/radar.dex');
+loadDexfile('/data/local/tmp/radar.dex');
 
 
 function printOkhttp3FakeClass(okhttp3FakeClassObject) {

@@ -1,4 +1,0 @@
-#!/bin/bash
-
-#./traceJNI com.ss.android.ugc.aweme
-frida-trace -U -i "Java_*" $1
