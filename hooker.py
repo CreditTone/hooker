@@ -439,7 +439,7 @@ def spawn(script_file, use_v8=False):
     # online_script.on('message', on_message)
     online_script.load()
     frida_device.resume(current_identifier_pid)
-    sys.stdin.read()
+    #sys.stdin.read()
     return online_session, online_script
     
 
