@@ -31,9 +31,15 @@ import adbutils
 import hashlib
 import shutil
 import textwrap
+import zipfile
+import pygtrie
+from androguard.core.bytecodes import dvm
+from androguard.core.analysis.analysis import MethodAnalysis
+from androguard.core import androconf
 from run_env import xinitPyScript
 
 from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.patch_stdout import patch_stdout
@@ -80,7 +86,7 @@ def print_js_file(filenames :list):
         print(line)
 
 
-cmd_session = PromptSession()
+cmd_session = None
 
 warn = red
 info = yellow
@@ -217,6 +223,7 @@ current_identifier_version = None
 current_identifier_pid = None
 current_identifier_install_path = None
 current_identifier_uid = None
+current_app_classes_trie :pygtrie.CharTrie = None
 frida_device = None
 
 def _init_frida_device():
@@ -604,7 +611,16 @@ def create_working_dir_enverment():
         create_workingdir_file(packageName + "/apk_shell_scanner.js", run_env.apk_shell_scanner_jscode)
         #info(f"Copying APK {current_identifier_install_path}/base.apk to working directory please waiting for a few seconds")
         app_name = current_identifier_name.replace(" ", "")
-        pull_file_to_local(f"{current_identifier_install_path}/base.apk", f"./{packageName}/{app_name}_{current_identifier_version}.apk")
+        local_apk_path = f"{packageName}/{app_name}_{current_identifier_version}.apk"
+        pull_file_to_local(f"{current_identifier_install_path}/base.apk", local_apk_path)
+        local_apk_dex_list_dir = f"{packageName}/.dex_list"
+        os.makedirs(local_apk_dex_list_dir)
+        with zipfile.ZipFile(local_apk_path, 'r') as zip_ref:
+            for file_info in zip_ref.infolist():
+                if file_info.filename.endswith('.dex'):
+                    # 提取 dex 到指定目录
+                    zip_ref.extract(file_info, path=local_apk_dex_list_dir)
+                    #print(f"Extracted {file_info.filename} to {local_apk_dex_list_dir}")
         info(f"Working directory create successful")
 
 def hook_js(hookCmdArg, savePath = None):
@@ -727,10 +743,10 @@ def execute_script(script_file, is_spawn=False):
                 with patch_stdout():
                     text = cmd_session.prompt("CTRL + C to stop > ", handle_sigint=True)
             except KeyboardInterrupt:
-                info(f"Tnterrupting {script_file}")
+                info(f"Interrupting {script_file}")
                 break
             except EOFError:
-                print("Exiting...")
+                warn("Exiting...")
                 break
     except Exception:
         print(traceback.format_exc())  
@@ -751,7 +767,6 @@ def un_proxy():
     run_su_command("iptables -t nat -X REDSOCKS")
     run_su_command("killall redsocks")
     run_su_command("pid=$(ps -ef | grep '[r]edsocks' | awk '{print $2}'); [ -n \"$pid\" ] && kill -9 $pid")
-    info("un_proxy OK")
         
 def set_proxy(proxy):
     pattern = r'(http|socks5)://(\d{2,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$'
@@ -813,11 +828,120 @@ def set_proxy(proxy):
         # run_su_command(f"iptables -t nat -A OUTPUT -p tcp  --dport 443 -j REDIRECT --to 12345")
     elif proxy_type.startswith("socks"):
         run_su_command(f"iptables -t nat -A OUTPUT -p tcp -m owner --uid-owner {current_identifier_uid} -j REDIRECT --to-ports 12345")
+        info(f"proxy {proxy} OK")
     else:
         warn(f"Cannot set proxy {proxy}")
         return
-    info(f"proxy {proxy} OK")
     
+    
+def load_classes_and_methods_to_trie(dex_dir):
+    SKIP_PREFIXES = (
+        "java.", "javax.", "android.", "androidx.", "kotlin.", "com.google.",
+        "com.squareup.", "dagger.", "com.fasterxml.", "org.apache.", "org.json.", "com.alibaba.", "okio.", "com.orhanobut.",
+    )
+    def should_skip_class(class_name):
+        return class_name.startswith(SKIP_PREFIXES) or 'R$' in class_name or class_name.endswith(('BuildConfig', 'Manifest'))
+    loaded_count = 0
+    trie = pygtrie.CharTrie()
+    trie["com.idlefish.flutterboost.containers.e"] = True
+    trie["com.idlefish.flutterboost.xxxxxxx.e"] = True
+    trie["com.idlefish.flutterboost.bbbbbbb.e"] = True
+    if True:
+        return trie
+    for file in os.listdir(dex_dir):
+        if not file.endswith(".dex"):
+            continue
+        dex_path = os.path.join(dex_dir, file)
+        try:
+            with open(dex_path, 'rb') as f:
+                dex_bytes = f.read()
+                dex = dvm.DalvikVMFormat(dex_bytes)
+                for cls in dex.get_classes():
+                    class_name = cls.get_name().strip('L;').replace('/', '.')
+                    if should_skip_class(class_name):
+                        continue
+                    for method in cls.get_methods():
+                        method_name = method.get_name()
+                        proto = method.get_descriptor()  # e.g., (Ljava/lang/String;)V
+                        # 转换描述符为更易读格式
+                        readable_proto = convert_descriptor_to_readable(proto)
+                        key = f"{class_name}:{method_name}{readable_proto}"
+                        trie[key] = True
+                        loaded_count += 1
+                        if loaded_count > 100:
+                            return trie
+        except Exception as e:
+            print(f"[!] Error processing {dex_path}: {e}")
+    return trie
+
+def convert_descriptor_to_readable(descriptor):
+    def type_map(d):
+        mapping = {
+            'I': 'int', 'Z': 'boolean', 'B': 'byte',
+            'S': 'short', 'J': 'long', 'F': 'float',
+            'D': 'double', 'C': 'char', 'V': 'void',
+        }
+        if d.startswith('L') and d.endswith(';'):
+            return d[1:-1].replace('/', '.').split('.')[-1]
+        return mapping.get(d, d)
+    args, ret = descriptor.split(')')
+    args = args[1:]  # remove opening '('
+    i = 0
+    parsed = []
+    while i < len(args):
+        if args[i] == 'L':
+            j = i
+            while args[j] != ';':
+                j += 1
+            parsed.append(type_map(args[i:j+1]))
+            i = j + 1
+        elif args[i] in "ZBSCIJFD":
+            parsed.append(type_map(args[i]))
+            i += 1
+        elif args[i] == '[':
+            dim = 0
+            while args[i] == '[':
+                dim += 1
+                i += 1
+            if args[i] == 'L':
+                j = i
+                while args[j] != ';':
+                    j += 1
+                base = type_map(args[i:j+1])
+                i = j + 1
+            else:
+                base = type_map(args[i])
+                i += 1
+            parsed.append(base + '[]' * dim)
+        else:
+            i += 1  # unknown type, skip
+    return f"({', '.join(parsed)})"
+
+
+class ClassNameCompleter(Completer):
+    def get_completions(self, document, complete_event):
+        text = document.text_before_cursor.strip()
+        # print("get_completions:"+text)
+        if text.startswith("generatescript "):
+            try:
+                value = text[len("generatescript "):].strip()
+                max_items = 15
+                count = 0
+                for class_method_info, _ in current_app_classes_trie.items(prefix=value):
+                    # print(key, value)
+                    count += 1
+                    if count >= max_items:
+                        break
+                    yield Completion(class_method_info, start_position=-len(value))
+            except Exception as e:
+                yield Completion(f"[ERROR: {e}]", start_position=0)
+        else:
+            # 其他命令提示
+            for cmd in ["generatescript", "attach", "proxy", "exit"]:
+                if cmd.startswith(text):
+                    yield Completion(cmd, start_position=-len(text))
+                        
+cmd_session = PromptSession()
     
 def entry_debug_mode():    
     def handle_command(cmd):
@@ -851,6 +975,7 @@ def entry_debug_mode():
                 return True
         elif cmd == "unproxy" or cmd == "up":
             un_proxy()
+            info("un_proxy OK")
             return True
         elif cmd.startswith("attach ") and re.search(r"attach\s+([^\s]+)", cmd):
             m = re.search(r"attach\s+([^\s]+)", cmd)
@@ -865,8 +990,11 @@ def entry_debug_mode():
         elif cmd == "restart":
             restart_app(current_identifier)
             return True
-        elif cmd == "current_identifier_pid":
+        elif cmd == "pid":
             info(current_identifier_pid)
+            return True
+        elif cmd == "uid":
+            info(current_identifier_uid)
             return True
         elif (cmd.startswith("generatescript ") or cmd.startswith("gs ")) and re.search(r"(generatescript|gs)\s+([^\s]+)", cmd):
             m = re.search(r"(generatescript|gs)\s+([^\s]+)", cmd)
@@ -891,6 +1019,8 @@ def entry_debug_mode():
         ("attach [script_file_name]", "quickly execute a frida script, similar to executing the command \"frida -U com.example.app -l xxx.js\". For example: attach url.js"),
         ("spawn [script_file_name]", "quickly spawn a frida script, similar to executing the command \"frida -U -f -n com.example.app -l xxx.js\". For example: spawn just_trust_me.js"),
         ("restart", "restart this app"),
+        ("pid", "get pid of this app main process"),
+        ("uid", "get pid of this app"),
         ("exit", "return to the previous level"),
     ]
     def print_help_msg():
@@ -939,12 +1069,13 @@ def entry_debug_mode():
         'attach': js_files,
         'spawn': js_files,
         'restart': None,
-        'current_identifier_pid': None,
+        'pid': None,
+        'uid': None,
         'exit': None,
     })
     while True:
         try:
-            hooker_cmd = cmd_session.prompt(f'{current_identifier_name} > ', completer=debug_completer)
+            hooker_cmd = cmd_session.prompt(f'{current_identifier_name} > ', completer=ClassNameCompleter())
             hooker_cmd = hooker_cmd.strip()
             if hooker_cmd == 'exit' or hooker_cmd == 'quit':
                 break
@@ -1002,6 +1133,11 @@ while True:
         if not os.path.isdir(identifier):
             run_env.init(current_identifier)
             create_working_dir_enverment()
+        
+        print("load_classes_and_methods_to_trie")
+        current_app_classes_trie = load_classes_and_methods_to_trie(f"{current_identifier}/.dex_list/")
+        print(len(current_app_classes_trie))
+        print(current_app_classes_trie)
         check_dependency_files()
         entry_debug_mode()
     except (EOFError, KeyboardInterrupt):
