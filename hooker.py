@@ -945,6 +945,7 @@ def entry_debug_mode():
     while True:
         try:
             hooker_cmd = cmd_session.prompt(f'{current_identifier_name} > ', completer=debug_completer)
+            hooker_cmd = hooker_cmd.strip()
             if hooker_cmd == 'exit' or hooker_cmd == 'quit':
                 break
             if hooker_cmd == 'h' or hooker_cmd == 'help':
@@ -954,7 +955,7 @@ def entry_debug_mode():
             if not is_handled and hooker_cmd:
                 warn(f"hooker command not found: {hooker_cmd}")
                 continue
-            elif not hooker_cmd.strip():
+            elif not hooker_cmd:
                 continue
         except (EOFError, KeyboardInterrupt):
             break        
