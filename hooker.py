@@ -956,8 +956,6 @@ def entry_debug_mode():
                 continue
             elif not hooker_cmd.strip():
                 continue
-            if is_handled:
-                print_help_msg()
         except (EOFError, KeyboardInterrupt):
             break        
 
