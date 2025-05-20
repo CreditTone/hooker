@@ -30,6 +30,7 @@ import threading
 import adbutils
 import hashlib
 import shutil
+import textwrap
 from run_env import xinitPyScript
 
 from prompt_toolkit import PromptSession
@@ -92,7 +93,7 @@ def _init_adb_device():
 _init_adb_device()
 
 def run_su_command(cmd, not_read=False):
-    print("run_su_command:", cmd)
+    #print("run_su_command:", cmd)
     conn = adb_device.shell(["su", "-c", cmd], stream=True)
     try:
         if not_read:
@@ -876,19 +877,38 @@ def entry_debug_mode():
                 warn(f"Can not parse class and method: {cmd}")
             return True
         return False
-    
-    help_text = (
-        "help >\n"
-        "show activity \n"
-        "\tobtains the information of the activity stack\n"
-        "show service\n"
-        "\tobtains the servic stack information\n"
-        "show object \n"
-        "\tviews the internal information of the object according to objectId\n"
-        "hook {className}:{method}\n"
-        "\tGenerate frida hook script for example: hook okhttp3.Request$Builder:addHeader"
-    )
-    print(help_text)
+    help_msg = [
+        ("h, help", "show this help message"),
+        ("a, activitys", "show the activity stack"),
+        ("s, services", "show the service stack"),
+        ("o, object [object_id]", "show object info by object_id"),
+        ("v, view [view_id]", "show view info by view_id of view"),
+        ("gs, generatescript [class_name:method_name]", "specify the class name and method name to generate a frida hook java script file. For example: generatescript okhttp3.Request$Builder:addHeader"),
+        ("p, proxy [socks5_proxy_server]", "set up a socks5 proxy for this app. For example: proxy socks5://192.168.0.100:9998"),
+        ("up, unproxy", "remove socks5 proxy for this app"),
+        ("trust, justtrustme", "quickly spawn just_trust_me.js script to kill all ssl pinning"),
+        ("ls", "list all the frida scripts of the current app"),
+        ("attach [script_file_name]", "quickly execute a frida script, similar to executing the command \"frida -U com.example.app -l xxx.js\". For example: attach url.js"),
+        ("spawn [script_file_name]", "quickly spawn a frida script, similar to executing the command \"frida -U -f -n com.example.app -l xxx.js\". For example: spawn just_trust_me.js"),
+        ("restart", "restart this app"),
+        ("exit", "return to the previous level"),
+    ]
+    def print_help_msg():
+        GREEN = "\033[32m"
+        YELLOW = "\033[33m"
+        RESET = "\033[0m"
+        # 获取终端宽度，默认宽度 80
+        term_width = shutil.get_terminal_size((80, 20)).columns
+        max_cmd_len = max(len(cmd) for cmd, _ in help_msg) + 2
+        for cmd, desc in help_msg:
+            cmd_part = f"{GREEN}{cmd.ljust(max_cmd_len)}{RESET}"
+            desc_lines = textwrap.wrap(desc, width=term_width - max_cmd_len)
+            if desc_lines:
+                print(cmd_part + f"{YELLOW}{desc_lines[0]}{RESET}")
+                for line in desc_lines[1:]:
+                    print(" " * max_cmd_len + f"{YELLOW}{line}{RESET}")
+            else:
+                print(cmd_part)
     hooker_cmd = ""
     list_working_dir()
     js_files = {
@@ -897,6 +917,8 @@ def entry_debug_mode():
         if filename.endswith(".js")
     }
     debug_completer = NestedCompleter.from_nested_dict({
+        'help': None,
+        'h': None,
         'activitys': None,
         'a': None,
         'services': None,
@@ -907,10 +929,8 @@ def entry_debug_mode():
         'v': None,
         'generatescript': None,
         'gs': None,
-        'detectshell': None,
-        'ds': None,
-        'proxy': None,
-        'p': None,
+        'proxy': {"socks5://": None},
+        'p': {"socks5://": None},
         'unproxy': None,
         'up': None,
         'justtrustme': None,
@@ -927,14 +947,17 @@ def entry_debug_mode():
             hooker_cmd = cmd_session.prompt(f'{current_identifier_name} > ', completer=debug_completer)
             if hooker_cmd == 'exit' or hooker_cmd == 'quit':
                 break
+            if hooker_cmd == 'h' or hooker_cmd == 'help':
+                print_help_msg()
+                continue
             is_handled = handle_command(hooker_cmd)
             if not is_handled and hooker_cmd:
                 warn(f"hooker command not found: {hooker_cmd}")
-                print(help_text)
                 continue
             elif not hooker_cmd.strip():
                 continue
-            print(help_text)
+            if is_handled:
+                print_help_msg()
         except (EOFError, KeyboardInterrupt):
             break        
 
