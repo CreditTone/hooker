@@ -165,15 +165,16 @@ def choose_frida_server():
     info("For simulator, please start frida-server manually first. Thank you")
     sys.exit(2)
     
-def pull_file_to_local(remote_file, local_path):
+def pull_file_to_local(remote_file, local_path, is_debug=True):
     adb_device.sync.pull(remote_file, local_path)
-    #info(f"Working directory create successful")
-    info(f"pull {remote_file} to {local_path} successful")
+    if is_debug:
+        info(f"pull {remote_file} to {local_path} successful")
 
-def push_file_to_remote(local_path, remote_path):
+def push_file_to_remote(local_path, remote_path, is_debug=True):
     # info(f"push {local_path} to {remote_path}")
     adb_device.sync.push(local_path, remote_path)
-    info(f"push {local_path} to {remote_path} successful")
+    if is_debug:
+        info(f"push {local_path} to {remote_path} successful")
     
 def is_root():
     return "system" in run_su_command("ls /data/")
@@ -376,11 +377,11 @@ def compara_and_update_file(local_file, remote_file):
     sdcard_remote_md5 = get_remote_file_md5(f"/sdcard/{filename}")
     #先把radar.dex拷贝到sdcard，后期更新radar.dex直接从sdcard拷过去
     if local_md5 != sdcard_remote_md5:
-        push_file_to_remote(local_file, "/sdcard/")
+        push_file_to_remote(local_file, "/sdcard/", False)
     remote_md5 = get_remote_file_md5(remote_file)
     #print(f"local_md5:{local_md5} remote_md5:{remote_md5}")
     if local_md5 != remote_md5:
-        info(f"update {filename} into {remote_file}")
+        #info(f"update {filename} into {remote_file}")
         run_su_command(f"cp /sdcard/{filename} {remote_file}", True)
         run_su_command(f"chmod 777 {remote_file}", True)
         
@@ -643,11 +644,13 @@ def create_working_dir_enverment():
         create_workingdir_file(packageName + "/apk_shell_scanner.js", apk_shell_scanner_jscode)
         #info(f"Copying APK {current_identifier_install_path}/base.apk to working directory please waiting for a few seconds")
         app_name = current_identifier_name.replace(" ", "")
+        global current_local_apk_path
         current_local_apk_path = f"{packageName}/{app_name}_{current_identifier_version}.apk"
         pull_file_to_local(f"{current_identifier_install_path}/base.apk", current_local_apk_path)
         info(f"Working directory create successful")
         
 def init_working_dir_enverment():
+    global current_local_apk_path
     app_name = current_identifier_name.replace(" ", "")
     current_local_apk_path = f"{current_identifier}/{app_name}_{current_identifier_version}.apk"
     if os.path.isfile(current_local_apk_path):
@@ -897,9 +900,9 @@ def load_dexes_to_cache(dexes_dir):
             for dkey, dvalue in dex_tire.items():
                 current_app_classes_trie[dkey] = dvalue
             if count >= 15:
-                info(f"Warning: dex count too many :{count}")
+                #info(f"Warning: dex count too many :{count}")
                 break
-        info(f"load dexes finish simplification: {simplification} current_app_classes_trie: {len(current_app_classes_trie)}")
+        #info(f"load dexes finish simplification: {simplification} current_app_classes_trie: {len(current_app_classes_trie)}")
         
     dexes_list = []
     for file in os.listdir(dexes_dir):
@@ -1259,7 +1262,6 @@ while True:
             create_working_dir_enverment()
         else:
             init_working_dir_enverment()
-        current_local_apk_path = f"{current_identifier}/{current_identifier_name}_{current_identifier_version}.apk"
         load_dexes_to_cache(f"{current_identifier}/.dexes/")
         check_dependency_files()
         entry_debug_mode()
