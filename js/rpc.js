@@ -41,11 +41,172 @@ function checkFile(filepath, checkLength) {
     return file.exists() && file.length() == checkLength;
 };
 
+
+function discoverClass(className) {
+    if (!className) {
+        return;
+    }
+    var radarClz = Java.use("gz.radar.ClassRadar");
+    var radarClassResult = radarClz.discoverClass(className);
+    return radarClassResult;
+};
+
+function generateFridaMethodOverload(clzVarName, radarMethod) {
+    var overloadJs = "";
+    if (!radarMethod.isLocal.value || radarMethod.methodName.value.indexOf("-") > -1) {
+        return overloadJs;
+    }
+    var methodVarName = clzVarName + "_method_" + radarMethod.methodName.value + "_" + Math.random().toString(36).slice( - 4);
+    overloadJs += "var " + methodVarName + "=" + clzVarName + "." + radarMethod.methodName.value + ".overload(";
+    if (radarMethod.paramsNum.value > 0) {
+        for (var j = 0; j < radarMethod.paramsNum.value; j++) {
+            overloadJs += "'";
+            overloadJs += radarMethod.paramsClasses.value[j];
+            overloadJs += "'";
+            if (j < (radarMethod.paramsNum.value - 1)) {
+                overloadJs += ",";
+            }
+        }
+    }
+    overloadJs += ");";
+    overloadJs += methodVarName;
+    overloadJs += ".implementation = function(";
+    var paramsJs = "";
+    for (var j = 0; j < radarMethod.paramsNum.value; j++) {
+        paramsJs += radarMethod.parameterNames.value[j];
+        if (j < (radarMethod.paramsNum.value - 1)) {
+            paramsJs += ",";
+        }
+    }
+    overloadJs += paramsJs;
+    overloadJs += ") {";
+    var handle = "this";
+    if (radarMethod.isStatic.value) {
+        handle = clzVarName;
+    }
+    if (handle == "this") {
+        overloadJs += "var executor = this.hashCode();";
+    } else {
+        overloadJs += "var executor = 'Class';";
+    }
+    overloadJs += "var beatText = '" + radarMethod.describe.value + "';";
+    overloadJs += "var beat = newMethodBeat(beatText, executor);";
+    if (radarMethod.returnClass.value != "void") {
+        overloadJs += "var ret = ";
+    }
+    overloadJs += methodVarName + ".call(" + handle;
+    if (radarMethod.paramsNum.value > 0) {
+        overloadJs += "," + paramsJs + ");";
+    } else {
+        overloadJs += ");";
+    }
+	overloadJs += "printBeat(beat);";
+    if (radarMethod.returnClass.value != "void") {
+        overloadJs += "return ret;";
+    }
+    overloadJs += "};";
+    return overloadJs;
+}
+
+//生成构造方法的overload
+function generateFridaConstructorMethodOverload(clzVarName, constructorMethod) {
+    var overloadJs = "";
+    if (!constructorMethod.isLocal.value) {
+        return overloadJs;
+    }
+    var constructorMethodVarName = clzVarName + "_init_" + Math.random().toString(36).slice( - 4);
+    var hookConstructorMethodJs = clzVarName + ".$init.overload(";
+    if (constructorMethod.paramsNum.value > 0) {
+        for (var j = 0; j < constructorMethod.paramsNum.value; j++) {
+            hookConstructorMethodJs += "'";
+            hookConstructorMethodJs += constructorMethod.paramsClasses.value[j];
+            hookConstructorMethodJs += "'";
+            if (j < (constructorMethod.paramsNum.value - 1)) {
+                hookConstructorMethodJs += ",";
+            }
+        }
+    }
+    hookConstructorMethodJs += ");";
+    overloadJs += "var " + constructorMethodVarName + " = " + hookConstructorMethodJs;
+    overloadJs += constructorMethodVarName + ".implementation = function(";
+    var paramsJs = "";
+    for (var j = 0; j < constructorMethod.paramsNum.value; j++) {
+        paramsJs += "v" + j;
+        if (j < (constructorMethod.paramsNum.value - 1)) {
+            paramsJs += ",";
+        }
+    }
+    overloadJs += paramsJs;
+    overloadJs += ") {";
+    overloadJs += "var executor = this.hashCode();";
+    overloadJs += "var beatText = '" + constructorMethod.describe.value + "';";
+    overloadJs += "var beat = newMethodBeat(beatText, executor);";
+    overloadJs += "var returnObj = ";
+    overloadJs += constructorMethodVarName + ".call(this";
+    if (constructorMethod.paramsNum.value > 0) {
+        overloadJs += "," + paramsJs + ");";
+    } else {
+        overloadJs += ");";
+    }
+    overloadJs += "printBeat(beat);";
+    overloadJs += "return returnObj;};";
+    return overloadJs;
+}
+
+//RadarClassResult  string
+function generateMethodHookJs(radarClassResult, methodName) {
+    if (radarClassResult.isEnum.value || radarClassResult.isInterface.value) {
+        return "";
+    }
+    var hookJs = "";
+    var hasHook = false;
+    var clzHookJs = "";
+
+    var clzVarName = radarClassResult.className.value.replace(/[\.$;]/g, "_") + "_clz";
+    clzHookJs += "var " + clzVarName + " = Java.use('" + radarClassResult.className.value + "');";
+    var methods = radarClassResult.methods.value;
+    var hookMethod = (methodName == "?" || methodName == "*");
+    var hookConstructorMethod = (methodName == "_" || methodName == "*");
+    for (var i = 0; i < methods.length; i++) {
+        var radarMethod = methods[i];
+        if (hookMethod || radarMethod.matchName(methodName)) {
+            hasHook = true;
+            clzHookJs += generateFridaMethodOverload(clzVarName, radarMethod);
+        }
+    }
+
+    //是否需要hook构造方法
+    if (hookConstructorMethod) {
+        hasHook = true;
+        var constructorMethods = radarClassResult.constructorMethods.value;
+        for (var i = 0; i < constructorMethods.length; i++) {
+            clzHookJs += generateFridaConstructorMethodOverload(clzVarName, constructorMethods[i]);
+        }
+    }
+
+    if (hasHook) {
+        hookJs += clzHookJs;
+    }
+    return hookJs;
+};
+
+function class_exists(className) {
+    var exists = false;
+    try {
+        var clz = Java.use(className);
+        exists = true;
+    } catch(err) {
+        //console.log(err);
+    }
+    return exists;
+};
+
+
 //可能会超时 为了防止这个发生，可以在函数 setImmediate 中给你的脚本添加一层包装
 rpc.exports = {
     loadradardex: function() {
         Java.perform(function() {
-            if (!classExists("gz.radar.ClassRadar")) {
+            if (!class_exists("gz.radar.ClassRadar")) {
                 var context = Java.use("android.app.ActivityThread").currentApplication().getApplicationContext();
                 var packageName = context.getPackageName();
                 Java.openClassFile('/data/local/tmp/radar.dex').load();
@@ -56,36 +217,9 @@ rpc.exports = {
     containsclass: function(className) {
         var result = false;
         Java.perform(function() {
-            result = classExists(className);
+            result = class_exists(className);
         });
         return result;
-    },
-    so: function(moduleName) {
-        return findSOLibrary(moduleName);
-    },
-    findclasses: function(classRegex) {
-        var report = "";
-        Java.perform(function() {
-            var radarClassResults = findClasses(classRegex);
-            report += ("Found Classes: " + radarClassResults.length) + "\n";
-            for (var j = 0; j < radarClassResults.length; j++) {
-                var radarClassResult = radarClassResults[j];
-                report += ("\t" + radarClassResult.describ()) + "\n";
-            }
-        });
-        return report;
-    },
-    findclasses2: function(className) {
-        var report = "";
-        Java.perform(function() {
-            var radarClassResults = findOffspringsClasses(className.trim());
-            report += ("Found Classes: " + radarClassResults.length) + "\n";
-            for (var j = 0; j < radarClassResults.length; j++) {
-                var radarClassResult = radarClassResults[j];
-                report += ("\t" + radarClassResult.describ()) + "\n";
-            }
-        });
-        return report;
     },
     hookjs: function(className, toSpace) {
         var found = true;
@@ -103,7 +237,7 @@ rpc.exports = {
             }
         });
         if (found) {
-            return jsbeautify(hookJs);
+            return hookJs;
         }
         return "";
     },

@@ -2,3 +2,4 @@ frida
 frida-tools
 adbutils==1.2.11
 androguard==3.3.5
+jsbeautifier==1.15.4
