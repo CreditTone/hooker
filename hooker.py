@@ -22,7 +22,6 @@ import time
 import json
 import getopt
 import traceback
-import run_env
 import base64
 import time
 import platform
@@ -31,9 +30,17 @@ import adbutils
 import hashlib
 import shutil
 import textwrap
-from run_env import xinitPyScript
+import zipfile
+import pygtrie
+import queue
+import itertools
+import jsbeautifier
+from androguard.core.bytecodes import dvm
+from androguard.core.analysis.analysis import MethodAnalysis
+from androguard.core import androconf
 
 from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.patch_stdout import patch_stdout
@@ -79,8 +86,10 @@ def print_js_file(filenames :list):
         line = "".join(f"{GREEN}{name.ljust(max_len)}{RESET}" for name in filenames[i:i + items_per_line])
         print(line)
 
-
-cmd_session = PromptSession()
+def read_js_resource(filename):
+    return io.open('./js/' + filename,'r',encoding= 'utf8').read()
+        
+cmd_session = None
 
 warn = red
 info = yellow
@@ -210,20 +219,48 @@ if not is_frida_working_via_attach():
     if not success:
         info("❌ Failed to start frida-server automatically. Please start it manually and try again.")
         sys.exit(2)
-        
+
+# 全局变量        
 current_identifier = None
 current_identifier_name = None
 current_identifier_version = None
 current_identifier_pid = None
 current_identifier_install_path = None
 current_identifier_uid = None
+current_app_classes_trie :pygtrie.CharTrie = pygtrie.CharTrie() #[pygtrie.CharTrie, pygtrie.CharTrie]
+current_temp_dexes_tire_queue = queue.Queue() #临时缓存
+current_local_apk_path = None
 frida_device = None
+
+resource_rpc_jscode = None
+resource_hook_js_prepare_jscode = None
+resource_hook_js_enhance_jscode = None
+
+def _init_resource_jscode():
+    global resource_rpc_jscode
+    global resource_hook_js_prepare_jscode
+    global resource_hook_js_enhance_jscode
+    resource_rpc_jscode = read_js_resource("rpc.js")
+    resource_hook_js_prepare_jscode = read_js_resource("_hook_js_prepare.js")
+    resource_hook_js_enhance_jscode = read_js_resource("_hook_js_enhance.js")
+
+_init_resource_jscode()
+
+#print(f"resource_rpc_jscode:{resource_rpc_jscode}")
 
 def _init_frida_device():
     global frida_device
+    def getRemoteDriver():
+        text = io.open(".hooker_driver",'r',encoding= 'utf8').read()
+        if not text:
+            return None
+        searchResult = re.search('\d+\.\d+\.\d+\.\d+:\d+', text)
+        if searchResult:
+            return searchResult.group()
+        return None
     if frida_device:
         return
-    remoteDriver = run_env.getRemoteDriver() #ip:port
+    remoteDriver = getRemoteDriver() #ip:port
     if remoteDriver:
         frida_device = frida.get_device_manager().add_remote_device(remoteDriver)
     else:
@@ -326,9 +363,12 @@ def read_local_file(filename):
     return io.open(filename,'r',encoding= 'utf8').read()
     
 def check_dependency_files():
-    compara_and_update_file("mobile-deploy/radar.dex", "/data/local/tmp/radar.dex")
-    compara_and_update_file("mobile-deploy/libext64.so", f"/data/data/{current_identifier}/files/libext64.so")
-    compara_and_update_file("mobile-deploy/libext.so", f"/data/data/{current_identifier}/files/libext.so")
+    def process_dex_dependency_files():
+        compara_and_update_file("mobile-deploy/radar.dex", "/data/local/tmp/radar.dex")
+        compara_and_update_file("mobile-deploy/libext64.so", f"/data/data/{current_identifier}/files/libext64.so")
+        compara_and_update_file("mobile-deploy/libext.so", f"/data/data/{current_identifier}/files/libext.so")
+    t = threading.Thread(target=process_dex_dependency_files)
+    t.start()
              
 def compara_and_update_file(local_file, remote_file):
     local_md5 = get_local_file_md5(local_file)
@@ -380,8 +420,6 @@ def _get_min_pid_by_name(process_name):
         # 如果没有找到匹配的进程，返回 None
         return None
 
-
-
 def attach_rpc(use_v8=False):
     global frida_device
     online_session = None
@@ -391,9 +429,10 @@ def attach_rpc(use_v8=False):
         warn("attaching fail to device")
         return None, None
     if use_v8:
-        online_script = online_session.create_script(run_env.rpc_jscode, runtime="v8")
+        online_script = online_session.create_script(resource_rpc_jscode, runtime="v8")
     else:
-        online_script = online_session.create_script(run_env.rpc_jscode)
+        online_script = online_session.create_script(resource_rpc_jscode)
+    # print(f"rpc_jscode:{resource_rpc_jscode}")
     online_script.on('message', on_message)
     online_script.load()
     online_script.exports_sync.loadradardex()
@@ -458,28 +497,6 @@ def existsClass(target,className):
         warn(traceback.format_exc())  
     finally:    
         detach(online_session)
-
-def findclasses(target, classRegex):
-    online_session = None
-    online_script = None
-    try:
-        online_session, online_script,_ = attach_rpc(target);
-        info(online_script.exports_sync.findclasses(classRegex));
-    except Exception:
-        warn(traceback.format_exc())  
-    finally:    
-        detach(online_session)
-
-def findclasses2(target, className):
-    online_session = None
-    online_script = None
-    try:
-        online_session, online_script,_ = attach_rpc(target);
-        info(online_script.exports_sync.findclasses2(className));
-    except Exception:
-        warn(traceback.format_exc())  
-    finally:    
-        detach(online_session)        
 
 def create_workingdir_file(filename, text):
     file = None
@@ -561,51 +578,83 @@ def create_working_dir_enverment():
         os.makedirs(packageName+"/xinit")
         shellPrefix = "#!/bin/bash\nHOOKER_DRIVER=$(cat ../.hooker_driver)\n"
         logHooking = shellPrefix + "echo \"hooking $1\" > log\ndate | tee -ai log\n" + "frida $HOOKER_DRIVER -l $1 -N " + packageName + " | tee -ai log"
-        attach_shell = shellPrefix + "frida $HOOKER_DRIVER -l $1 -n " + packageName
+        attach_shell = shellPrefix + "frida $HOOKER_DRIVER -l $1 -N " + packageName
         spawn_shell = f"{shellPrefix}\nfrida $HOOKER_DRIVER --runtime=v8 -f {packageName} -l $1"
-        xinitPyScript = run_env.xinitPyScript + "xinitDeploy('"+packageName+"')"
         create_workingdir_file(packageName+"/hooking", logHooking)
-        create_workingdir_file(packageName+"/attach_rpc", attach_shell)
+        create_workingdir_file(packageName+"/attach", attach_shell)
         create_workingdir_file(packageName+"/spawn", spawn_shell)
-        create_workingdir_file(packageName+"/xinitdeploy", xinitPyScript)
         create_workingdir_file(packageName + "/kill", shellPrefix + "frida-kill $HOOKER_DRIVER "+packageName)
         create_workingdir_file(packageName + "/pull_so", pull_so_python_code.replace("com.smile.gifmaker", packageName))
         create_workingdir_file(packageName+"/objection", shellPrefix + "objection -d -g "+packageName+" explore")
         os.popen('chmod 777 ' + packageName +'/hooking').readlines()
-        os.popen('chmod 777 ' + packageName +'/attach_rpc').readlines()
-        os.popen('chmod 777 ' + packageName +'/xinitdeploy').readlines()
+        os.popen('chmod 777 ' + packageName +'/attach').readlines()
         os.popen('chmod 777 ' + packageName +'/kill').readlines()
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
         os.popen('chmod 777 ' + packageName +'/spawn').readlines()
         os.popen('chmod 777 ' + packageName +'/pull_so').readlines()
         info(f"Generating built-in frida script...")
         create_workingdir_file(packageName + "/empty.js", "")
-        create_workingdir_file(packageName + "/ssl_log.js", run_env.ssl_log_jscode)
-        create_workingdir_file(packageName + "/url.js", run_env.url_jscode)
-        create_workingdir_file(packageName + "/edit_text.js", run_env.edit_text_jscode)
-        create_workingdir_file(packageName + "/text_view.js", run_env.text_view_jscode)
-        create_workingdir_file(packageName + "/click.js", run_env.click_jscode)
-        create_workingdir_file(packageName + "/hook_register_natives.js", run_env.hook_RN_jscode)
-        create_workingdir_file(packageName + "/keystore_dump.js", run_env.keystore_dump_jscode)
-        create_workingdir_file(packageName + "/dump_dex.js", run_env.dump_dex_jscode)
-        create_workingdir_file(packageName + "/android_ui.js", run_env.android_ui_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/activity_events.js", run_env.activity_events_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/object_store.js", run_env.object_store_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/just_trust_me.js", run_env.just_trust_me_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/just_trust_me_okhttp_hook_finder_for_android.js", run_env.just_trust_me_okhttp_hook_finder_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/just_trust_me_for_ios.js", run_env.just_trust_me_for_ios_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/hook_artmethod_register.js", run_env.hook_artmethod_register_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/get_device_info.js", run_env.get_device_info_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/trace_initproc.js", run_env.trace_initproc_jscode)
-        create_workingdir_file(packageName + "/find_anit_frida_so.js", run_env.find_anit_frida_so_jscode)
-        create_workingdir_file(packageName + "/hook_jni_method_trace.js", run_env.hook_jni_method_trace_jscode)
-        create_workingdir_file(packageName + "/replace_dlsym_get_pthread_create.js", run_env.replace_dlsym_get_pthread_create_jscode)
-        create_workingdir_file(packageName + "/find_boringssl_custom_verify_func.js", run_env.find_boringssl_custom_verify_func_jscode)
-        create_workingdir_file(packageName + "/apk_shell_scanner.js", run_env.apk_shell_scanner_jscode)
+        hook_js_prepare_jscode = read_js_resource("_hook_js_prepare.js")
+        hook_js_enhance_jscode = read_js_resource("_hook_js_enhance.js")
+        rpc_jscode = read_js_resource("rpc.js")
+        url_jscode = read_js_resource("url.js")
+        android_ui_jscode = read_js_resource("android_ui.js")
+        edit_text_jscode = read_js_resource("edit_text.js")
+        text_view_jscode = read_js_resource("text_view.js")
+        click_jscode = read_js_resource("click.js")
+        activity_events_jscode = read_js_resource("activity_events.js")
+        object_store_jscode = read_js_resource("object_store.js")
+        keystore_dump_jscode = read_js_resource("keystore_dump.js")
+        ssl_log_jscode = read_js_resource("ssl_log.js")
+        just_trust_me_jscode = read_js_resource("just_trust_me.js")
+        just_trust_me_okhttp_hook_finder_jscode = read_js_resource("just_trust_me_okhttp_hook_finder.js")
+        just_trust_me_for_ios_jscode = read_js_resource("just_trust_me_for_ios.js")
+        hook_RN_jscode = read_js_resource("hook_register_natives.js")
+        dump_dex_jscode = read_js_resource("dump_dex.js")
+        trace_initproc_jscode = read_js_resource("trace_initproc.js")
+        hook_artmethod_register_jscode = read_js_resource("hook_artmethod_register.js")
+        find_anit_frida_so_jscode = read_js_resource("find_anit_frida_so.js")
+        hook_jni_method_trace_jscode = read_js_resource("hook_jni_method_trace.js")
+        replace_dlsym_get_pthread_create_jscode = read_js_resource("replace_dlsym_get_pthread_create.js")
+        find_boringssl_custom_verify_func_jscode = read_js_resource("find_boringssl_custom_verify_func.js")
+        get_device_info_jscode = read_js_resource("get_device_info.js")
+        apk_shell_scanner_jscode = read_js_resource("apk_shell_scanner.js")
+        create_workingdir_file(packageName + "/ssl_log.js", ssl_log_jscode)
+        create_workingdir_file(packageName + "/url.js", url_jscode)
+        create_workingdir_file(packageName + "/edit_text.js", edit_text_jscode)
+        create_workingdir_file(packageName + "/text_view.js", text_view_jscode)
+        create_workingdir_file(packageName + "/click.js", click_jscode)
+        create_workingdir_file(packageName + "/hook_register_natives.js", hook_RN_jscode)
+        create_workingdir_file(packageName + "/keystore_dump.js", keystore_dump_jscode)
+        create_workingdir_file(packageName + "/dump_dex.js", dump_dex_jscode)
+        create_workingdir_file(packageName + "/android_ui.js", android_ui_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/activity_events.js", activity_events_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/object_store.js", object_store_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/just_trust_me.js", just_trust_me_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/just_trust_me_okhttp_hook_finder_for_android.js", just_trust_me_okhttp_hook_finder_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/just_trust_me_for_ios.js", just_trust_me_for_ios_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/hook_artmethod_register.js", hook_artmethod_register_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/get_device_info.js", get_device_info_jscode.replace("com.smile.gifmaker", packageName))
+        create_workingdir_file(packageName + "/trace_initproc.js", trace_initproc_jscode)
+        create_workingdir_file(packageName + "/find_anit_frida_so.js", find_anit_frida_so_jscode)
+        create_workingdir_file(packageName + "/hook_jni_method_trace.js", hook_jni_method_trace_jscode)
+        create_workingdir_file(packageName + "/replace_dlsym_get_pthread_create.js", replace_dlsym_get_pthread_create_jscode)
+        create_workingdir_file(packageName + "/find_boringssl_custom_verify_func.js", find_boringssl_custom_verify_func_jscode)
+        create_workingdir_file(packageName + "/apk_shell_scanner.js", apk_shell_scanner_jscode)
         #info(f"Copying APK {current_identifier_install_path}/base.apk to working directory please waiting for a few seconds")
         app_name = current_identifier_name.replace(" ", "")
-        pull_file_to_local(f"{current_identifier_install_path}/base.apk", f"./{packageName}/{app_name}_{current_identifier_version}.apk")
+        current_local_apk_path = f"{packageName}/{app_name}_{current_identifier_version}.apk"
+        pull_file_to_local(f"{current_identifier_install_path}/base.apk", current_local_apk_path)
         info(f"Working directory create successful")
+        
+def init_working_dir_enverment():
+    app_name = current_identifier_name.replace(" ", "")
+    current_local_apk_path = f"{current_identifier}/{app_name}_{current_identifier_version}.apk"
+    if os.path.isfile(current_local_apk_path):
+        return
+    pull_file_to_local(f"{current_identifier_install_path}/base.apk", current_local_apk_path)
+    info(f"Working directory init successful")
+        
 
 def hook_js(hookCmdArg, savePath = None):
     online_session = None
@@ -614,13 +663,20 @@ def hook_js(hookCmdArg, savePath = None):
     try:
         ganaretoionJscode = ""
         online_session, online_script = attach_rpc(use_v8=True);
-        appversion = online_script.exports_sync.appversion();
+        appversion = current_identifier_version
         spaceSpatrater = hookCmdArg.find(":")
         className = hookCmdArg
         toSpace = "*"
+        file_method_name = "allfunc"
         if spaceSpatrater > 0:
             className = hookCmdArg[:spaceSpatrater]
             toSpace = hookCmdArg[spaceSpatrater+1:]
+            if "<init>" in toSpace:
+                toSpace = "_"
+                file_method_name = "_init"
+            else:
+                toSpace = toSpace.split("(")[0]
+                file_method_name = toSpace
         if not online_script.exports_sync.containsclass(className):
             warn(f"Class Not Found {className}")
             return
@@ -628,18 +684,18 @@ def hook_js(hookCmdArg, savePath = None):
         ganaretoionJscode += ("\n//"+hookCmdArg+"\n")
         ganaretoionJscode += jscode
         if savePath == None:
-            defaultFilename = hookCmdArg.replace(".", "_").replace(":", "_").replace("$", "_").replace("__", "_") + ".js"
+            defaultFilename = className.replace(":", ".").replace("$", ".").replace("__", ".")+ "." + file_method_name + ".js"
             savePath = packageName+"/"+defaultFilename;
         else:
+            defaultFilename = savePath
             savePath = packageName+"/"+savePath;
         if len(ganaretoionJscode):
-            ganaretoionJscode = run_env.loadxinit_dexfile_template_jscode.replace("{PACKAGENAME}", packageName) + "\n" + ganaretoionJscode
+            ganaretoionJscode = resource_hook_js_prepare_jscode + "\n" + ganaretoionJscode + "\n\n\n\n\n//---------------------may be you need--------------------\n\n" + resource_hook_js_enhance_jscode
             warpExtraInfo = f"//cracked by {current_identifier_name} {appversion}\n"
-            warpExtraInfo += "//"+hookCmdArg + "\n"
-            warpExtraInfo += run_env.base_jscode
+            warpExtraInfo += "//"+hookCmdArg + "\n\n"
             warpExtraInfo += ganaretoionJscode
-            create_workingdir_file(savePath, warpExtraInfo)
-            info("frida hook script: " + savePath)
+            create_workingdir_file(savePath, jsbeautifier.beautify(warpExtraInfo))
+            info("frida hook script: " + defaultFilename)
         else:
             warn("Not found any classes by pattern "+hookCmdArg+".")
     except Exception:
@@ -727,10 +783,10 @@ def execute_script(script_file, is_spawn=False):
                 with patch_stdout():
                     text = cmd_session.prompt("CTRL + C to stop > ", handle_sigint=True)
             except KeyboardInterrupt:
-                info(f"Tnterrupting {script_file}")
+                info(f"Interrupting {script_file}")
                 break
             except EOFError:
-                print("Exiting...")
+                warn("Exiting...")
                 break
     except Exception:
         print(traceback.format_exc())  
@@ -751,7 +807,6 @@ def un_proxy():
     run_su_command("iptables -t nat -X REDSOCKS")
     run_su_command("killall redsocks")
     run_su_command("pid=$(ps -ef | grep '[r]edsocks' | awk '{print $2}'); [ -n \"$pid\" ] && kill -9 $pid")
-    info("un_proxy OK")
         
 def set_proxy(proxy):
     pattern = r'(http|socks5)://(\d{2,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d+)$'
@@ -813,11 +868,235 @@ def set_proxy(proxy):
         # run_su_command(f"iptables -t nat -A OUTPUT -p tcp  --dport 443 -j REDIRECT --to 12345")
     elif proxy_type.startswith("socks"):
         run_su_command(f"iptables -t nat -A OUTPUT -p tcp -m owner --uid-owner {current_identifier_uid} -j REDIRECT --to-ports 12345")
+        info(f"proxy {proxy} OK")
     else:
         warn(f"Cannot set proxy {proxy}")
         return
-    info(f"proxy {proxy} OK")
     
+    
+def load_dexes_to_cache(dexes_dir):
+    global current_app_classes_trie
+    current_app_classes_trie = pygtrie.CharTrie()
+    current_temp_dexes_tire_queue = queue.Queue() #临时缓存
+    if not os.path.isdir(dexes_dir):
+        os.makedirs(dexes_dir)
+    if not os.listdir(dexes_dir):
+        with zipfile.ZipFile(current_local_apk_path, 'r') as zip_ref:
+            for file_info in zip_ref.infolist():
+                if file_info.filename.endswith('.dex'):
+                    # 提取 dex 到指定目录
+                    zip_ref.extract(file_info, path=dexes_dir)
+                    # print(f"Extracted {file_info.filename} to {dexes_dir}")
+    def process_dex(dexes_list):
+        simplification = len(dexes_list) > 10
+        count = 0
+        for dex_path in dexes_list:
+            count += 1
+            dex_tire = load_classes_and_methods_to_trie(dex_path, simplification)
+            # current_temp_dexes_tire_queue.put(dex_tire)
+            for dkey, dvalue in dex_tire.items():
+                current_app_classes_trie[dkey] = dvalue
+            if count >= 15:
+                info(f"Warning: dex count too many :{count}")
+                break
+        info(f"load dexes finish simplification: {simplification} current_app_classes_trie: {len(current_app_classes_trie)}")
+        
+    dexes_list = []
+    for file in os.listdir(dexes_dir):
+        if not file.endswith(".dex"):
+            continue
+        dex_path = os.path.join(dexes_dir, file)
+        dexes_list.append(dex_path)
+    t = threading.Thread(target=process_dex, args=(dexes_list,))
+    t.start()
+    #info(f"threading {dexes_list} {len(dexes_list) > 10} ")
+    
+def load_classes_and_methods_to_trie(dex_path, simplification=False):
+    SKIP_PREFIXES = (
+        "java.", "javax.", "android.", "androidx.", "kotlin.", "com.google.",
+        "com.squareup.", "dagger.", "com.fasterxml.", "org.apache.", "org.json.", "com.alibaba.", "okio.", "com.orhanobut.",
+    )
+    SIMPLIFICATION_PREFIXES = (
+        current_identifier
+    )
+    def should_skip_class(class_name):
+        if simplification and not class_name.startswith(SKIP_PREFIXES):
+            return False
+        return class_name.startswith(SKIP_PREFIXES) or 'R$' in class_name or class_name.endswith(('BuildConfig', 'Manifest'))
+    loaded_count = 0
+    trie = pygtrie.CharTrie()
+    try:
+        with open(dex_path, 'rb') as f:
+            dex_bytes = f.read()
+            dex = dvm.DalvikVMFormat(dex_bytes)
+            for cls in dex.get_classes():
+                class_name = cls.get_name().strip('L;').replace('/', '.')
+                if should_skip_class(class_name):
+                    continue
+                trie_method = pygtrie.CharTrie()
+                for method in cls.get_methods():
+                    method_name = method.get_name()
+                    proto = method.get_descriptor()  # e.g., (Ljava/lang/String;)V
+                    # 转换描述符为更易读格式
+                    readable_proto = convert_descriptor_to_readable(proto)
+                    trie_method[f"{method_name}{readable_proto}"] = True
+                    loaded_count += 1
+                trie[f"{class_name}:"] = trie_method
+    except Exception as e:
+        print(f"[!] Error processing {dex_path}: {e}")
+    return trie
+
+def convert_descriptor_to_readable(descriptor):
+    def type_map(d):
+        mapping = {
+            'I': 'int', 'Z': 'boolean', 'B': 'byte',
+            'S': 'short', 'J': 'long', 'F': 'float',
+            'D': 'double', 'C': 'char', 'V': 'void',
+        }
+        if d.startswith('L') and d.endswith(';'):
+            return d[1:-1].replace('/', '.').split('.')[-1]
+        return mapping.get(d, d)
+    args, ret = descriptor.split(')')
+    args = args[1:]  # remove opening '('
+    i = 0
+    parsed = []
+    while i < len(args):
+        if args[i] == 'L':
+            j = i
+            while args[j] != ';':
+                j += 1
+            parsed.append(type_map(args[i:j+1]))
+            i = j + 1
+        elif args[i] in "ZBSCIJFD":
+            parsed.append(type_map(args[i]))
+            i += 1
+        elif args[i] == '[':
+            dim = 0
+            while args[i] == '[':
+                dim += 1
+                i += 1
+            if args[i] == 'L':
+                j = i
+                while args[j] != ';':
+                    j += 1
+                base = type_map(args[i:j+1])
+                i = j + 1
+            else:
+                base = type_map(args[i])
+                i += 1
+            parsed.append(base + '[]' * dim)
+        else:
+            i += 1  # unknown type, skip
+    return f"({', '.join(parsed)})"
+
+
+class ClassNameCompleter(Completer):
+    def __init__(self):
+        js_files = {
+            filename: None
+            for filename in os.listdir(current_identifier)
+            if filename.endswith(".js")
+        }
+        self.nested_dict = {
+            'help': None,
+            'h': None,
+            'activitys': None,
+            'a': None,
+            'services': None,
+            's': None,
+            'object': None,
+            'o': None,
+            'view': None,
+            'v': None,
+            'generatescript': None,
+            'gs': None,
+            'proxy': {"socks5://": None},
+            'p': {"socks5://": None},
+            'unproxy': None,
+            'up': None,
+            'justtrustme': None,
+            'trust': None,
+            'ls': None,
+            'attach': js_files,
+            'spawn': js_files,
+            'restart': None,
+            'pid': None,
+            'uid': None,
+            'exit': None,
+        }
+        self.debug_completer = NestedCompleter.from_nested_dict(self.nested_dict)
+        
+    def update_js_files(self):
+        js_files = {
+            filename: None
+            for filename in os.listdir(current_identifier)
+            if filename.endswith(".js")
+        }
+        self.nested_dict["attach"] = js_files
+        self.nested_dict["spawn"] = js_files
+        self.debug_completer = NestedCompleter.from_nested_dict(self.nested_dict)
+        
+    def get_completions(self, document, complete_event):
+        text = document.text_before_cursor.strip()
+        #print("\nget_completions:"+text)
+        generatescript_cmd_match = re.search(r"(generatescript|gs)\s+([^\s]+)", text)
+        if generatescript_cmd_match:
+            try:
+                value = generatescript_cmd_match.group(2)
+                max_items = 15
+                count = 0
+                if ":" in value:
+                    class_name, method_prefix = value.split(":", 1)
+                    if not current_app_classes_trie.has_node(class_name):
+                        return
+                    for _, class_method_trie in current_app_classes_trie.items(prefix=class_name):
+                        if not class_method_trie.has_node(method_prefix):
+                            continue
+                        for class_method, _ in class_method_trie.items(prefix=method_prefix):
+                            count += 1
+                            yield Completion(f"{class_name}:{class_method}", start_position=-len(value))
+                            if count >= max_items:
+                                return
+                else:
+                    class_name_prefix = value
+                    #print("\nclass_name_prefix:"+class_name_prefix)
+                    #print(f"\ncurrent_app_classes_trie:{len(current_app_classes_trie)}")
+                    result_class_tire = []
+                    if not current_app_classes_trie.has_node(class_name_prefix):
+                        #print(f"current_app_classes_trie not has_node: {class_name_prefix}")
+                        return
+                    for class_name, class_method_trie in current_app_classes_trie.items(prefix=class_name_prefix):
+                        result_class_tire.append((class_name, class_method_trie))
+                        count += 1
+                        if count >= max_items:
+                            break
+                    results_length = len(result_class_tire)
+                    count = 0
+                    for result in result_class_tire:
+                        class_name = result[0]
+                        if results_length >= max_items:
+                            count += 1
+                            yield Completion(class_name.replace(":", ""), start_position=-len(value))
+                    if count < max_items:
+                        for result in result_class_tire:
+                            class_name = result[0]
+                            class_method_trie = result[1]
+                            for class_method in class_method_trie.keys():
+                                count += 1
+                                yield Completion(f"{class_name}{class_method}", start_position=-len(value))
+                                if count >= max_items:
+                                    break
+            except Exception as e:
+                traceback.print_exc()
+                yield Completion(f"[ERROR: {e}]", start_position=0)
+                pass
+        else:
+            # 其他命令提示
+            for c in self.debug_completer.get_completions(document, complete_event):
+                yield c
+                        
+cmd_session = PromptSession()
+classNameCompleter = None
     
 def entry_debug_mode():    
     def handle_command(cmd):
@@ -851,6 +1130,7 @@ def entry_debug_mode():
                 return True
         elif cmd == "unproxy" or cmd == "up":
             un_proxy()
+            info("un_proxy OK")
             return True
         elif cmd.startswith("attach ") and re.search(r"attach\s+([^\s]+)", cmd):
             m = re.search(r"attach\s+([^\s]+)", cmd)
@@ -865,14 +1145,18 @@ def entry_debug_mode():
         elif cmd == "restart":
             restart_app(current_identifier)
             return True
-        elif cmd == "current_identifier_pid":
+        elif cmd == "pid":
             info(current_identifier_pid)
+            return True
+        elif cmd == "uid":
+            info(current_identifier_uid)
             return True
         elif (cmd.startswith("generatescript ") or cmd.startswith("gs ")) and re.search(r"(generatescript|gs)\s+([^\s]+)", cmd):
             m = re.search(r"(generatescript|gs)\s+([^\s]+)", cmd)
             if m:
                 info("Generating frida script, please wait for a few seconds")
                 hook_js(m.group(2), None)
+                classNameCompleter.update_js_files()
             else:
                 warn(f"Can not parse class and method: {cmd}")
             return True
@@ -891,6 +1175,8 @@ def entry_debug_mode():
         ("attach [script_file_name]", "quickly execute a frida script, similar to executing the command \"frida -U com.example.app -l xxx.js\". For example: attach url.js"),
         ("spawn [script_file_name]", "quickly spawn a frida script, similar to executing the command \"frida -U -f -n com.example.app -l xxx.js\". For example: spawn just_trust_me.js"),
         ("restart", "restart this app"),
+        ("pid", "get pid of this app main process"),
+        ("uid", "get pid of this app"),
         ("exit", "return to the previous level"),
     ]
     def print_help_msg():
@@ -911,40 +1197,10 @@ def entry_debug_mode():
                 print(cmd_part)
     hooker_cmd = ""
     list_working_dir()
-    js_files = {
-        filename: None
-        for filename in os.listdir(current_identifier)
-        if filename.endswith(".js")
-    }
-    debug_completer = NestedCompleter.from_nested_dict({
-        'help': None,
-        'h': None,
-        'activitys': None,
-        'a': None,
-        'services': None,
-        's': None,
-        'object': None,
-        'o': None,
-        'view': None,
-        'v': None,
-        'generatescript': None,
-        'gs': None,
-        'proxy': {"socks5://": None},
-        'p': {"socks5://": None},
-        'unproxy': None,
-        'up': None,
-        'justtrustme': None,
-        'trust': None,
-        'ls': None,
-        'attach': js_files,
-        'spawn': js_files,
-        'restart': None,
-        'current_identifier_pid': None,
-        'exit': None,
-    })
+    classNameCompleter = ClassNameCompleter()
     while True:
         try:
-            hooker_cmd = cmd_session.prompt(f'{current_identifier_name} > ', completer=debug_completer)
+            hooker_cmd = cmd_session.prompt(f'{current_identifier_name} > ', completer=classNameCompleter)
             hooker_cmd = hooker_cmd.strip()
             if hooker_cmd == 'exit' or hooker_cmd == 'quit':
                 break
@@ -1000,8 +1256,11 @@ while True:
         current_identifier = identifier
         current_identifier_pid, current_identifier_name, current_identifier_version, current_identifier_install_path, current_identifier_uid  = ensure_app_in_foreground(current_identifier)
         if not os.path.isdir(identifier):
-            run_env.init(current_identifier)
             create_working_dir_enverment()
+        else:
+            init_working_dir_enverment()
+        current_local_apk_path = f"{current_identifier}/{current_identifier_name}_{current_identifier_version}.apk"
+        load_dexes_to_cache(f"{current_identifier}/.dexes/")
         check_dependency_files()
         entry_debug_mode()
     except (EOFError, KeyboardInterrupt):
