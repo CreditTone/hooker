@@ -303,8 +303,17 @@ def ensure_app_in_foreground(package_name):
         uid = int(matchx.group(1))
     else:
         warn("UID not found.")
-    appinfo = adb_device.package_info(package_name)
-    appinstall_path = appinfo["path"].rsplit("/", 1)[0]
+    apk_path = device.shell(f"pm path {package_name}").strip().replace("package:", "")
+    # print(f"apk_path:{apk_path}")
+    appinstall_path = apk_path.rsplit("/", 1)[0]
+    appinfo = None
+    version_name = None
+    if 'app_info' in dir(adb_device):
+        appinfo = adb_device.app_info(package_name)
+        version_name = appinfo.version_name
+    else:
+        appinfo = adb_device.package_info(package_name)
+        version_name = appinfo["version_name"]
     # 获取当前正在运行的所有进程
     proc_map = {}
     apps = frida_device.enumerate_applications()
@@ -322,12 +331,12 @@ def ensure_app_in_foreground(package_name):
             info(f"📲 App {package_name} is running in the background, bringing it to the foreground...")
             # 通过 am 启动主 Activity，会自动 bring 到前台
             adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
-        return proc_map[package_name][0], proc_map[package_name][1], appinfo["version_name"], appinstall_path, uid
+        return proc_map[package_name][0], proc_map[package_name][1], version_name, appinstall_path, uid
     else:
         info(f"🚀 App {package_name} is not running, starting it now...")
         #adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
         app_pid, app_name = start_app(package_name)
-        return app_pid, app_name, appinfo["version_name"], appinstall_path, uid
+        return app_pid, app_name, version_name, appinstall_path, uid
 
 def get_remote_file_md5(file_path):
     # 检查文件是否存在并获取长度
@@ -774,6 +783,9 @@ def list_working_dir():
                 
                 
 def execute_script(script_file, is_spawn=False):
+    if not os.path.isfile(script_file):
+        warn(f"{script_file} File Not found")
+        return
     online_session = None
     online_script = None
     try:
@@ -781,7 +793,7 @@ def execute_script(script_file, is_spawn=False):
             online_session, online_script = spawn(f"{current_identifier}/{script_file}", True)
         else:
             online_session, online_script = attach(f"{current_identifier}/{script_file}", True)
-        while True:
+        while online_session != None:
             try:
                 with patch_stdout():
                     text = cmd_session.prompt("CTRL + C to stop > ", handle_sigint=True)
