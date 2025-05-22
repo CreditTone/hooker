@@ -1122,6 +1122,7 @@ def entry_debug_mode():
                 return True
         elif cmd == "ls":
             list_working_dir()
+            classNameCompleter.update_js_files()
             return True
         elif cmd == "justtrustme" or cmd == "trust":
             just_trust_me()
