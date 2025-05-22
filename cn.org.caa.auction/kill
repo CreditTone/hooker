@@ -1,3 +1,0 @@
-#!/bin/bash
-HOOKER_DRIVER=$(cat ../.hooker_driver)
-frida-kill $HOOKER_DRIVER cn.org.caa.auction
