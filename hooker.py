@@ -786,8 +786,8 @@ def list_working_dir():
                 
                 
 def execute_script(script_file, is_spawn=False):
-    if not os.path.isfile(script_file):
-        warn(f"{script_file} File Not found")
+    if not os.path.isfile(f"{current_identifier}/{script_file}"):
+        warn(f"{current_identifier}/{script_file} File Not found")
         return
     online_session = None
     online_script = None
