@@ -350,7 +350,7 @@ Java.perform(function() {
 
 
 - 7.3 Generate a Frida hook script for the constructor(s) of a specified class:
-gs okhttp3.Request$Builder:_ or gs okhttp3.Request$Builder:<init>
+gs okhttp3.Request$Builder:_ or gs okhttp3.Request$Builder:\<init\>
 
 ```shell
 某信拍 > gs okhttp3.Request$Builder:<init>()
