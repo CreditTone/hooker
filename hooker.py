@@ -306,7 +306,7 @@ def ensure_app_in_foreground(package_name):
         uid = int(matchx.group(1))
     else:
         warn("UID not found.")
-    apk_path = device.shell(f"pm path {package_name}").strip().replace("package:", "")
+    apk_path = adb_device.shell(f"pm path {package_name}").strip().replace("package:", "")
     # print(f"apk_path:{apk_path}")
     appinstall_path = apk_path.rsplit("/", 1)[0]
     appinfo = None
