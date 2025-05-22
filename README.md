@@ -335,7 +335,7 @@ Java.perform(function() {
 
 
 - 7.3 生成指定类构造方法，生成构造方法的frida hook脚本：
-gs okhttp3.Request$Builder:_ 或者gs okhttp3.Request$Builder:<init>
+gs okhttp3.Request$Builder:_ 或者gs okhttp3.Request$Builder:\<init\>
 
 ```shell
 某信拍 > gs okhttp3.Request$Builder:<init>()
