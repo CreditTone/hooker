@@ -270,6 +270,7 @@ def _init_frida_device():
 _init_frida_device()
 
 def start_app(package_name):
+    global current_identifier_pid
     shell_result = adb_device.shell(f"dumpsys package {package_name} | grep -A 1 MAIN | grep {package_name}").strip()
     m = re.search(r"\s+([^\s]+)\s+filter", shell_result)
     if m:
@@ -285,15 +286,17 @@ def start_app(package_name):
     apps = frida_device.enumerate_applications()
     for app in sorted(apps, key=lambda x: x.pid or 0):
         if app.pid != 0 and app.identifier == package_name:
+            current_identifier_pid = app.pid
             return app.pid, app.name
     return None, None
 
 def restart_app(package_name):
+    global current_identifier_pid
     info(f"restarts {package_name}")
     adb_device.app_stop(package_name)
     time.sleep(3)
     app_pid, app_name = start_app(package_name)
-    current_identifier = app_pid
+    current_identifier_pid = app_pid
 
 def ensure_app_in_foreground(package_name):
     uid = None
