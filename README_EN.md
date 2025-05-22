@@ -14,8 +14,7 @@ Please ensure compliance with relevant laws and regulations when using the tools
 ![GitHub code size](https://img.shields.io/github/languages/code-size/CreditTone/hooker?style=flat-square)
 ![Python](https://img.shields.io/badge/python-3.8.8-blue?style=flat-square)
 
-Hooker is a reverse engineering toolkit powered by Frida.
-It provides reverse engineers with:
+Hooker is a reverse engineering toolkit based on Frida, designed to provide Android reverse engineers with a comfortable command-line interface,
 
 A unified script package management system
 
@@ -29,6 +28,8 @@ A Frida-based implementation of JustTrustMe
 
 Global app support for boringssl unpinning
 
+One picture to prove why you need Hooker:
+![gs_show.jpg](assets/gs_show.jpg)
 
 ## 📚 Table of Contents
 
@@ -183,26 +184,204 @@ exit                                         return to the previous level
 
 
 ### 7. Generate Frida hook scripts for a specific class and method
+
+![gs_show.jpg](assets/gs_show.jpg)
+
+- Command Syntax：gs, generatescript [class_name:method_name]
+
+
+- 7.1 Generate a Frida hook script for a specific method:
+gs okhttp3.Request$Builder:addHeader — the parameter part (String, String) is not required.
+
 ```shell
-hooker(Identifier): cxm.shxpxx.sg
-✅ App cxm.shxpxx.sg is already in the foreground
-Creating working directory: cxm.shxpxx.sg
-Generating frida shortcut command...
-Generating built-in frida script...
-pull /data/app/cxm.shxpxx.sg-L8zkrpFVICv0-hOrtmPPxA==/base.apk to cxm.shxpxx.sg/ShopeeSG_3.43.40.apk successful
-Working directory create successful
-just_trust_me.js                                 empty.js                                         keystore_dump.js
-edit_text.js                                     activity_events.js                               find_boringssl_custom_verify_func.js
-ssl_log.js                                       hook_register_natives.js                         click.js
-get_device_info.js                               apk_shell_scanner.js                             dump_dex.js
-object_store.js                                  hook_artmethod_register.js                       replace_dlsym_get_pthread_create.js
-just_trust_me_for_ios.js                         trace_initproc.js                                android_ui.js
-hook_jni_method_trace.js                         url.js                                           just_trust_me_okhttp_hook_finder_for_android.js
-text_view.js                                     find_anit_frida_so.js
-某皮 > gs okhttp3.Request$Builder:addHeader(String, String)
+某信拍 > gs okhttp3.Request$Builder:addHeader(String, String)
 Generating frida script, please wait for a few seconds
 frida hook script: okhttp3.Request.Builder.addHeader.js
-某皮 > 
+某信拍 > 
+```
+
+```js
+//cat okhttp3.Request.Builder.addHeader.js
+Java.perform(function() {
+    var okhttp3_Request_Builder_clz = Java.use('okhttp3.Request$Builder');
+    var okhttp3_Request_Builder_clz_method_addHeader_2grl = okhttp3_Request_Builder_clz.addHeader.overload('java.lang.String', 'java.lang.String');
+    okhttp3_Request_Builder_clz_method_addHeader_2grl.implementation = function(string, string_x2) {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder okhttp3.Request$Builder.addHeader(java.lang.String,java.lang.String)';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_addHeader_2grl.call(this, string, string_x2);
+        console.log("header name:" + string + " header value:" + string_x2);
+        printBeat(beat);
+        return ret;
+    };
+});
+```
+***
+
+
+
+- 7.2 Generate a Frida hook script for all member methods of a specified class:
+gs okhttp3.Request$Builder
+
+```shell
+某信拍 > generatescript okhttp3.Request$Builder
+Generating frida script, please wait for a few seconds
+frida hook script: okhttp3.Request.Builder.allfunc.js
+```
+***
+
+```js
+//cat okhttp3.Request.Builder.allfunc.js
+//okhttp3.Request$Builder
+Java.perform(function() {
+    var okhttp3_Request_Builder_clz = Java.use('okhttp3.Request$Builder');
+    var okhttp3_Request_Builder_clz_method_header_ng3n = okhttp3_Request_Builder_clz.header.overload('java.lang.String', 'java.lang.String');
+    okhttp3_Request_Builder_clz_method_header_ng3n.implementation = function(string, string_x2) {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder okhttp3.Request$Builder.header(java.lang.String,java.lang.String)';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_header_ng3n.call(this, string, string_x2);
+        printBeat(beat);
+        return ret;
+    };
+    var okhttp3_Request_Builder_clz_method_cacheControl_q8q5 = okhttp3_Request_Builder_clz.cacheControl.overload('okhttp3.CacheControl');
+    okhttp3_Request_Builder_clz_method_cacheControl_q8q5.implementation = function(cacheControl) {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder okhttp3.Request$Builder.cacheControl(okhttp3.CacheControl)';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_cacheControl_q8q5.call(this, cacheControl);
+        printBeat(beat);
+        return ret;
+    };
+    var okhttp3_Request_Builder_clz_method_method_bjk9 = okhttp3_Request_Builder_clz.method.overload('java.lang.String', 'okhttp3.RequestBody');
+    okhttp3_Request_Builder_clz_method_method_bjk9.implementation = function(string, requestBody) {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder okhttp3.Request$Builder.method(java.lang.String,okhttp3.RequestBody)';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_method_bjk9.call(this, string, requestBody);
+        printBeat(beat);
+        return ret;
+    };
+    var okhttp3_Request_Builder_clz_method_head_a5nq = okhttp3_Request_Builder_clz.head.overload();
+    okhttp3_Request_Builder_clz_method_head_a5nq.implementation = function() {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder okhttp3.Request$Builder.head()';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_head_a5nq.call(this);
+        printBeat(beat);
+        return ret;
+    };
+    var okhttp3_Request_Builder_clz_method_headers_to5i = okhttp3_Request_Builder_clz.headers.overload('okhttp3.Headers');
+    okhttp3_Request_Builder_clz_method_headers_to5i.implementation = function(headers) {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder okhttp3.Request$Builder.headers(okhttp3.Headers)';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_headers_to5i.call(this, headers);
+        printBeat(beat);
+        return ret;
+    };
+    var okhttp3_Request_Builder_clz_method_post_heaq = okhttp3_Request_Builder_clz.post.overload('okhttp3.RequestBody');
+    okhttp3_Request_Builder_clz_method_post_heaq.implementation = function(requestBody) {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder okhttp3.Request$Builder.post(okhttp3.RequestBody)';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_post_heaq.call(this, requestBody);
+        printBeat(beat);
+        return ret;
+    };
+    var okhttp3_Request_Builder_clz_method_build_rmqx = okhttp3_Request_Builder_clz.build.overload();
+    okhttp3_Request_Builder_clz_method_build_rmqx.implementation = function() {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request okhttp3.Request$Builder.build()';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_build_rmqx.call(this);
+        printBeat(beat);
+        return ret;
+    };
+    var okhttp3_Request_Builder_clz_method_patch_hp9u = okhttp3_Request_Builder_clz.patch.overload('okhttp3.RequestBody');
+    okhttp3_Request_Builder_clz_method_patch_hp9u.implementation = function(requestBody) {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder okhttp3.Request$Builder.patch(okhttp3.RequestBody)';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_patch_hp9u.call(this, requestBody);
+        printBeat(beat);
+        return ret;
+    };
+    var okhttp3_Request_Builder_clz_method_url_0owi = okhttp3_Request_Builder_clz.url.overload('java.lang.String');
+    okhttp3_Request_Builder_clz_method_url_0owi.implementation = function(string) {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder okhttp3.Request$Builder.url(java.lang.String)';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_url_0owi.call(this, string);
+        printBeat(beat);
+        return ret;
+    };
+    var okhttp3_Request_Builder_clz_method_removeHeader_uzb9 = okhttp3_Request_Builder_clz.removeHeader.overload('java.lang.String');
+    okhttp3_Request_Builder_clz_method_removeHeader_uzb9.implementation = function(string) {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder okhttp3.Request$Builder.removeHeader(java.lang.String)';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_removeHeader_uzb9.call(this, string);
+        printBeat(beat);
+        return ret;
+    };
+    var okhttp3_Request_Builder_clz_method_url_ykbd = okhttp3_Request_Builder_clz.url.overload('java.net.URL');
+    okhttp3_Request_Builder_clz_method_url_ykbd.implementation = function(url) {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder okhttp3.Request$Builder.url(java.net.URL)';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_url_ykbd.call(this, url);
+        printBeat(beat);
+        return ret;
+    };
+    var okhttp3_Request_Builder_clz_method_delete_dqyl = okhttp3_Request_Builder_clz.delete.overload();
+    okhttp3_Request_Builder_clz_method_delete_dqyl.implementation = function() {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder okhttp3.Request$Builder.delete()';
+        var beat = newMethodBeat(beatText, executor);
+        var ret = okhttp3_Request_Builder_clz_method_delete_dqyl.call(this);
+        printBeat(beat);
+        return ret;
+    };
+    //.......省略N行代码
+```
+***
+
+
+
+- 7.3 Generate a Frida hook script for the constructor(s) of a specified class:
+gs okhttp3.Request$Builder:_ or gs okhttp3.Request$Builder:<init>
+
+```shell
+某信拍 > gs okhttp3.Request$Builder:<init>()
+Generating frida script, please wait for a few seconds
+frida hook script: okhttp3.Request.Builder._init.js
+```
+
+```js
+//cat okhttp3.Request.Builder._init.js
+//okhttp3.Request$Builder:<init>()
+Java.perform(function() {
+    var okhttp3_Request_Builder_clz = Java.use('okhttp3.Request$Builder');
+    var okhttp3_Request_Builder_clz_init_uw3i = okhttp3_Request_Builder_clz.$init.overload();
+    okhttp3_Request_Builder_clz_init_uw3i.implementation = function() {
+        var executor = this.hashCode();
+        var beatText = 'public okhttp3.Request$Builder()';
+        var beat = newMethodBeat(beatText, executor);
+        var returnObj = okhttp3_Request_Builder_clz_init_uw3i.call(this);
+        printBeat(beat);
+        return returnObj;
+    };
+    var okhttp3_Request_Builder_clz_init_e58t = okhttp3_Request_Builder_clz.$init.overload('okhttp3.Request');
+    okhttp3_Request_Builder_clz_init_e58t.implementation = function(v0) {
+        var executor = this.hashCode();
+        var beatText = 'okhttp3.Request$Builder(okhttp3.Request)';
+        var beat = newMethodBeat(beatText, executor);
+        var returnObj = okhttp3_Request_Builder_clz_init_e58t.call(this, v0);
+        printBeat(beat);
+        return returnObj;
+    };
+});
 ```
 ***
 
