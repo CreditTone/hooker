@@ -13,6 +13,7 @@
 ![GitHub forks](https://img.shields.io/github/forks/CreditTone/hooker?style=flat-square)
 ![GitHub code size](https://img.shields.io/github/languages/code-size/CreditTone/hooker?style=flat-square)
 ![Python](https://img.shields.io/badge/python-3.8.8-blue?style=flat-square)
+![frida](https://img.shields.io/badge/frida-16.7.19-blue?style=flat-square)
 
 hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发人员提供一个舒适的命令行界面和一些常用的通杀脚本、自动化生成hook脚本、内存漫游探测activity和service、frida版JustTrustMe、boringssl unpinning全网app通杀
 

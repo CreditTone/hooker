@@ -13,6 +13,7 @@ Please ensure compliance with relevant laws and regulations when using the tools
 ![GitHub forks](https://img.shields.io/github/forks/CreditTone/hooker?style=flat-square)
 ![GitHub code size](https://img.shields.io/github/languages/code-size/CreditTone/hooker?style=flat-square)
 ![Python](https://img.shields.io/badge/python-3.8.8-blue?style=flat-square)
+![frida](https://img.shields.io/badge/frida-16.7.19-blue?style=flat-square)
 
 Hooker is a reverse engineering toolkit based on Frida, designed to provide Android reverse engineers with a comfortable command-line interface,
 
