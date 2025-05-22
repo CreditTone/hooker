@@ -1,4 +1,4 @@
-frida
+frida==16.7.19
 frida-tools
 pygtrie==2.5.0
 adbutils==1.2.11
