@@ -1,5 +1,0 @@
-{
-	"just_trust_me.js": "Frida version of just_trust_me, implements all features of Xposed's JustTrustMe and also supports BoringSSL unpinning. Launch command: ./spawn just_trust_me.js",
-	"replace_dlsym_get_pthread_create.js": "For now, here's a general-purpose implementation specifically designed to counter the dlsym version of libmsaoaidsec.so.",
-	"find_boringssl_custom_verify_func.js": "Specifically used to locate BoringSSL's verification function — hook SSL_CTX_set_custom_verify to identify the verification callback."
-}

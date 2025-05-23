@@ -18,7 +18,7 @@
 hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发人员提供一个舒适的命令行界面和一些常用的通杀脚本、自动化生成hook脚本、内存漫游探测activity和service、frida版JustTrustMe、boringssl unpinning全网app通杀
 
 一张图证明你需要hooker
-![gs_show.jpg](assets/gs_show.jpg)
+![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
 
 目录
 =================
@@ -119,6 +119,7 @@ Please enter the identifier that needs to be reversed
 hooker(Identifier):
 ```
 ***
+![hooker_debug_app_1080.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/hooker_debug_app_1080.gif)
 
 ### 5. 输入调试应用包名
 ```shell
