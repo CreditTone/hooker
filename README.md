@@ -209,7 +209,7 @@ Java.perform(function() {
 
 
 
-- 7.2 生成指定类，生成所有成员方法的frida hook脚本：
+- 7.2 生成指定类的所有成员方法的frida hook脚本：
 gs okhttp3.Request$Builder
 
 ```shell
@@ -338,7 +338,7 @@ Java.perform(function() {
 
 
 
-- 7.3 生成指定类构造方法，生成构造方法的frida hook脚本：
+- 7.3 生成指定类的构造方法的frida hook脚本：
 gs okhttp3.Request$Builder:_ 或者gs okhttp3.Request$Builder:\<init\>
 
 ```shell

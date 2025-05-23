@@ -1211,6 +1211,8 @@ while True:
         info("hooker Let's enjoy reverse engineering together")
         info("-----------------------------------------------------------------------------------------------")
         identifier_list = list_third_party_apps()
+        identifier_list.append("exit")
+        identifier_list.append("quit")
         print("Please enter the identifier that needs to be reversed")
         identifier = cmd_session.prompt('hooker(Identifier): ', completer=WordCompleter(identifier_list, ignore_case=False, match_middle=True, WORD=True))  
         if identifier == 'exit' or identifier == 'exit()' or identifier == 'quit':
