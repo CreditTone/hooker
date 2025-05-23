@@ -865,7 +865,7 @@ def load_dexes_to_cache(dexes_dir):
             # current_temp_dexes_tire_queue.put(dex_tire)
             for dkey, dvalue in dex_tire.items():
                 current_app_classes_trie[dkey] = dvalue
-            if count >= 10:
+            if count >= 10 or len(current_app_classes_trie) > 200000:
                 #info(f"Warning: dex count too many :{count}")
                 break
         #info(f"load dexes finish simplification: {simplification} current_app_classes_trie: {len(current_app_classes_trie)}")
