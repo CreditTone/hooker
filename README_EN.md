@@ -152,6 +152,7 @@ hook_jni_method_trace.js                         url.js                         
 text_view.js                                     find_anit_frida_so.js
 某皮 > 
 ```
+![hooker_enter_debug.gif](https://raw.githubusercontent.com/CreditTone/img_resources/main/hooker_enter_debug.gif)
 ***
 
 
@@ -181,6 +182,7 @@ uid                                          get pid of this app
 exit                                         return to the previous level
 某皮 > 
 ```
+![hooker_help.gif](https://raw.githubusercontent.com/CreditTone/img_resources/main/hooker_help.gif)
 ***
 
 

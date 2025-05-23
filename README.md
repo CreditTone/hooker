@@ -119,7 +119,7 @@ Please enter the identifier that needs to be reversed
 hooker(Identifier):
 ```
 ***
-![hooker_debug_app_1080.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/hooker_debug_app_1080.gif)
+
 
 ### 5. 输入调试应用包名
 ```shell
@@ -140,6 +140,7 @@ hook_jni_method_trace.js                         url.js                         
 text_view.js                                     find_anit_frida_so.js
 某皮 > 
 ```
+![hooker_enter_debug.gif](https://raw.githubusercontent.com/CreditTone/img_resources/main/hooker_enter_debug.gif)
 ***
 
 
@@ -169,6 +170,7 @@ uid                                          get pid of this app
 exit                                         return to the previous level
 某皮 > 
 ```
+![hooker_help.gif](https://raw.githubusercontent.com/CreditTone/img_resources/main/hooker_help.gif)
 ***
 
 
