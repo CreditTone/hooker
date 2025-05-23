@@ -175,7 +175,7 @@ exit                                         return to the previous level
 
 
 ### 7. 生成指定类方法frida脚本
-![gs_show.jpg](assets/gs_show.jpg)
+![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
 - Command语法：gs, generatescript [class_name:method_name]
 
 
