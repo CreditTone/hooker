@@ -188,7 +188,7 @@ exit                                         return to the previous level
 
 ### 7. Generate Frida hook scripts for a specific class and method
 
-![gs_show.jpg](assets/gs_show.jpg)
+![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
 
 - Command Syntax：gs, generatescript [class_name:method_name]
 
