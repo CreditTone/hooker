@@ -812,14 +812,20 @@ def set_proxy(proxy):
         )
     if not check_remote_file_exists("/sdcard/redsocks"):
         push_file_to_remote(f"mobile-deploy/redsocks", "/sdcard/redsocks")
+        run_su_command(f"cp /sdcard/redsocks /data/local/tmp/redsocks")
+        run_su_command(f"chmod 700 /data/local/tmp/redsocks")
+    if not check_remote_file_exists("/sdcard/libevent-2.1.so"):
+        push_file_to_remote(f"mobile-deploy/libevent-2.1.so", "/sdcard/libevent-2.1.so")
+        run_su_command(f"cp /sdcard/libevent-2.1.so /data/local/tmp/libevent-2.1.so")
     if not check_remote_file_exists("/data/local/tmp/redsocks"):
         run_su_command(f"cp /sdcard/redsocks /data/local/tmp/redsocks")
+        run_su_command(f"cp /sdcard/libevent-2.1.so /data/local/tmp/libevent-2.1.so")
         run_su_command(f"chmod 700 /data/local/tmp/redsocks")
     un_proxy()
     adb_device.shell(f"rm -f /data/local/tmp/redsocks.conf")
     adb_device.shell(f"echo '{config}' > /data/local/tmp/redsocks.conf")
     time.sleep(1)
-    run_su_command(f"/data/local/tmp/redsocks -c /data/local/tmp/redsocks.conf")
+    run_su_command(f"LD_LIBRARY_PATH=/data/local/tmp/ /data/local/tmp/redsocks -c /data/local/tmp/redsocks.conf")
     if proxy_type == "http-relay":
         run_su_command(f"iptables -t nat -N REDSOCKS")
         run_su_command(f"iptables -t nat -A REDSOCKS -d 0.0.0.0/8 -j RETURN")
