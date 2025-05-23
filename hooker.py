@@ -307,7 +307,8 @@ def ensure_app_in_foreground(package_name):
     else:
         warn("UID not found.")
     apk_path = adb_device.shell(f"pm path {package_name}").strip().replace("package:", "")
-    # print(f"apk_path:{apk_path}")
+    apk_path = re.search(r"/data/app/[^/]+/base.apk", apk_path).group(0)
+    #print(f"apk_path:{apk_path}")
     appinstall_path = apk_path.rsplit("/", 1)[0]
     appinfo = None
     version_name = None
@@ -381,6 +382,7 @@ def check_dependency_files():
         compara_and_update_file("mobile-deploy/libext64.so", f"/data/data/{current_identifier}/files/libext64.so")
         compara_and_update_file("mobile-deploy/libext.so", f"/data/data/{current_identifier}/files/libext.so")
     t = threading.Thread(target=process_dex_dependency_files)
+    t.daemon = True
     t.start()
              
 def compara_and_update_file(local_file, remote_file):
@@ -522,62 +524,6 @@ def create_workingdir_file(filename, text):
         if file != None:
             file.close()
             
-pull_so_python_code = """
-#!/usr/bin/env python3
-
-import adbutils
-import argparse
-import os
-
-# 命令行参数解析
-parser = argparse.ArgumentParser(description="从设备中提取指定 .so 文件")
-parser.add_argument("so_name", help="要提取的 .so 文件名（如 libnative-lib.so）")
-parser.add_argument("output_name", nargs='?', help="输出保存的文件名（可选）")
-
-args = parser.parse_args()
-so_name = args.so_name
-output_name = args.output_name if args.output_name else so_name
-
-# 连接设备
-adb = adbutils.AdbClient(host="127.0.0.1", port=5037)
-device = adb.device()
-
-# 应用包名
-package_name = "com.smile.gifmaker"
-
-# 获取 APK 安装目录
-cmd = f"pm path {package_name}"
-result = device.shell(cmd).strip()
-if not result.startswith("package:"):
-    raise RuntimeError(f"未找到包 {package_name}，pm path 返回：{result}")
-
-apk_path = result.replace("package:", "")
-base_dir = apk_path.rsplit('/', 1)[0]  # e.g., /data/app/com.example.app-abc123==
-
-# 构造 lib 目录路径
-lib_root = f"{base_dir}/lib/"
-abi_dirs = device.shell(f"ls {lib_root}").strip().splitlines()
-
-# 遍历所有 ABI 目录，查找 so 文件
-found = False
-for abi in abi_dirs:
-    full_lib_dir = f"{lib_root}{abi}/"
-    file_list = device.shell(f"ls -1 {full_lib_dir}").strip().splitlines()
-    file_list
-    
-    if so_name in file_list:
-        remote_path = f"{full_lib_dir}{so_name}"
-        local_path = os.path.abspath(output_name)
-        print(f"正在从设备中拉取: {remote_path} 到本地: {local_path}")
-        device.sync.pull(remote_path, local_path)
-        print("拉取成功")
-        found = True
-        break
-
-if not found:
-    print(f"未找到 {so_name}，请确认它是否存在于任何 ABI 子目录中")
-"""
-
 def create_working_dir_enverment():
     global current_identifier
     global frida_device
@@ -597,14 +543,12 @@ def create_working_dir_enverment():
         create_workingdir_file(packageName+"/attach", attach_shell)
         create_workingdir_file(packageName+"/spawn", spawn_shell)
         create_workingdir_file(packageName + "/kill", shellPrefix + "frida-kill $HOOKER_DRIVER "+packageName)
-        create_workingdir_file(packageName + "/pull_so", pull_so_python_code.replace("com.smile.gifmaker", packageName))
         create_workingdir_file(packageName+"/objection", shellPrefix + "objection -d -g "+packageName+" explore")
         os.popen('chmod 777 ' + packageName +'/hooking').readlines()
         os.popen('chmod 777 ' + packageName +'/attach').readlines()
         os.popen('chmod 777 ' + packageName +'/kill').readlines()
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
         os.popen('chmod 777 ' + packageName +'/spawn').readlines()
-        os.popen('chmod 777 ' + packageName +'/pull_so').readlines()
         info(f"Generating built-in frida script...")
         create_workingdir_file(packageName + "/empty.js", "")
         hook_js_prepare_jscode = read_js_resource("_hook_js_prepare.js")
@@ -654,19 +598,20 @@ def create_working_dir_enverment():
         create_workingdir_file(packageName + "/replace_dlsym_get_pthread_create.js", replace_dlsym_get_pthread_create_jscode)
         create_workingdir_file(packageName + "/find_boringssl_custom_verify_func.js", find_boringssl_custom_verify_func_jscode)
         create_workingdir_file(packageName + "/apk_shell_scanner.js", apk_shell_scanner_jscode)
-        #info(f"Copying APK {current_identifier_install_path}/base.apk to working directory please waiting for a few seconds")
-        app_name = current_identifier_name.replace(" ", "")
+        info(f"Copying APK {current_identifier_install_path}/base.apk to working directory please waiting for a few seconds")
         global current_local_apk_path
-        current_local_apk_path = f"{packageName}/{app_name}_{current_identifier_version}.apk"
+        current_local_apk_path = f"{packageName}/{current_identifier_name.replace(' ', '')}_{current_identifier_version}.apk"
         pull_file_to_local(f"{current_identifier_install_path}/base.apk", current_local_apk_path)
         info(f"Working directory create successful")
         
 def init_working_dir_enverment():
     global current_local_apk_path
-    app_name = current_identifier_name.replace(" ", "")
-    current_local_apk_path = f"{current_identifier}/{app_name}_{current_identifier_version}.apk"
+    current_local_apk_path = f"{current_identifier}/{current_identifier_name.replace(' ', '')}_{current_identifier_version}.apk"
     if os.path.isfile(current_local_apk_path):
         return
+    if os.path.isdir(current_local_apk_path):
+        os.popen(f'rm -rf {current_local_apk_path}').readlines()
+    #print(f"current_identifier_install_path:{current_identifier_install_path}")
     pull_file_to_local(f"{current_identifier_install_path}/base.apk", current_local_apk_path)
     info(f"Working directory init successful")
         
@@ -914,7 +859,7 @@ def load_dexes_to_cache(dexes_dir):
             # current_temp_dexes_tire_queue.put(dex_tire)
             for dkey, dvalue in dex_tire.items():
                 current_app_classes_trie[dkey] = dvalue
-            if count >= 15:
+            if count >= 10:
                 #info(f"Warning: dex count too many :{count}")
                 break
         #info(f"load dexes finish simplification: {simplification} current_app_classes_trie: {len(current_app_classes_trie)}")
@@ -926,6 +871,7 @@ def load_dexes_to_cache(dexes_dir):
         dex_path = os.path.join(dexes_dir, file)
         dexes_list.append(dex_path)
     t = threading.Thread(target=process_dex, args=(dexes_list,))
+    t.daemon = True
     t.start()
     #info(f"threading {dexes_list} {len(dexes_list) > 10} ")
     
