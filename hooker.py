@@ -5,6 +5,7 @@ Created on 2020年3月23日
 
 @author: stephen
 '''
+from _ast import In
 
 
 default_frida_server_arm = "frida-server-16.7.19-android-arm"
@@ -35,6 +36,8 @@ import pygtrie
 import queue
 import itertools
 import jsbeautifier
+from collections import Counter
+from androguard.core.bytecodes import apk
 from androguard.core.bytecodes import dvm
 from androguard.core.analysis.analysis import MethodAnalysis
 from androguard.core import androconf
@@ -841,12 +844,31 @@ def set_proxy(proxy):
     else:
         warn(f"Cannot set proxy {proxy}")
         return
-    
+
+def get_need_to_cache_pkg_prefix():
+    a = apk.APK(current_local_apk_path)
+    activities = a.get_activities()
+    # 取每个activity包名前两段
+    prefixes = []
+    for activity in activities:
+        parts = activity.split('.')
+        if len(parts) >= 2:
+            prefix = '.'.join(parts[:2])
+        else:
+            prefix = activity
+        prefixes.append(prefix)
+    # 统计出现次数
+    counter = Counter(prefixes)
+    # 找出现次数最多的前两个
+    most_common_two = counter.most_common(2)
+    results = ["okhttp3", "retrofit2", "javax.crypto", "java.security"]
+    for prefix, count in most_common_two:
+        results.append(prefix)
+    return results
     
 def load_dexes_to_cache(dexes_dir):
     global current_app_classes_trie
     current_app_classes_trie = pygtrie.CharTrie()
-    current_temp_dexes_tire_queue = queue.Queue() #临时缓存
     if not os.path.isdir(dexes_dir):
         os.makedirs(dexes_dir)
     if not os.listdir(dexes_dir):
@@ -856,19 +878,20 @@ def load_dexes_to_cache(dexes_dir):
                     # 提取 dex 到指定目录
                     zip_ref.extract(file_info, path=dexes_dir)
                     # print(f"Extracted {file_info.filename} to {dexes_dir}")
+    
     def process_dex(dexes_list):
-        simplification = len(dexes_list) > 10
+        need_to_cache_pkg_prefix = get_need_to_cache_pkg_prefix()
+        #info(f"need_to_cache_pkg_prefix:{need_to_cache_pkg_prefix}")
         count = 0
         for dex_path in dexes_list:
             count += 1
-            dex_tire = load_classes_and_methods_to_trie(dex_path, simplification)
-            # current_temp_dexes_tire_queue.put(dex_tire)
+            dex_tire = load_classes_and_methods_to_trie(dex_path, need_to_cache_pkg_prefix)
             for dkey, dvalue in dex_tire.items():
                 current_app_classes_trie[dkey] = dvalue
-            if count >= 10 or len(current_app_classes_trie) > 200000:
+            if len(current_app_classes_trie) > 200000:
                 #info(f"Warning: dex count too many :{count}")
                 break
-        #info(f"load dexes finish simplification: {simplification} current_app_classes_trie: {len(current_app_classes_trie)}")
+        #info(f"load dexes finish current_app_classes_trie: {len(current_app_classes_trie)}")
         
     dexes_list = []
     for file in os.listdir(dexes_dir):
@@ -881,18 +904,12 @@ def load_dexes_to_cache(dexes_dir):
     t.start()
     #info(f"threading {dexes_list} {len(dexes_list) > 10} ")
     
-def load_classes_and_methods_to_trie(dex_path, simplification=False):
-    SKIP_PREFIXES = (
-        "java.", "javax.", "android.", "androidx.", "kotlin.", "com.google.",
-        "com.squareup.", "dagger.", "com.fasterxml.", "org.apache.", "org.json.", "com.alibaba.", "okio.", "com.orhanobut.",
-    )
-    SIMPLIFICATION_PREFIXES = (
-        current_identifier
-    )
+def load_classes_and_methods_to_trie(dex_path, need_to_cache_pkg_prefix):
+    need_to_cache_pkg = tuple(need_to_cache_pkg_prefix)
     def should_skip_class(class_name):
-        if simplification and not class_name.startswith(SKIP_PREFIXES):
-            return False
-        return class_name.startswith(SKIP_PREFIXES) or 'R$' in class_name or class_name.endswith(('BuildConfig', 'Manifest'))
+        if not class_name.startswith(need_to_cache_pkg):
+            return True
+        return False
     loaded_count = 0
     trie = pygtrie.CharTrie()
     try:
@@ -988,7 +1005,9 @@ class ClassNameCompleter(Completer):
             'trust': None,
             'ls': None,
             'attach': js_files,
+            'frida': js_files,
             'spawn': js_files,
+            'fridaf': js_files,
             'restart': None,
             'pid': None,
             'uid': None,
@@ -1003,7 +1022,9 @@ class ClassNameCompleter(Completer):
             if filename.endswith(".js")
         }
         self.nested_dict["attach"] = js_files
+        self.nested_dict["frida"] = js_files
         self.nested_dict["spawn"] = js_files
+        self.nested_dict["fridaf"] = js_files
         self.debug_completer = NestedCompleter.from_nested_dict(self.nested_dict)
         
     def get_completions(self, document, complete_event):
@@ -1103,13 +1124,13 @@ def entry_debug_mode():
             un_proxy()
             info("un_proxy OK")
             return True
-        elif cmd.startswith("attach ") and re.search(r"attach\s+([^\s]+)", cmd):
-            m = re.search(r"attach\s+([^\s]+)", cmd)
+        elif (cmd.startswith("attach ") or cmd.startswith("frida ")) and re.search(r"(attach|frida)\s+([^\s]+\.js)", cmd):
+            m = re.search(r"(attach|frida)\s+([^\s]+)", cmd)
             if m:
                 execute_script(m.group(1), False)
                 return True
-        elif cmd.startswith("spawn ") and re.search(r"spawn\s+([^\s]+)", cmd):
-            m = re.search(r"spawn\s+([^\s]+)", cmd)
+        elif (cmd.startswith("spawn ") or cmd.startswith("fridaf ")) and re.search(r"(spawn|fridaf)\s+([^\s]+\.js)", cmd):
+            m = re.search(r"(spawn|fridaf)\s+([^\s]+)", cmd)
             if m:
                 execute_script(m.group(1), True)
                 return True
@@ -1143,8 +1164,8 @@ def entry_debug_mode():
         ("up, unproxy", "remove socks5 proxy for this app"),
         ("trust, justtrustme", "quickly spawn just_trust_me.js script to kill all ssl pinning"),
         ("ls", "list all the frida scripts of the current app"),
-        ("attach [script_file_name]", "quickly execute a frida script, similar to executing the command \"frida -U com.example.app -l xxx.js\". For example: attach url.js"),
-        ("spawn [script_file_name]", "quickly spawn a frida script, similar to executing the command \"frida -U -f -n com.example.app -l xxx.js\". For example: spawn just_trust_me.js"),
+        ("attach, frida [script_file_name]", "quickly execute a frida script, similar to executing the command \"frida -U com.example.app -l xxx.js\". For example: attach url.js"),
+        ("spawn, fridaf [script_file_name]", "quickly spawn a frida script, similar to executing the command \"frida -U -f -n com.example.app -l xxx.js\". For example: spawn just_trust_me.js"),
         ("restart", "restart this app"),
         ("pid", "get pid of this app main process"),
         ("uid", "get pid of this app"),
