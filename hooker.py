@@ -988,7 +988,9 @@ class ClassNameCompleter(Completer):
             'trust': None,
             'ls': None,
             'attach': js_files,
+            'frida': js_files,
             'spawn': js_files,
+            'fridaf': js_files,
             'restart': None,
             'pid': None,
             'uid': None,
@@ -1003,7 +1005,9 @@ class ClassNameCompleter(Completer):
             if filename.endswith(".js")
         }
         self.nested_dict["attach"] = js_files
+        self.nested_dict["frida"] = js_files
         self.nested_dict["spawn"] = js_files
+        self.nested_dict["fridaf"] = js_files
         self.debug_completer = NestedCompleter.from_nested_dict(self.nested_dict)
         
     def get_completions(self, document, complete_event):
@@ -1103,13 +1107,13 @@ def entry_debug_mode():
             un_proxy()
             info("un_proxy OK")
             return True
-        elif cmd.startswith("attach ") and re.search(r"attach\s+([^\s]+)", cmd):
-            m = re.search(r"attach\s+([^\s]+)", cmd)
+        elif (cmd.startswith("attach ") or cmd.startswith("frida ")) and re.search(r"(attach|frida)\s+([^\s]+\.js)", cmd):
+            m = re.search(r"(attach|frida)\s+([^\s]+)", cmd)
             if m:
                 execute_script(m.group(1), False)
                 return True
-        elif cmd.startswith("spawn ") and re.search(r"spawn\s+([^\s]+)", cmd):
-            m = re.search(r"spawn\s+([^\s]+)", cmd)
+        elif (cmd.startswith("spawn ") or cmd.startswith("fridaf ")) and re.search(r"(spawn|fridaf)\s+([^\s]+\.js)", cmd):
+            m = re.search(r"(spawn|fridaf)\s+([^\s]+)", cmd)
             if m:
                 execute_script(m.group(1), True)
                 return True
@@ -1143,8 +1147,8 @@ def entry_debug_mode():
         ("up, unproxy", "remove socks5 proxy for this app"),
         ("trust, justtrustme", "quickly spawn just_trust_me.js script to kill all ssl pinning"),
         ("ls", "list all the frida scripts of the current app"),
-        ("attach [script_file_name]", "quickly execute a frida script, similar to executing the command \"frida -U com.example.app -l xxx.js\". For example: attach url.js"),
-        ("spawn [script_file_name]", "quickly spawn a frida script, similar to executing the command \"frida -U -f -n com.example.app -l xxx.js\". For example: spawn just_trust_me.js"),
+        ("attach,frida [script_file_name]", "quickly execute a frida script, similar to executing the command \"frida -U com.example.app -l xxx.js\". For example: attach url.js"),
+        ("spawn,fridaf [script_file_name]", "quickly spawn a frida script, similar to executing the command \"frida -U -f -n com.example.app -l xxx.js\". For example: spawn just_trust_me.js"),
         ("restart", "restart this app"),
         ("pid", "get pid of this app main process"),
         ("uid", "get pid of this app"),
