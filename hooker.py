@@ -34,6 +34,7 @@ import textwrap
 import zipfile
 import pygtrie
 import queue
+import sqlite3
 import itertools
 import jsbeautifier
 from collections import Counter
@@ -239,6 +240,8 @@ frida_device = None
 resource_rpc_jscode = None
 resource_hook_js_prepare_jscode = None
 resource_hook_js_enhance_jscode = None
+
+current_identifier_cache_db = None
 
 def _init_resource_jscode():
     global resource_rpc_jscode
@@ -666,7 +669,6 @@ def hook_js(hookCmdArg, savePath = None):
     finally:    
         detach(online_session)
         
-
 def print_activitys():
     online_session = None
     online_script = None
@@ -844,6 +846,41 @@ def set_proxy(proxy):
     else:
         warn(f"Cannot set proxy {proxy}")
         return
+    
+if not os.path.exists('.cache'):
+    os.makedirs('.cache')
+    
+def open_or_create_db(db_path='.cache/app_methods.db'):
+    global current_identifier_cache_db
+    if current_identifier_cache_db:
+        return current_identifier_cache_db
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    # 检查是否存在 app_methods 表
+    cursor.execute('''
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='app_methods'
+    ''')
+    table_exists = cursor.fetchone()
+    if not table_exists:
+        # 创建表
+        cursor.execute('''
+            CREATE TABLE app_methods (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                app_package_name TEXT NOT NULL,
+                app_version TEXT NOT NULL,
+                class_package_name TEXT NOT NULL,
+                class_name TEXT NOT NULL,
+                method_name TEXT NOT NULL,
+                readable_proto_list TEXT
+            )
+        ''')
+        # 创建索引
+        cursor.execute('CREATE INDEX idx_class_package_prefix ON app_methods(class_package_name)')
+        cursor.execute('CREATE INDEX idx_class_name ON app_methods(class_name)')
+        conn.commit()
+    current_identifier_cache_db = conn
+    return current_identifier_cache_db
 
 def get_need_to_cache_pkg_prefix():
     a = apk.APK(current_local_apk_path)
@@ -867,6 +904,7 @@ def get_need_to_cache_pkg_prefix():
     return results
     
 def load_dexes_to_cache(dexes_dir):
+    open_or_create_db()
     global current_app_classes_trie
     current_app_classes_trie = pygtrie.CharTrie()
     if not os.path.isdir(dexes_dir):
@@ -906,8 +944,8 @@ def load_dexes_to_cache(dexes_dir):
     
 def load_classes_and_methods_to_trie(dex_path, need_to_cache_pkg_prefix):
     need_to_cache_pkg = tuple(need_to_cache_pkg_prefix)
-    def should_skip_class(class_name):
-        if not class_name.startswith(need_to_cache_pkg):
+    def should_skip_class(class_package_name):
+        if not class_package_name.startswith(need_to_cache_pkg):
             return True
         return False
     loaded_count = 0
@@ -918,8 +956,10 @@ def load_classes_and_methods_to_trie(dex_path, need_to_cache_pkg_prefix):
             dex = dvm.DalvikVMFormat(dex_bytes)
             for cls in dex.get_classes():
                 class_name = cls.get_name().strip('L;').replace('/', '.')
-                if should_skip_class(class_name):
+                class_package_name = class_name.rsplit("/", 1)[0]
+                if should_skip_class(class_package_name):
                     continue
+                class_name = class_name.rsplit("/", 1)[1]
                 trie_method = pygtrie.CharTrie()
                 for method in cls.get_methods():
                     method_name = method.get_name()
