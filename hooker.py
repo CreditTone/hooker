@@ -1047,6 +1047,8 @@ def load_dexes_to_cache():
     t.start()
     
 def load_classes_and_methods_to_db(dex_bytes, need_to_cache_pkg_prefix):
+    if not current_identifier_cache_db:
+        return
     cursor = current_identifier_cache_db.cursor()
     need_to_cache_pkg = tuple(need_to_cache_pkg_prefix)
     def should_skip_class(class_package_name):
