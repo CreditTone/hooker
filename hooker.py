@@ -32,8 +32,8 @@ import hashlib
 import shutil
 import textwrap
 import zipfile
-import pygtrie
 import queue
+import sqlite3
 import itertools
 import jsbeautifier
 from collections import Counter
@@ -231,7 +231,6 @@ current_identifier_version = None
 current_identifier_pid = None
 current_identifier_install_path = None
 current_identifier_uid = None
-current_app_classes_trie :pygtrie.CharTrie = pygtrie.CharTrie() #[pygtrie.CharTrie, pygtrie.CharTrie]
 current_temp_dexes_tire_queue = queue.Queue() #临时缓存
 current_local_apk_path = None
 frida_device = None
@@ -239,6 +238,8 @@ frida_device = None
 resource_rpc_jscode = None
 resource_hook_js_prepare_jscode = None
 resource_hook_js_enhance_jscode = None
+
+current_identifier_cache_db = None
 
 def _init_resource_jscode():
     global resource_rpc_jscode
@@ -666,7 +667,6 @@ def hook_js(hookCmdArg, savePath = None):
     finally:    
         detach(online_session)
         
-
 def print_activitys():
     online_session = None
     online_script = None
@@ -844,6 +844,133 @@ def set_proxy(proxy):
     else:
         warn(f"Cannot set proxy {proxy}")
         return
+    
+if not os.path.exists('.cache'):
+    os.makedirs('.cache')
+    
+def open_or_create_db():
+    global current_identifier_cache_db
+    if current_identifier_cache_db:
+        return current_identifier_cache_db
+    db_path=f'.cache/{current_identifier}_{current_identifier_version}_class_methods.db'
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+    cursor = conn.cursor()
+    # 检查是否存在 app_methods 表
+    cursor.execute('''
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='app_methods'
+    ''')
+    table_exists = cursor.fetchone()
+    if not table_exists:
+        # 创建表
+        cursor.execute('''
+            CREATE TABLE app_methods (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                app_package_name TEXT NOT NULL,
+                app_version TEXT NOT NULL,
+                class_package_name TEXT NOT NULL,
+                class_name TEXT NOT NULL,
+                method_name TEXT NOT NULL,
+                readable_proto_list TEXT
+            )
+        ''')
+        # 创建索引
+        cursor.execute('CREATE INDEX idx_class_package_prefix ON app_methods(class_package_name)')
+        cursor.execute('CREATE INDEX idx_class_name ON app_methods(class_name)')
+        conn.commit()
+    current_identifier_cache_db = conn
+    return current_identifier_cache_db
+
+def insert_if_not_exists(cursor, class_package_name, class_name,
+                         method_name, readable_proto_list):
+    # 查询是否存在相同 class_package_name 和 class_name 的记录
+    cursor.execute('''
+        SELECT 1 FROM app_methods
+        WHERE class_package_name = ? AND class_name = ?
+        LIMIT 1
+    ''', (class_package_name, class_name))
+    exists = cursor.fetchone()
+    if not exists:
+        cursor.execute('''
+            INSERT INTO app_methods (
+                app_package_name, app_version,
+                class_package_name, class_name,
+                method_name, readable_proto_list
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            current_identifier, current_identifier_version,
+            class_package_name, class_name,
+            method_name, readable_proto_list
+        ))
+        current_identifier_cache_db.commit()
+        
+def count_methods_by_app_version():
+    cursor = current_identifier_cache_db.cursor()
+    cursor.execute('''
+        SELECT COUNT(*) FROM app_methods
+        WHERE app_package_name = ? AND app_version = ?
+    ''', (current_identifier, current_identifier_version))
+    count = cursor.fetchone()[0]
+    return count
+
+def query_class_name_by_prefix(class_name_prefix, class_name, limit=15):
+    cursor = current_identifier_cache_db.cursor()
+    if class_name and not "." in class_name:
+        if class_name_prefix:
+            cursor.execute('''
+                SELECT class_package_name, class_name, readable_proto_list FROM app_methods
+                WHERE class_name = ? AND class_package_name LIKE ?
+                LIMIT ?
+            ''', (class_name, f'%{class_name_prefix}%', limit))
+            # print("1")
+            results = cursor.fetchall()
+            if results:
+                return results
+            cursor.execute('''
+                SELECT class_package_name, class_name, readable_proto_list FROM app_methods
+                WHERE class_name LIKE ? AND class_package_name LIKE ?
+                LIMIT ?
+            ''', (f'{class_name}%', f'%{class_name_prefix}%', limit))
+            # print("2")
+            results = cursor.fetchall()
+            if results:
+                return results
+        else:
+            cursor.execute('''
+                SELECT class_package_name, class_name, readable_proto_list FROM app_methods
+                WHERE class_name = ?
+                LIMIT ?
+            ''', (class_name, limit))
+            # print("3")
+            results = cursor.fetchall()
+            if results:
+                return results
+            cursor.execute('''
+                SELECT class_package_name, class_name, readable_proto_list FROM app_methods
+                WHERE class_name LIKE ?
+                LIMIT ?
+            ''', (f'{class_name}%', limit))
+            # print("4")
+            results = cursor.fetchall()
+            if results:
+                return results
+        return []
+    cursor.execute('''
+        SELECT class_package_name, class_name, readable_proto_list FROM app_methods
+        WHERE class_package_name LIKE ?
+        LIMIT ?
+    ''', (f'{class_name_prefix}%', limit))
+    # print("5")
+    results = cursor.fetchall()
+    if results:
+        return results
+    cursor.execute('''
+        SELECT class_package_name, class_name, readable_proto_list FROM app_methods
+        WHERE class_package_name LIKE ?
+        LIMIT ?
+    ''', (f'%{class_name_prefix}%', limit))
+    # print("6")
+    return cursor.fetchall()
 
 def get_need_to_cache_pkg_prefix():
     a = apk.APK(current_local_apk_path)
@@ -866,72 +993,56 @@ def get_need_to_cache_pkg_prefix():
         results.append(prefix)
     return results
     
-def load_dexes_to_cache(dexes_dir):
-    global current_app_classes_trie
-    current_app_classes_trie = pygtrie.CharTrie()
-    if not os.path.isdir(dexes_dir):
-        os.makedirs(dexes_dir)
-    if not os.listdir(dexes_dir):
+def load_dexes_to_cache():
+    open_or_create_db()
+    def process_dex():
+        need_to_cache_pkg_prefix = get_need_to_cache_pkg_prefix()
+        #info(f"need_to_cache_pkg_prefix:{need_to_cache_pkg_prefix}")
         with zipfile.ZipFile(current_local_apk_path, 'r') as zip_ref:
             for file_info in zip_ref.infolist():
                 if file_info.filename.endswith('.dex'):
-                    # 提取 dex 到指定目录
-                    zip_ref.extract(file_info, path=dexes_dir)
-                    # print(f"Extracted {file_info.filename} to {dexes_dir}")
-    
-    def process_dex(dexes_list):
-        need_to_cache_pkg_prefix = get_need_to_cache_pkg_prefix()
-        #info(f"need_to_cache_pkg_prefix:{need_to_cache_pkg_prefix}")
-        count = 0
-        for dex_path in dexes_list:
-            count += 1
-            dex_tire = load_classes_and_methods_to_trie(dex_path, need_to_cache_pkg_prefix)
-            for dkey, dvalue in dex_tire.items():
-                current_app_classes_trie[dkey] = dvalue
-            if len(current_app_classes_trie) > 200000:
-                #info(f"Warning: dex count too many :{count}")
-                break
-        #info(f"load dexes finish current_app_classes_trie: {len(current_app_classes_trie)}")
-        
-    dexes_list = []
-    for file in os.listdir(dexes_dir):
-        if not file.endswith(".dex"):
-            continue
-        dex_path = os.path.join(dexes_dir, file)
-        dexes_list.append(dex_path)
-    t = threading.Thread(target=process_dex, args=(dexes_list,))
+                    with zip_ref.open(file_info.filename) as dex_file:
+                        dex_data = dex_file.read()  # 读取为 bytes
+                        load_classes_and_methods_to_db(dex_data, need_to_cache_pkg_prefix)
+                        if count_methods_by_app_version() > 300000:
+                            break
+    t = threading.Thread(target=process_dex)
     t.daemon = True
     t.start()
-    #info(f"threading {dexes_list} {len(dexes_list) > 10} ")
     
-def load_classes_and_methods_to_trie(dex_path, need_to_cache_pkg_prefix):
+def load_classes_and_methods_to_db(dex_bytes, need_to_cache_pkg_prefix):
+    cursor = current_identifier_cache_db.cursor()
     need_to_cache_pkg = tuple(need_to_cache_pkg_prefix)
-    def should_skip_class(class_name):
-        if not class_name.startswith(need_to_cache_pkg):
+    def should_skip_class(class_package_name):
+        if not class_package_name.startswith(need_to_cache_pkg):
             return True
         return False
     loaded_count = 0
-    trie = pygtrie.CharTrie()
     try:
-        with open(dex_path, 'rb') as f:
-            dex_bytes = f.read()
-            dex = dvm.DalvikVMFormat(dex_bytes)
-            for cls in dex.get_classes():
-                class_name = cls.get_name().strip('L;').replace('/', '.')
-                if should_skip_class(class_name):
-                    continue
-                trie_method = pygtrie.CharTrie()
-                for method in cls.get_methods():
-                    method_name = method.get_name()
-                    proto = method.get_descriptor()  # e.g., (Ljava/lang/String;)V
-                    # 转换描述符为更易读格式
-                    readable_proto = convert_descriptor_to_readable(proto)
-                    trie_method[f"{method_name}{readable_proto}"] = True
-                    loaded_count += 1
-                trie[f"{class_name}:"] = trie_method
+        dex = dvm.DalvikVMFormat(dex_bytes)
+        for cls in dex.get_classes():
+            access_flags = cls.get_access_flags()
+            # （0x200 = ACC_INTERFACE）（0x400 = ACC_ABSTRACT）
+            if (cls.get_access_flags() & 0x200) or (cls.get_access_flags() & 0x400):
+                continue
+            class_name = cls.get_name().strip('L;').replace('/', '.')
+            temp = class_name.rsplit(".", 1)
+            class_package_name = temp[0]
+            if should_skip_class(class_package_name):
+                continue
+            class_name = temp[1]
+            readable_proto_list = ""
+            for method in cls.get_methods():
+                method_name = method.get_name()
+                proto = method.get_descriptor()  # e.g., (Ljava/lang/String;)V
+                # 转换描述符为更易读格式
+                readable_proto = convert_descriptor_to_readable(proto)
+                readable_proto_list += f"|{method_name}{readable_proto}"
+                loaded_count += 1
+            insert_if_not_exists(cursor, class_package_name, class_name, "", readable_proto_list)
     except Exception as e:
+        print(traceback.format_exc())  
         print(f"[!] Error processing {dex_path}: {e}")
-    return trie
 
 def convert_descriptor_to_readable(descriptor):
     def type_map(d):
@@ -1036,50 +1147,39 @@ class ClassNameCompleter(Completer):
                 value = generatescript_cmd_match.group(2)
                 max_items = 15
                 count = 0
+                class_name_prefix = None
+                class_name = None
+                method_prefix = None
                 if ":" in value:
-                    class_name, method_prefix = value.split(":", 1)
-                    if not current_app_classes_trie.has_node(class_name):
-                        return
-                    for _, class_method_trie in current_app_classes_trie.items(prefix=class_name):
-                        if not class_method_trie.has_node(method_prefix):
-                            continue
-                        for class_method, _ in class_method_trie.items(prefix=method_prefix):
-                            count += 1
-                            yield Completion(f"{class_name}:{class_method}", start_position=-len(value))
-                            if count >= max_items:
-                                return
+                    full_class_name, method_prefix = value.split(":", 1)
+                    temp = full_class_name.rsplit(".", 1)
+                    class_name_prefix = temp[0]
+                    class_name = temp[1]
                 else:
                     class_name_prefix = value
-                    #print("\nclass_name_prefix:"+class_name_prefix)
-                    #print(f"\ncurrent_app_classes_trie:{len(current_app_classes_trie)}")
-                    result_class_tire = []
-                    if not current_app_classes_trie.has_node(class_name_prefix):
-                        #print(f"current_app_classes_trie not has_node: {class_name_prefix}")
-                        return
-                    for class_name, class_method_trie in current_app_classes_trie.items(prefix=class_name_prefix):
-                        result_class_tire.append((class_name, class_method_trie))
+                #print("\nclass_name_prefix:"+class_name_prefix)
+                results = query_class_name_by_prefix(class_name_prefix, class_name, limit=max_items)
+                #print(f"\nquery_class_name_by_prefix size:{len(results)}")
+                for row in results:
+                    count += 1
+                    class_package_name = row[0]
+                    class_name = row[1]
+                    yield Completion(f"{class_package_name}.{class_name}", start_position=-len(value))
+                if count >= max_items:
+                    return
+                for row in results:
+                    class_package_name = row[0]
+                    class_name = row[1]
+                    readable_proto_list = row[2]
+                    readable_proto_mehtod_list = readable_proto_list.split("|")[1:]
+                    for readable_proto_mehtod in readable_proto_mehtod_list:
                         count += 1
-                        if count >= max_items:
-                            break
-                    results_length = len(result_class_tire)
-                    count = 0
-                    for result in result_class_tire:
-                        class_name = result[0]
-                        if results_length >= max_items:
-                            count += 1
-                            yield Completion(class_name.replace(":", ""), start_position=-len(value))
-                    if count < max_items:
-                        for result in result_class_tire:
-                            class_name = result[0]
-                            class_method_trie = result[1]
-                            for class_method in class_method_trie.keys():
-                                count += 1
-                                yield Completion(f"{class_name}{class_method}", start_position=-len(value))
-                                if count >= max_items:
-                                    break
+                        yield Completion(f"{class_package_name}.{class_name}:{readable_proto_mehtod}", start_position=-len(value))
+                        if count > max_items:
+                            return
             except Exception as e:
-                traceback.print_exc()
-                yield Completion(f"[ERROR: {e}]", start_position=0)
+                #traceback.print_exc()
+                #yield Completion(f"[ERROR: {e}]", start_position=0)
                 pass
         else:
             # 其他命令提示
@@ -1253,7 +1353,7 @@ while True:
             create_working_dir_enverment()
         else:
             init_working_dir_enverment()
-        load_dexes_to_cache(f"{current_identifier}/.dexes/")
+        load_dexes_to_cache()
         check_dependency_files()
         entry_debug_mode()
     except (EOFError, KeyboardInterrupt):
