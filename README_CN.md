@@ -616,18 +616,30 @@ CTRL + C to stop >
 ```
 ***
 
+### just_trust_me.js
+frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网所有app，除非像美团一样做了登录风控抓不了。
+
+在hooker命令行模式封装了快捷命令justtrustme
+
+
+亦可直接执行脚本 spawn just_trust_me.js
+
+***
+
 ### activity_events.js
 当你需要跟踪start某个Activity启动时可执行，获取startActivity的intent信息和调用堆栈。
 
 执行命令：frida activity_events.js
 
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/activity_events.gif)
+***
 
 ### click.js
 跟踪点击事件时可执行，并获取被点击View的真实View ClassName
 
 执行命令：frida click.js
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/click.gif)
+***
 
 ### android_ui.js
 封装一些操作原生Android UI的函数。如startActivity(activityName)、home()、back()、finishCurrentActivity()、clickByText(text) 等等，命令使用得用attach './attach android_ui.js' 原理是借助radar.dex作为代理操作Android原生View。
@@ -644,23 +656,20 @@ CTRL + C to stop >
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_02.png)
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_03.png)
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_04.png)
-
+***
 
 ### edit_text.js
 跟踪获取Editview的getText()事件，并获取Editview的真实Class（很重要）。Editview一般绑定Search Action的实现代码，如果你抓取“搜索”接口。那么这个一定可以帮助你定位发送搜索请求的相关代码。
 
 执行命令：frida edit_text.js
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/edit_text.png)
+***
 
 ### hook_register_natives.js
 trace JNI register_natives函数
 
 推荐命令：spawn hook_register_natives.js
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/hook_RN.gif)
+***
 
-### just_trust_me.js
-frida版本的just_trust_me，支持boringssl unpinning
 
-在hooker命令行模式封装了快捷命令justtrustme/trust
-
-亦可直接执行脚本 spawn just_trust_me.js
