@@ -235,6 +235,7 @@ current_identifier_uid = None
 current_local_apk_path = None
 current_identifier_cache_db = None
 current_identifier_cache_readonly_db = None
+current_identifier_stop_event = None
 
 frida_device = None
 
@@ -297,9 +298,9 @@ def start_app(package_name):
 
 def restart_app(package_name):
     global current_identifier_pid
-    info(f"restarts {package_name}")
+    info(f"Restarting {current_identifier_name} Please wait for a few seconds")
     adb_device.app_stop(package_name)
-    time.sleep(3)
+    time.sleep(1)
     app_pid, app_name = start_app(package_name)
     current_identifier_pid = app_pid
 
@@ -1018,7 +1019,7 @@ def get_need_to_cache_pkg_prefix():
     for prefix, count in most_common_two:
         results.append(prefix)
     return results
-    
+
 def load_dexes_to_cache():
     open_or_create_db()
     def process_dex():
@@ -1030,14 +1031,21 @@ def load_dexes_to_cache():
                     with zip_ref.open(file_info.filename) as dex_file:
                         dex_data = dex_file.read()  # 读取为 bytes
                         load_classes_and_methods_to_db(dex_data, need_to_cache_pkg_prefix)
+                        if current_identifier_stop_event == None or current_identifier_stop_event.is_set():
+                            # info("中断线程3")
+                            break
                         if count_methods_by_app_version() > 300000:
                             break
+    global current_identifier_stop_event
+    current_identifier_stop_event = threading.Event()
     t = threading.Thread(target=process_dex)
     t.daemon = True
     t.start()
     
 def load_classes_and_methods_to_db(dex_bytes, need_to_cache_pkg_prefix):
     if not current_identifier_cache_db:
+        return
+    if current_identifier_stop_event == None or current_identifier_stop_event.is_set():
         return
     cursor = current_identifier_cache_db.cursor()
     need_to_cache_pkg = tuple(need_to_cache_pkg_prefix)
@@ -1053,6 +1061,9 @@ def load_classes_and_methods_to_db(dex_bytes, need_to_cache_pkg_prefix):
             # （0x200 = ACC_INTERFACE）（0x400 = ACC_ABSTRACT）
             if (cls.get_access_flags() & 0x200) or (cls.get_access_flags() & 0x400):
                 continue
+            if current_identifier_stop_event == None or current_identifier_stop_event.is_set():
+                # info("中断线程")
+                return
             class_name = cls.get_name().strip('L;').replace('/', '.')
             temp = class_name.rsplit(".", 1)
             class_package_name = temp[0]
@@ -1373,15 +1384,6 @@ while True:
         if identifier not in identifier_list:
             warn("The application does not exist. Please enter an existing application")
             continue
-        current_identifier = None
-        current_identifier_name = None
-        current_identifier_version = None
-        current_identifier_pid = None
-        current_identifier_install_path = None
-        current_identifier_uid = None
-        current_local_apk_path = None
-        current_identifier_cache_db = None
-        current_identifier_cache_readonly_db = None
         current_identifier = identifier
         current_identifier_pid, current_identifier_name, current_identifier_version, current_identifier_install_path, current_identifier_uid  = ensure_app_in_foreground(current_identifier)
         if not os.path.isdir(identifier):
@@ -1391,6 +1393,18 @@ while True:
         load_dexes_to_cache()
         check_dependency_files()
         entry_debug_mode()
+        # 从debug模式跳出来
+        current_identifier = None
+        current_identifier_name = None
+        current_identifier_version = None
+        current_identifier_pid = None
+        current_identifier_install_path = None
+        current_identifier_uid = None
+        current_local_apk_path = None
+        current_identifier_cache_db = None
+        current_identifier_cache_readonly_db = None
+        current_identifier_stop_event.set()
+        # current_identifier_stop_event = None
     except (EOFError, KeyboardInterrupt):
         sys.exit(2);
     

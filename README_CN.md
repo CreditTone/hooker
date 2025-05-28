@@ -541,6 +541,7 @@ restarts com.xxx.buyxxphone
 
 
 ### 15. 获取uid和pid
+
 ```shell
 某信拍 > uid
 10189
@@ -620,10 +621,10 @@ CTRL + C to stop >
 frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网所有app，除非像美团一样做了登录风控抓不了。
 
 在hooker命令行模式封装了快捷命令justtrustme
-
+这在上文 [执行justtrustme kill掉所有ssl验证](#11-执行justtrustme-kill掉所有ssl验证包括boringgssl)有介绍
 
 亦可直接执行脚本 spawn just_trust_me.js
-
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/just_trust_me.gif)
 ***
 
 ### activity_events.js
