@@ -541,6 +541,7 @@ restarts com.xxx.buyxxphone
 
 
 ### 15. 获取uid和pid
+
 ```shell
 某信拍 > uid
 10189
@@ -566,7 +567,7 @@ com.android.okhttp.Request.Builder.build()（系统自带 okhttp）
 
 android.net.Uri.parse(String) 方法（处理 URI 的常用工具方法）
 
-执行命令：attach/frida url.js
+执行命令：frida url.js
 
 ```shell
 抖音 > frida url.js
@@ -615,3 +616,61 @@ public static android.net.Uri android.net.Uri.parse(java.lang.String)
 CTRL + C to stop >
 ```
 ***
+
+### just_trust_me.js
+frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网所有app，除非像美团一样做了登录风控抓不了。
+
+在hooker命令行模式封装了快捷命令justtrustme
+这在上文 [执行justtrustme kill掉所有ssl验证](#11-执行justtrustme-kill掉所有ssl验证包括boringgssl)有介绍
+
+亦可直接执行脚本 spawn just_trust_me.js
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/just_trust_me.gif)
+***
+
+### activity_events.js
+当你需要跟踪start某个Activity启动时可执行，获取startActivity的intent信息和调用堆栈。
+
+执行命令：frida activity_events.js
+
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/activity_events.gif)
+***
+
+### click.js
+跟踪点击事件时可执行，并获取被点击View的真实View ClassName
+
+执行命令：frida click.js
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/click.gif)
+***
+
+### android_ui.js
+封装一些操作原生Android UI的函数。如startActivity(activityName)、home()、back()、finishCurrentActivity()、clickByText(text) 等等，命令使用得用attach './attach android_ui.js' 原理是借助radar.dex作为代理操作Android原生View。
+
+执行命令：frida android_ui.js
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/android_ui.gif)
+***
+
+### keystore_dump.js
+在https双向认证的情况下，dump客户端证书为p12。存储位置:/data/user/0/{packagename}/client_keystore_{nowtime}.p12 证书密码: hooker。原理是hook java.security.KeyStore的getPrivateKey和getCertificate方法，因为客户端向服务发送证书必调这个方法。强烈建议keystore_dump.js用spawn模式启动，
+
+推荐命令：spawn keystore_dump.js
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_01.png)
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_02.png)
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_03.png)
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_04.png)
+***
+
+### edit_text.js
+跟踪获取Editview的getText()事件，并获取Editview的真实Class（很重要）。Editview一般绑定Search Action的实现代码，如果你抓取“搜索”接口。那么这个一定可以帮助你定位发送搜索请求的相关代码。
+
+执行命令：frida edit_text.js
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/edit_text.png)
+***
+
+### hook_register_natives.js
+trace JNI register_natives函数
+
+推荐命令：spawn hook_register_natives.js
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/hook_RN.gif)
+***
+
+
