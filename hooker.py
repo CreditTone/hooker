@@ -993,39 +993,24 @@ def get_need_to_cache_pkg_prefix():
         results.append(prefix)
     return results
     
-def load_dexes_to_cache(dexes_dir):
+def load_dexes_to_cache():
     open_or_create_db()
-    if not os.path.isdir(dexes_dir):
-        os.makedirs(dexes_dir)
-    if not os.listdir(dexes_dir):
+    def process_dex():
+        need_to_cache_pkg_prefix = get_need_to_cache_pkg_prefix()
+        #info(f"need_to_cache_pkg_prefix:{need_to_cache_pkg_prefix}")
         with zipfile.ZipFile(current_local_apk_path, 'r') as zip_ref:
             for file_info in zip_ref.infolist():
                 if file_info.filename.endswith('.dex'):
-                    # 提取 dex 到指定目录
-                    zip_ref.extract(file_info, path=dexes_dir)
-                    # print(f"Extracted {file_info.filename} to {dexes_dir}")
-    
-    def process_dex(dexes_list):
-        need_to_cache_pkg_prefix = get_need_to_cache_pkg_prefix()
-        #info(f"need_to_cache_pkg_prefix:{need_to_cache_pkg_prefix}")
-        for dex_path in dexes_list:
-            load_classes_and_methods_to_db(dex_path, need_to_cache_pkg_prefix)
-            if count_methods_by_app_version() > 300000:
-                break
-        #info(f"load dexes finish count_methods_by_app_version: {count_methods_by_app_version()}")
-        
-    dexes_list = []
-    for file in os.listdir(dexes_dir):
-        if not file.endswith(".dex"):
-            continue
-        dex_path = os.path.join(dexes_dir, file)
-        dexes_list.append(dex_path)
-    t = threading.Thread(target=process_dex, args=(dexes_list,))
+                    with zip_ref.open(file_info.filename) as dex_file:
+                        dex_data = dex_file.read()  # 读取为 bytes
+                        load_classes_and_methods_to_db(dex_data, need_to_cache_pkg_prefix)
+                        if count_methods_by_app_version() > 300000:
+                            break
+    t = threading.Thread(target=process_dex)
     t.daemon = True
     t.start()
-    #info(f"threading {dexes_list} {len(dexes_list) > 10} ")
     
-def load_classes_and_methods_to_db(dex_path, need_to_cache_pkg_prefix):
+def load_classes_and_methods_to_db(dex_bytes, need_to_cache_pkg_prefix):
     cursor = current_identifier_cache_db.cursor()
     need_to_cache_pkg = tuple(need_to_cache_pkg_prefix)
     def should_skip_class(class_package_name):
@@ -1034,29 +1019,27 @@ def load_classes_and_methods_to_db(dex_path, need_to_cache_pkg_prefix):
         return False
     loaded_count = 0
     try:
-        with open(dex_path, 'rb') as f:
-            dex_bytes = f.read()
-            dex = dvm.DalvikVMFormat(dex_bytes)
-            for cls in dex.get_classes():
-                access_flags = cls.get_access_flags()
-                # （0x200 = ACC_INTERFACE）（0x400 = ACC_ABSTRACT）
-                if (cls.get_access_flags() & 0x200) or (cls.get_access_flags() & 0x400):
-                    continue
-                class_name = cls.get_name().strip('L;').replace('/', '.')
-                temp = class_name.rsplit(".", 1)
-                class_package_name = temp[0]
-                if should_skip_class(class_package_name):
-                    continue
-                class_name = temp[1]
-                readable_proto_list = ""
-                for method in cls.get_methods():
-                    method_name = method.get_name()
-                    proto = method.get_descriptor()  # e.g., (Ljava/lang/String;)V
-                    # 转换描述符为更易读格式
-                    readable_proto = convert_descriptor_to_readable(proto)
-                    readable_proto_list += f"|{method_name}{readable_proto}"
-                    loaded_count += 1
-                insert_if_not_exists(cursor, class_package_name, class_name, "", readable_proto_list)
+        dex = dvm.DalvikVMFormat(dex_bytes)
+        for cls in dex.get_classes():
+            access_flags = cls.get_access_flags()
+            # （0x200 = ACC_INTERFACE）（0x400 = ACC_ABSTRACT）
+            if (cls.get_access_flags() & 0x200) or (cls.get_access_flags() & 0x400):
+                continue
+            class_name = cls.get_name().strip('L;').replace('/', '.')
+            temp = class_name.rsplit(".", 1)
+            class_package_name = temp[0]
+            if should_skip_class(class_package_name):
+                continue
+            class_name = temp[1]
+            readable_proto_list = ""
+            for method in cls.get_methods():
+                method_name = method.get_name()
+                proto = method.get_descriptor()  # e.g., (Ljava/lang/String;)V
+                # 转换描述符为更易读格式
+                readable_proto = convert_descriptor_to_readable(proto)
+                readable_proto_list += f"|{method_name}{readable_proto}"
+                loaded_count += 1
+            insert_if_not_exists(cursor, class_package_name, class_name, "", readable_proto_list)
     except Exception as e:
         print(traceback.format_exc())  
         print(f"[!] Error processing {dex_path}: {e}")
@@ -1370,7 +1353,7 @@ while True:
             create_working_dir_enverment()
         else:
             init_working_dir_enverment()
-        load_dexes_to_cache(f"{current_identifier}/.dexes/")
+        load_dexes_to_cache()
         check_dependency_files()
         entry_debug_mode()
     except (EOFError, KeyboardInterrupt):
