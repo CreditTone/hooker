@@ -552,186 +552,66 @@ restarts com.xxx.buyxxphone
 # 应用目录通杀脚本
 
 ### url.js
-跟踪所有url生成
-frida url.js
 
+该脚本会 hook 应用中 构造 URL 或 URI 对象的多个关键方法，用于打印或分析网络请求相关的信息（如目标 URL）
 
-### 2. activity_events.js
-当你需要跟踪start某个Activity启动时可执行，获取startActivity的intent信息和调用堆栈。/hooking activity_events.js
-![](assets/activity_events.gif)
+Hook 的目标方法
+java.net.URI(String) 构造函数
 
-### 3. click.js
-跟踪点击事件时可执行，并获取被点击View的真实VClass（很重要）。获取到了Class，你就可以在jadx找到这个View绑定事件代码。多一种办法定位到关键逻辑不好吗？一定要靠分析网络请求吗？条条大路通罗马，不一定非从网络库分析！ /hooking click.js
-![](assets/click.gif)
+java.net.URL(String) 构造函数
 
-### 4. android_ui.js
-封装一些操作原生Android UI的函数。如startActivity(activityName)、home()、back()、finishCurrentActivity()、clickByText(text) 等等，命令使用得用attach './attach android_ui.js' 原理是借助radar.dex作为代理操作Android原生View。（tag）
-![](assets/android_ui.gif)
-***
+okhttp3.Request.Builder.build() 方法（常用于创建 HTTP 请求）
 
-### 5. keystore_dump.js
-在https双向认证的情况下，dump客户端证书为p12。存储位置:/data/user/0/{packagename}/client_keystore_{nowtime}.p12 证书密码: hooker。原理是hook java.security.KeyStore的getPrivateKey和getCertificate方法，因为客户端向服务发送证书必调这个方法。强烈建议keystore_dump.js用spawn模式启动，启动命令为 ./spawn keystore_dump.js 。下面是某app双向认证dump客户端证书过程
-![](assets/https_bothway_01.png)
-![](assets/https_bothway_02.png)
-![](assets/https_bothway_03.png)
-![](assets/https_bothway_04.png)
+com.android.okhttp.Request.Builder.build()（系统自带 okhttp）
 
-### 6. edit_text.js
-跟踪获取Editview的getText()事件，并获取Editview的真实Class（很重要）。Editview一般绑定Search Action的实现代码，如果你抓取“搜索”接口。那么这个一定可以帮助你定位发送搜索请求的相关代码。多一种办法定位到关键逻辑不好吗？一定要靠分析网络请求吗？条条大路通罗马，不一定非从网络库分析！
-![](assets/edit_text.png)
+android.net.Uri.parse(String) 方法（处理 URI 的常用工具方法）
 
-### 7. text_view.js
-跟踪TextView的setText和getText，获取TextView的真实Class。一般setText的堆栈信息会带出业务层的数据model处理逻辑，进而进一步分析到业务层数据bean封装类。
-![](assets/text_view.png)
-
-### 8. ssl_log.js
-在native层跟踪ssl握手并记录CLIENT RANDOM，tcpdump出来的链路层pacp里面的TLS包可以用CLIENT RANDOM记录文件解出来，将在高级篇讲解使用步骤。
-
-### 9. object_store.js
-操作ObjectId标识的对象，根据自身分析情况可进行特定的序列化打印、操作对象的私有成员变量。
-实践文章：https://bbs.pediy.com/thread-267245.htm
-
-### 10. hook_register_natives.js
-对于动态注册的native函数，我们需要用hook_register_natives.js来分析。建议用spawn模式启动，启动命令为 ./spawn hook_register_natives.js
-当hook_RN.js无法找到native函数时，试试[15. hook_artmethod_register.js](#15-hook_artmethod_registerjs)
-![](assets/hook_RN.gif)
-
-### 11. just_trust_me.js
-frida版本的just_trust_me，支持boringssl unpinning。执行./spawn just_trust_me.js
-
-windowsn用户配置just_trust_me.js执行环境看[windows临时使用hooker js脚本方案](#6-windows临时使用hooker-js脚本方案)
-
-下面以Twitter为例，启动just_trust_me.js
-启动演示
-![](assets/strat_just_trust_me.gif)
-
-抓包效果演示
-![](assets/just_trust_me_show.gif)
-
-### 13. trace_init_proc.js
-init_proc的hook实现比较麻烦，这边给一个实现模版，你需要把脚本中init_proc函数的startAddr、endAddr补充上，somodule是你so的名字，这样你就可以trace init_proc了
-![trace_init_proc.png](assets/trace_init_proc.png)
-
-### 14. dump_dex.js
-执行./spawn dump_dex.js即可脱壳，针对大部分简单的壳可以脱。ART下引入了dex2oat来对dex进行编译，生成每一个java函数对应的native代码，来提高运行效率。有时候如果不能脱你需求删除/data/app/<package_name>-*/oat/arm64/目录下的所有文件再执行，如果还不能脱就gg了
-```javascript
-MacBook-Pro-32G-2T:com.shxpxx.sg stephen256$ ./spawn dump_dex.js
-     ____
-    / _  |   Frida 14.2.2 - A world-class dynamic instrumentation toolkit
-   | (_| |
-    > _  |   Commands:
-   /_/ |_|       help      -> Displays the help system
-   . . . .       object?   -> Display information about 'object'
-   . . . .       exit/quit -> Exit
-   . . . .
-   . . . .   More info at https://www.frida.re/docs/home/
-Spawning `com.shxpxx.sg`...
-_ZN3art11ClassLinker11DefineClassEPNS_6ThreadEPKcmNS_6HandleINS_6mirror11ClassLoaderEEERKNS_7DexFileERKNS9_8ClassDefE 0x7521584e08
-[DefineClass:] 0x7521584e08
-Spawned `com.shxpxx.sg`. Resuming main thread!
-[MI MAX 3::com.shxpxx.sg]-> [find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes.dex
-[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes.dex
-[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes2.dex
-[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes2.dex
-[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes3.dex
-[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes3.dex
-[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes4.dex
-[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes4.dex
-[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes5.dex
-[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes5.dex
-[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes6.dex
-[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes6.dex
-[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes7.dex
-[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes7.dex
-[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes8.dex
-[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes8.dex
-[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes9.dex
-[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes9.dex
-[find dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes10.dex
-[dump dex]: /data/data/com.shxpxx.sg/files/dump_dex_com.shxpxx.sg/classes10.dex
-```
-
-### 15. hook_artmethod_register.js
-有时候hook_RN.js无法hook到RegisterNatives方法，那是因为厂商直接自实现了RegisterNatives，方法下沉到了ArtMethod.RegisterNative方法
-先执行./xinitdeploy将扩展的so部署到应用目录，再执行./spawn hook_artmethod_register.js hook ArtMethod RegisterNative
+执行命令：attach/frida url.js
 
 ```shell
-MacBook-Pro-32G-2T:com.shxpxx.sg stephen256$ ./xinitdeploy
-copying libext64.so to path: /data/data/com.shxpxx.sg/libext64.so
-copying libext.so to path: /data/data/com.shxpxx.sg/libext.so
-deploying xinit finished.
-MacBook-Pro-32G-2T:com.shxpxx.sg stephen256$ ./spawn hook_artmethod_register.js
-     ____
-    / _  |   Frida 14.2.2 - A world-class dynamic instrumentation toolkit
-   | (_| |
-    > _  |   Commands:
-   /_/ |_|       help      -> Displays the help system
-   . . . .       object?   -> Display information about 'object'
-   . . . .       exit/quit -> Exit
-   . . . .
-   . . . .   More info at https://www.frida.re/docs/home/
-Spawning `com.shxpxx.sg`...
-ArtMethod::PrettyMethod is at  0x7521538e60 _ZN3art9ArtMethod12PrettyMethodEb
-ArtMethod::RegisterNative is at  0x75215391b0 _ZN3art9ArtMethod14RegisterNativeEPKv
-Spawned `com.shxpxx.sg`. Resuming main thread!
-[MI MAX 3::com.shxpxx.sg]-> [ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_lock_acq(int, int, int[]) module_name: libqti_performance.so offset: 0x19f0
-[ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_lock_rel(int) module_name: libqti_performance.so offset: 0x1abc
-[ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_hint(int, java.lang.String, int, int) module_name: libqti_performance.so offset: 0x1ad8
-[ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_get_feedback(int, java.lang.String) module_name: libqti_performance.so offset: 0x1b90
-[ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_io_prefetch_start(int, java.lang.String, java.lang.String) module_name: libqti_performance.so offset: 0x1c24
-[ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_io_prefetch_stop() module_name: libqti_performance.so offset: 0x1e58
-[ArtMethod_RegisterNative] Method_sig: int com.qualcomm.qti.Performance.native_perf_uxEngine_events(int, int, java.lang.String, int) module_name: libqti_performance.so offset: 0x1f80
-[ArtMethod_RegisterNative] Method_sig: java.lang.String com.qualcomm.qti.Performance.native_perf_uxEngine_trigger(int) module_name: libqti_performance.so offset: 0x2154
-[ArtMethod_RegisterNative] Method_sig: void com.tencent.mmkv.MMKV.onExit() module_name: libmmkv.so offset: 0x1717c
-[ArtMethod_RegisterNative] Method_sig: java.lang.String com.tencent.mmkv.MMKV.cryptKey() module_name: libmmkv.so offset: 0x17180
-[ArtMethod_RegisterNative] Method_sig: boolean com.tencent.mmkv.MMKV.reKey(java.lang.String) module_name: libmmkv.so offset: 0x1727c
-[ArtMethod_RegisterNative] Method_sig: void com.tencent.mmkv.MMKV.checkReSetCryptKey(java.lang.String) module_name: libmmkv.so offset: 0x17478
+抖音 > frida url.js
+------------startFlag:p1ojn6vr,objectHash:Class,thread(id:19650,name:#NetNormal#434),timestamp:1748425136726---------------
+https://ib.snssdk.com/cloudpush/promotion/keep_alive/?alliance_sdk_version_code=30912&country=CN&push_sdk_version=30912&iid=3801434875822153&channel=vivo_1128_64&is_foreground=1&device_type=MI+MAX+3&language=zh&os_detail_type=android&device_manufacturer=Xiaomi&platform=phone&update_version_code=33909900&rom=MIUI-9.9.3&os_api=28&tz_name=Asia%2FShanghai&push_sdk_version_name=3.9.12-rc.1.5-bugfix&tz_offset=28800&alliance_sdk_version_name=3.9.12-rc.1.5-bugfix&dpi=440&ac=wifi&package=com.ss.android.ugc.aweme&device_id=3675046342828212&os=android&os_version=9&version_code=330900&proxy_support_type=3&app_name=aweme&version_name=33.9.0&device_brand=Xiaomi&region=cn&aid=1128&rom_version=miui_v10_9.9.3&klink_egdi=AALcC3Nad7kZlXSau99SG54AWCQwafDgT_v77VbFQz915iprrubo9Wst&device_platform=android&ssmix=a&manifest_version_code=330901&resolution=1080*2030&_rticket=1748425136447&mcc_mnc=46000&first_launch_timestamp=1747477393&last_deeplink_update_version_code=0&cpu_support64=true&host_abi=arm64-v8a&is_guest_mode=0&app_type=normal&minor_status=0&appTheme=light&is_preinstall=0&need_personal_recommend=1&is_android_pad=0&is_android_fold=0&ts=1748425135&cdid=a240c124-bbdc-4245-ae82-e4315ba3fbb5
+public static android.net.Uri android.net.Uri.parse(java.lang.String)
+	at android.net.Uri.parse(Native Method)
+	at X.0sus.LIZ(SourceFile:17039373)
+	at X.0suo.LJJIJ(SourceFile:16908298)
+	at com.ss.android.ugc.aweme.routemonitor.RouteMonitor.LJJIJ(Unknown Source:7)
+	at com.ss.android.ugc.aweme.statistic.AppLogNetworkInterceptor.intercept(SourceFile:16973849)
+	at com.bytedance.retrofit2.intercept.RealInterceptorChain.com_bytedance_retrofit2_intercept_RealInterceptorChain__proceed$___twin___(SourceFile:17170564)
+	at com.bytedance.retrofit2.intercept.RealInterceptorChain.com_bytedance_retrofit2_intercept_RealInterceptorChain_com_ss_android_ugc_aweme_lancet_network_ApiTimeLancet_proceed(SourceFile:33882116)
+	at com.bytedance.retrofit2.intercept.RealInterceptorChain.proceed(Unknown Source:0)
+	at com.ss.android.ugc.aweme.lancet.ssretrofitchain.VerifyInterceptor.realHandleInterceptor(SourceFile:50790414)
+	at com.ss.android.ugc.aweme.lancet.ssretrofitchain.VerifyInterceptor.intercept(SourceFile:16908293)
+	at com.bytedance.retrofit2.intercept.RealInterceptorChain.com_bytedance_retrofit2_intercept_RealInterceptorChain__proceed$___twin___(SourceFile:17170564)
+	at com.bytedance.retrofit2.intercept.RealInterceptorChain.com_bytedance_retrofit2_intercept_RealInterceptorChain_com_ss_android_ugc_aweme_lancet_network_ApiTimeLancet_proceed(SourceFile:33882116)
+	at com.bytedance.retrofit2.intercept.RealInterceptorChain.proceed(Unknown Source:0)
+	at com.bytedance.frameworks.baselib.netx.partner.NetworkPartnerGroup$PartnerInterceptor.intercept(SourceFile:17301666)
+	at com.bytedance.retrofit2.intercept.RealInterceptorChain.com_bytedance_retrofit2_intercept_RealInterceptorChain__proceed$___twin___(SourceFile:17170564)
+	at com.bytedance.retrofit2.intercept.RealInterceptorChain.com_bytedance_retrofit2_intercept_RealInterceptorChain_com_ss_android_ugc_aweme_lancet_network_ApiTimeLancet_proceed(SourceFile:33882116)
+	at com.bytedance.retrofit2.intercept.RealInterceptorChain.proceed(Unknown Source:0)
+	at com.bytedance.retrofit2.SsHttpCall.getResponseWithInterceptorChain(SourceFile:327758)
+	at com.bytedance.retrofit2.SsHttpCall$1.run(SourceFile:393255)
+	at X.0tF0.run(SourceFile:131084)
+	at com.ss.android.ugc.bytex.async.stack.delegate.ThreadPoolComparableRunnable.run(SourceFile:65538)
+	at X.0UV1.run(SourceFile:65538)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+	at java.lang.Thread.run(Thread.java:764)
+	at com.ss.android.ugc.bytex.pthread.base.proxy.PthreadThreadV2.run(Unknown Source:20)
+	at com.ss.android.ugc.bytex.async.stack.delegate.TransmitThread.run(SourceFile:327764)
+	at X.0Dg1.run(SourceFile:196616)
+	at com.ss.android.ugc.nimbleworker.task.RunnableSessionThreadWrapper.doWork(SourceFile:393227)
+	at com.ss.android.ugc.nimbleworker.task.RunnableSessionScheduleWrapper.run(SourceFile:327762)
+	at kotlin.jvm.internal.ALambdaS976S0100000_50.invoke$86(SourceFile:33816634)
+	at kotlin.jvm.internal.ALambdaS976S0100000_50.invoke(Unknown Source:698)
+	at com.ss.android.ugc.bytex.pthread.base.convergence.core.ThreadWorker.run(Unknown Source:101)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+	at com.ss.android.ugc.bytex.pthread.base.convergence.core.ExemptThreadFactory$newThread$t$1.run(Unknown Source:33)
+	at java.lang.Thread.run(Thread.java:764)
+------------endFlag:p1ojn6vr,usedtime:1---------------
+省略.........
+CTRL + C to stop >
 ```
-
-### 16. find_anit_frida_so.js
-某些可恶的app会对frida进行反调试，用这个可以对反调试的so进行找出。原理是谁最后一个被加载，然后app出现了崩溃，谁就是坏人
-![find_anti_frida_so.png](assets/find_anti_frida_so.png)
-
-### 17. hook_jni_method_trace.js
-Native层调java时追踪一些方法，用于确定so层的调用栈，hook的地方比较多，打印有些凌乱，你需要根据自身需求精简打印和增加更多打印的信息
-
-### 18. replace_dlsym_get_pthread_create.js
-libmsaoaidsec.so版本有很多，而且在很多app中广泛存在。大致分为2类一个是通过got表导入了pthread_create函数创建了反调试线程，这个你直接去ida so搜索pthread_create函数NOP。第二是用dlsym动态加载libc.so库来获取pthread_create函数指针，这个我们直接用frida hook dlsym函数就可以劫持
-我预计，将来厂商可能会下沉到svc或者通过其他so来启动线程，到那时候我们再说。这边先给了通用实现，专门用来对抗dlsym版本的libmsaoaidsec.so
-![replace_pthread_create.png](assets/replace_pthread_create.png)
-
-
-### 19. find_boringssl_custom_verify_func.js
-专门用于查找boringssl的验证函数，boringssl现在学聪明了，验证函数没有了之前的字符串特征。我们需要hook SSL_CTX_set_custom_verify把验证函数找出来，随后进行hook强制返回0。
-
-执行./spawn find_boringssl_custom_verify_func.js 之前记得清除某音app所有的数据缓存，因为某些函数只会注册一次。
-
-![find_boringssl_custom_verify.png](assets/find_boringssl_custom_verify.png)
-
-找到几个验证函数后，我们再实现hook验证函数强制返回0，如下
-![hook_verify.png](assets/hook_verify.png)
-
-抓包效果
-![mouyin_capture_33.9.0.png](assets/mouyin_capture_33.9.0.png)
-
-### 20. get_device_info.js
-获取设备指纹信息，包括Android ID、IMEI、FINGERPRINT、已安装app、传感器、基带版本等等几十个设备指纹。用于当你想快速了解当前设备的指纹信息时使用
-打开任意一个app，附加调试后进入到attch命令行模式
-./attach get_device_info.js
-![get_device_info_attach.png](assets/get_device_info_attach.png)
-这里有4个方法供你使用，输入任意一个方法即可获取相应信息
-#### getBasicInfo()，获取基本设备信息 包括品牌、厂商、型号、主板、硬件、系统版本、内存信息、存储信息、电池信息、Android ID、IMEI、FINGERPRINT等
-#### getInstalledPackages()，获取每个已安装apk的应用名称、包名、是否系统应用
-#### getSensos()，获取每个传感器的名称、厂商、功耗、精度、最小延迟等
-#### getSystemInfo()，获取是否已root、开机时长、Java运行时信息、内核信息、DRM信息
-![get_device_info_functions.png](assets/get_device_info_functions.png)
-
-
-### 21. apk_shell_scanner.js
-查壳脚本，动态识别加载的共享库（.so）或特征文件。支持多种主流壳类型，包括：娜迦、爱加密、爱加密企业版、梆梆免费版、梆梆企业版、360加固保、通付盾、网秦、百度加固、阿里聚安全、腾讯加固、腾讯御安全、网易易盾、APKProtect、几维安全、顶像科技、盛大加固、瑞星加固。
-
-./attach apk_shell_scanner.js
-
-如检测到壳将输出: This app is protected by {爱加密}.
-
-如未检测到壳将输出：This app is not protected or uses an unknown protection scheme.
+***

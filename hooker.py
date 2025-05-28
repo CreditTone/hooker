@@ -1257,12 +1257,12 @@ def entry_debug_mode():
         elif (cmd.startswith("attach ") or cmd.startswith("frida ")) and re.search(r"(attach|frida)\s+([^\s]+\.js)", cmd):
             m = re.search(r"(attach|frida)\s+([^\s]+)", cmd)
             if m:
-                execute_script(m.group(1), False)
+                execute_script(m.group(2), False)
                 return True
         elif (cmd.startswith("spawn ") or cmd.startswith("fridaf ")) and re.search(r"(spawn|fridaf)\s+([^\s]+\.js)", cmd):
             m = re.search(r"(spawn|fridaf)\s+([^\s]+)", cmd)
             if m:
-                execute_script(m.group(1), True)
+                execute_script(m.group(2), True)
                 return True
         elif cmd == "restart":
             restart_app(current_identifier)
