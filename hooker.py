@@ -36,6 +36,7 @@ import queue
 import sqlite3
 import itertools
 import jsbeautifier
+from datetime import datetime
 from collections import Counter
 from androguard.core.bytecodes import apk
 from androguard.core.bytecodes import dvm
@@ -231,15 +232,17 @@ current_identifier_version = None
 current_identifier_pid = None
 current_identifier_install_path = None
 current_identifier_uid = None
-current_temp_dexes_tire_queue = queue.Queue() #临时缓存
 current_local_apk_path = None
+current_identifier_cache_db = None
+current_identifier_cache_readonly_db = None
+
 frida_device = None
 
 resource_rpc_jscode = None
 resource_hook_js_prepare_jscode = None
 resource_hook_js_enhance_jscode = None
 
-current_identifier_cache_db = None
+
 
 def _init_resource_jscode():
     global resource_rpc_jscode
@@ -854,6 +857,7 @@ def open_or_create_db():
         return current_identifier_cache_db
     db_path=f'.cache/{current_identifier}_{current_identifier_version}_class_methods.db'
     conn = sqlite3.connect(db_path, check_same_thread=False)
+    current_identifier_cache_db = conn
     cursor = conn.cursor()
     # 检查是否存在 app_methods 表
     cursor.execute('''
@@ -878,7 +882,6 @@ def open_or_create_db():
         cursor.execute('CREATE INDEX idx_class_package_prefix ON app_methods(class_package_name)')
         cursor.execute('CREATE INDEX idx_class_name ON app_methods(class_name)')
         conn.commit()
-    current_identifier_cache_db = conn
     return current_identifier_cache_db
 
 def insert_if_not_exists(cursor, class_package_name, class_name,
@@ -904,8 +907,39 @@ def insert_if_not_exists(cursor, class_package_name, class_name,
         ))
         current_identifier_cache_db.commit()
         
+def ensure_readonly_copy_fresh():
+    """
+    确保只读数据库副本是最新的，如果过旧或主库有更新则拷贝。
+    设置 current_identifier_cache_readonly_db 为连接对象。
+    """
+    global current_identifier_cache_readonly_db  # 注意声明为全局变量
+    base_path = f'.cache/{current_identifier}_{current_identifier_version}_class_methods.db'
+    readonly_path = f'.cache/{current_identifier}_{current_identifier_version}_tmp_readonly_class_methods.db'
+    # 主库不存在直接报错
+    if not os.path.exists(base_path):
+        raise FileNotFoundError(f"主数据库不存在: {base_path}")
+    now = time.time()
+    # 如果只读文件不存在，则直接拷贝
+    if not os.path.exists(readonly_path):
+        shutil.copy2(base_path, readonly_path)
+    else:
+        readonly_ctime = os.path.getctime(readonly_path)
+        # 如果只读副本距现在小于5分钟，则不更新
+        if now - readonly_ctime < 5 * 60:
+            pass  # 不拷贝
+        else:
+            base_ctime = os.path.getctime(base_path)
+            if base_ctime > readonly_ctime:
+                shutil.copy2(base_path, readonly_path)
+
+    # 连接（无论是否拷贝，都会使用只读副本连接）
+    readonly_uri = f'file:{readonly_path}?mode=ro'
+    current_identifier_cache_readonly_db = sqlite3.connect(readonly_uri, uri=True, check_same_thread=False)
+
+        
 def count_methods_by_app_version():
-    cursor = current_identifier_cache_db.cursor()
+    ensure_readonly_copy_fresh()
+    cursor = current_identifier_cache_readonly_db.cursor()
     cursor.execute('''
         SELECT COUNT(*) FROM app_methods
         WHERE app_package_name = ? AND app_version = ?
@@ -914,7 +948,9 @@ def count_methods_by_app_version():
     return count
 
 def query_class_name_by_prefix(class_name_prefix, class_name, limit=15):
-    cursor = current_identifier_cache_db.cursor()
+    # 拷贝最新主库文件（如果需要）
+    ensure_readonly_copy_fresh()
+    cursor = current_identifier_cache_readonly_db.cursor()
     if class_name and not "." in class_name:
         if class_name_prefix:
             cursor.execute('''
@@ -922,7 +958,7 @@ def query_class_name_by_prefix(class_name_prefix, class_name, limit=15):
                 WHERE class_name = ? AND class_package_name LIKE ?
                 LIMIT ?
             ''', (class_name, f'%{class_name_prefix}%', limit))
-            # print("1")
+            #print("1")
             results = cursor.fetchall()
             if results:
                 return results
@@ -931,7 +967,7 @@ def query_class_name_by_prefix(class_name_prefix, class_name, limit=15):
                 WHERE class_name LIKE ? AND class_package_name LIKE ?
                 LIMIT ?
             ''', (f'{class_name}%', f'%{class_name_prefix}%', limit))
-            # print("2")
+            #print("2")
             results = cursor.fetchall()
             if results:
                 return results
@@ -941,7 +977,7 @@ def query_class_name_by_prefix(class_name_prefix, class_name, limit=15):
                 WHERE class_name = ?
                 LIMIT ?
             ''', (class_name, limit))
-            # print("3")
+            #print("3")
             results = cursor.fetchall()
             if results:
                 return results
@@ -950,7 +986,7 @@ def query_class_name_by_prefix(class_name_prefix, class_name, limit=15):
                 WHERE class_name LIKE ?
                 LIMIT ?
             ''', (f'{class_name}%', limit))
-            # print("4")
+            #print("4")
             results = cursor.fetchall()
             if results:
                 return results
@@ -960,7 +996,7 @@ def query_class_name_by_prefix(class_name_prefix, class_name, limit=15):
         WHERE class_package_name LIKE ?
         LIMIT ?
     ''', (f'{class_name_prefix}%', limit))
-    # print("5")
+    #print("5")
     results = cursor.fetchall()
     if results:
         return results
@@ -969,7 +1005,7 @@ def query_class_name_by_prefix(class_name_prefix, class_name, limit=15):
         WHERE class_package_name LIKE ?
         LIMIT ?
     ''', (f'%{class_name_prefix}%', limit))
-    # print("6")
+    #print("6")
     return cursor.fetchall()
 
 def get_need_to_cache_pkg_prefix():
@@ -1147,19 +1183,24 @@ class ClassNameCompleter(Completer):
                 value = generatescript_cmd_match.group(2)
                 max_items = 15
                 count = 0
+                full_class_name = None
                 class_name_prefix = None
                 class_name = None
                 method_prefix = None
                 if ":" in value:
                     full_class_name, method_prefix = value.split(":", 1)
-                    temp = full_class_name.rsplit(".", 1)
-                    class_name_prefix = temp[0]
-                    class_name = temp[1]
                 else:
-                    class_name_prefix = value
-                #print("\nclass_name_prefix:"+class_name_prefix)
+                    full_class_name = value
+                if "." in full_class_name:
+                    class_name_prefix, class_name = full_class_name.rsplit(".", 1)
+                else:
+                    class_name_prefix = full_class_name
+                # print("\nclass_name_prefix:"+class_name_prefix)
                 results = query_class_name_by_prefix(class_name_prefix, class_name, limit=max_items)
-                #print(f"\nquery_class_name_by_prefix size:{len(results)}")
+                # print(f"{len(results)}")
+                if len(results) == 0:
+                    #info(f"query_class_name_by_prefix class_name_prefix:{class_name_prefix} class_name:{class_name}")
+                    pass
                 for row in results:
                     count += 1
                     class_package_name = row[0]
@@ -1178,7 +1219,7 @@ class ClassNameCompleter(Completer):
                         if count > max_items:
                             return
             except Exception as e:
-                #traceback.print_exc()
+                traceback.print_exc()
                 #yield Completion(f"[ERROR: {e}]", start_position=0)
                 pass
         else:
@@ -1343,10 +1384,15 @@ while True:
         if identifier not in identifier_list:
             warn("The application does not exist. Please enter an existing application")
             continue
-        # global current_identifier_pid
-        # global current_identifier
-        # global current_identifier_name
-        # global current_identifier_version
+        current_identifier = None
+        current_identifier_name = None
+        current_identifier_version = None
+        current_identifier_pid = None
+        current_identifier_install_path = None
+        current_identifier_uid = None
+        current_local_apk_path = None
+        current_identifier_cache_db = None
+        current_identifier_cache_readonly_db = None
         current_identifier = identifier
         current_identifier_pid, current_identifier_name, current_identifier_version, current_identifier_install_path, current_identifier_uid  = ensure_app_in_foreground(current_identifier)
         if not os.path.isdir(identifier):
