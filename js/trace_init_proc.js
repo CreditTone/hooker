@@ -21,7 +21,7 @@ function hook_dlopen(){
                 this.path = path;
                 if(path.indexOf(somodule)!=-1){
                     console.log("android_dlopen_ext:",path);
-                    trace_initproc()
+                    trace_init_proc()
                 }
             }
         },
@@ -31,7 +31,7 @@ function hook_dlopen(){
     })
 }
 
-function trace_initproc() {
+function trace_init_proc() {
     let linker = null;
     if (Process.pointerSize === 4) {
         linker = Process.findModuleByName("linker");

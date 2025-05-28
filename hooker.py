@@ -238,11 +238,9 @@ current_identifier_cache_readonly_db = None
 
 frida_device = None
 
-resource_rpc_jscode = None
-resource_hook_js_prepare_jscode = None
-resource_hook_js_enhance_jscode = None
-
-
+resource_rpc_jscode = read_js_resource("rpc.js")
+resource_hook_js_prepare_jscode = read_js_resource("_hook_js_prepare.js")
+resource_hook_js_enhance_jscode = read_js_resource("_hook_js_enhance.js")
 
 def _init_resource_jscode():
     global resource_rpc_jscode
@@ -557,54 +555,40 @@ def create_working_dir_enverment():
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
         os.popen('chmod 777 ' + packageName +'/spawn').readlines()
         info(f"Generating built-in frida script...")
-        create_workingdir_file(packageName + "/empty.js", "")
-        hook_js_prepare_jscode = read_js_resource("_hook_js_prepare.js")
-        hook_js_enhance_jscode = read_js_resource("_hook_js_enhance.js")
-        rpc_jscode = read_js_resource("rpc.js")
-        url_jscode = read_js_resource("url.js")
-        android_ui_jscode = read_js_resource("android_ui.js")
-        edit_text_jscode = read_js_resource("edit_text.js")
-        text_view_jscode = read_js_resource("text_view.js")
-        click_jscode = read_js_resource("click.js")
-        activity_events_jscode = read_js_resource("activity_events.js")
-        object_store_jscode = read_js_resource("object_store.js")
-        keystore_dump_jscode = read_js_resource("keystore_dump.js")
-        ssl_log_jscode = read_js_resource("ssl_log.js")
-        just_trust_me_jscode = read_js_resource("just_trust_me.js")
-        just_trust_me_okhttp_hook_finder_jscode = read_js_resource("just_trust_me_okhttp_hook_finder.js")
-        just_trust_me_for_ios_jscode = read_js_resource("just_trust_me_for_ios.js")
-        hook_RN_jscode = read_js_resource("hook_register_natives.js")
-        dump_dex_jscode = read_js_resource("dump_dex.js")
-        trace_initproc_jscode = read_js_resource("trace_initproc.js")
-        hook_artmethod_register_jscode = read_js_resource("hook_artmethod_register.js")
-        find_anit_frida_so_jscode = read_js_resource("find_anit_frida_so.js")
-        hook_jni_method_trace_jscode = read_js_resource("hook_jni_method_trace.js")
-        replace_dlsym_get_pthread_create_jscode = read_js_resource("replace_dlsym_get_pthread_create.js")
-        find_boringssl_custom_verify_func_jscode = read_js_resource("find_boringssl_custom_verify_func.js")
-        get_device_info_jscode = read_js_resource("get_device_info.js")
-        apk_shell_scanner_jscode = read_js_resource("apk_shell_scanner.js")
-        create_workingdir_file(packageName + "/ssl_log.js", ssl_log_jscode)
-        create_workingdir_file(packageName + "/url.js", url_jscode)
-        create_workingdir_file(packageName + "/edit_text.js", edit_text_jscode)
-        create_workingdir_file(packageName + "/text_view.js", text_view_jscode)
-        create_workingdir_file(packageName + "/click.js", click_jscode)
-        create_workingdir_file(packageName + "/hook_register_natives.js", hook_RN_jscode)
-        create_workingdir_file(packageName + "/keystore_dump.js", keystore_dump_jscode)
-        create_workingdir_file(packageName + "/dump_dex.js", dump_dex_jscode)
-        create_workingdir_file(packageName + "/android_ui.js", android_ui_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/activity_events.js", activity_events_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/object_store.js", object_store_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/just_trust_me.js", just_trust_me_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/just_trust_me_okhttp_hook_finder_for_android.js", just_trust_me_okhttp_hook_finder_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/just_trust_me_for_ios.js", just_trust_me_for_ios_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/hook_artmethod_register.js", hook_artmethod_register_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/get_device_info.js", get_device_info_jscode.replace("com.smile.gifmaker", packageName))
-        create_workingdir_file(packageName + "/trace_initproc.js", trace_initproc_jscode)
-        create_workingdir_file(packageName + "/find_anit_frida_so.js", find_anit_frida_so_jscode)
-        create_workingdir_file(packageName + "/hook_jni_method_trace.js", hook_jni_method_trace_jscode)
-        create_workingdir_file(packageName + "/replace_dlsym_get_pthread_create.js", replace_dlsym_get_pthread_create_jscode)
-        create_workingdir_file(packageName + "/find_boringssl_custom_verify_func.js", find_boringssl_custom_verify_func_jscode)
-        create_workingdir_file(packageName + "/apk_shell_scanner.js", apk_shell_scanner_jscode)
+        init_js_files = [
+            "url.js",
+            "android_ui.js",
+            "edit_text.js",
+            "text_view.js",
+            "click.js",
+            "activity_events.js",
+            "object_store.js",
+            "keystore_dump.js",
+            "ssl_log.js",
+            "just_trust_me.js",
+            "just_trust_me_for_ios.js",
+            "hook_register_natives.js",
+            "dump_dex.js",
+            "trace_init_proc.js",
+            "hook_artmethod_register.js",
+            "find_anit_frida_so.js",
+            "hook_jni_method_trace.js",
+            "replace_dlsym_get_pthread_create.js",
+            "find_boringssl_custom_verify_func.js",
+            "get_device_info.js",
+            "apk_shell_scanner.js",
+            "bypass_frida_svc_detect.js",
+            "bypass_root_detect.js",
+            "bypass_vpn_detect.js",
+            "hook_encryption_algo.js",
+            "hook_encryption_algo2.js"
+        ]
+        for js_file in init_js_files:
+            if not os.path.exists(f"js/{js_file}"):
+                info(f"File not Found: js/{js_file}")
+                continue
+            jscode = read_js_resource(js_file)
+            create_workingdir_file(f"{packageName}/{js_file}", jscode.replace("com.smile.gifmaker", packageName))
         info(f"Copying APK {current_identifier_install_path}/base.apk to working directory please waiting for a few seconds")
         global current_local_apk_path
         current_local_apk_path = f"{packageName}/{current_identifier_name.replace(' ', '')}_{current_identifier_version}.apk"
