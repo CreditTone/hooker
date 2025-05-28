@@ -990,7 +990,13 @@ def query_class_name_by_prefix(class_name_prefix, class_name, limit=15):
         LIMIT ?
     ''', (f'%{class_name_prefix}%', limit))
     #print("6")
-    return cursor.fetchall()
+    results = cursor.fetchall()
+    if results:
+        return results
+    if not "." in class_name_prefix:
+        return []
+    class_name_prefix, class_name = class_name_prefix.rsplit(".", 1)
+    return query_class_name_by_prefix(class_name_prefix, class_name, limit)
 
 def get_need_to_cache_pkg_prefix():
     a = apk.APK(current_local_apk_path)
@@ -1177,10 +1183,7 @@ class ClassNameCompleter(Completer):
                     full_class_name, method_prefix = value.split(":", 1)
                 else:
                     full_class_name = value
-                if "." in full_class_name:
-                    class_name_prefix, class_name = full_class_name.rsplit(".", 1)
-                else:
-                    class_name_prefix = full_class_name
+                class_name_prefix = full_class_name
                 # print("\nclass_name_prefix:"+class_name_prefix)
                 results = query_class_name_by_prefix(class_name_prefix, class_name, limit=max_items)
                 # print(f"{len(results)}")
