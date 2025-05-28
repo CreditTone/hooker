@@ -32,7 +32,6 @@ import hashlib
 import shutil
 import textwrap
 import zipfile
-import pygtrie
 import queue
 import sqlite3
 import itertools
@@ -853,7 +852,7 @@ def open_or_create_db():
     global current_identifier_cache_db
     if current_identifier_cache_db:
         return current_identifier_cache_db
-    db_path=f'.cache/{current_identifier}_{current_identifier_version}_app_methods.db'
+    db_path=f'.cache/{current_identifier}_{current_identifier_version}_class_methods.db'
     conn = sqlite3.connect(db_path, check_same_thread=False)
     cursor = conn.cursor()
     # 检查是否存在 app_methods 表
@@ -914,13 +913,63 @@ def count_methods_by_app_version():
     count = cursor.fetchone()[0]
     return count
 
-def query_class_name_by_prefix(class_name_prefix, limit=15):
+def query_class_name_by_prefix(class_name_prefix, class_name, limit=15):
     cursor = current_identifier_cache_db.cursor()
+    if class_name and not "." in class_name:
+        if class_name_prefix:
+            cursor.execute('''
+                SELECT class_package_name, class_name, readable_proto_list FROM app_methods
+                WHERE class_name = ? AND class_package_name LIKE ?
+                LIMIT ?
+            ''', (class_name, f'%{class_name_prefix}%', limit))
+            # print("1")
+            results = cursor.fetchall()
+            if results:
+                return results
+            cursor.execute('''
+                SELECT class_package_name, class_name, readable_proto_list FROM app_methods
+                WHERE class_name LIKE ? AND class_package_name LIKE ?
+                LIMIT ?
+            ''', (f'{class_name}%', f'%{class_name_prefix}%', limit))
+            # print("2")
+            results = cursor.fetchall()
+            if results:
+                return results
+        else:
+            cursor.execute('''
+                SELECT class_package_name, class_name, readable_proto_list FROM app_methods
+                WHERE class_name = ?
+                LIMIT ?
+            ''', (class_name, limit))
+            # print("3")
+            results = cursor.fetchall()
+            if results:
+                return results
+            cursor.execute('''
+                SELECT class_package_name, class_name, readable_proto_list FROM app_methods
+                WHERE class_name LIKE ?
+                LIMIT ?
+            ''', (f'{class_name}%', limit))
+            # print("4")
+            results = cursor.fetchall()
+            if results:
+                return results
+        return []
     cursor.execute('''
         SELECT class_package_name, class_name, readable_proto_list FROM app_methods
-        WHERE class_name LIKE ?
+        WHERE class_package_name LIKE ?
         LIMIT ?
     ''', (f'{class_name_prefix}%', limit))
+    # print("5")
+    results = cursor.fetchall()
+    if results:
+        return results
+    cursor.execute('''
+        SELECT class_package_name, class_name, readable_proto_list FROM app_methods
+        WHERE class_package_name LIKE ?
+        LIMIT ?
+    ''', (f'%{class_name_prefix}%', limit))
+    # print("6")
     return cursor.fetchall()
 
 def get_need_to_cache_pkg_prefix():
@@ -960,10 +1009,10 @@ def load_dexes_to_cache(dexes_dir):
         need_to_cache_pkg_prefix = get_need_to_cache_pkg_prefix()
         #info(f"need_to_cache_pkg_prefix:{need_to_cache_pkg_prefix}")
         for dex_path in dexes_list:
-            load_classes_and_methods_to_trie(dex_path, need_to_cache_pkg_prefix)
-            if count_methods_by_app_version() > 200000:
+            load_classes_and_methods_to_db(dex_path, need_to_cache_pkg_prefix)
+            if count_methods_by_app_version() > 300000:
                 break
-        info(f"load dexes finish count_methods_by_app_version: {count_methods_by_app_version()}")
+        #info(f"load dexes finish count_methods_by_app_version: {count_methods_by_app_version()}")
         
     dexes_list = []
     for file in os.listdir(dexes_dir):
@@ -976,7 +1025,7 @@ def load_dexes_to_cache(dexes_dir):
     t.start()
     #info(f"threading {dexes_list} {len(dexes_list) > 10} ")
     
-def load_classes_and_methods_to_trie(dex_path, need_to_cache_pkg_prefix):
+def load_classes_and_methods_to_db(dex_path, need_to_cache_pkg_prefix):
     cursor = current_identifier_cache_db.cursor()
     need_to_cache_pkg = tuple(need_to_cache_pkg_prefix)
     def should_skip_class(class_package_name):
@@ -989,6 +1038,10 @@ def load_classes_and_methods_to_trie(dex_path, need_to_cache_pkg_prefix):
             dex_bytes = f.read()
             dex = dvm.DalvikVMFormat(dex_bytes)
             for cls in dex.get_classes():
+                access_flags = cls.get_access_flags()
+                # （0x200 = ACC_INTERFACE）（0x400 = ACC_ABSTRACT）
+                if (cls.get_access_flags() & 0x200) or (cls.get_access_flags() & 0x400):
+                    continue
                 class_name = cls.get_name().strip('L;').replace('/', '.')
                 temp = class_name.rsplit(".", 1)
                 class_package_name = temp[0]
@@ -1005,6 +1058,7 @@ def load_classes_and_methods_to_trie(dex_path, need_to_cache_pkg_prefix):
                     loaded_count += 1
                 insert_if_not_exists(cursor, class_package_name, class_name, "", readable_proto_list)
     except Exception as e:
+        print(traceback.format_exc())  
         print(f"[!] Error processing {dex_path}: {e}")
 
 def convert_descriptor_to_readable(descriptor):
@@ -1110,43 +1164,39 @@ class ClassNameCompleter(Completer):
                 value = generatescript_cmd_match.group(2)
                 max_items = 15
                 count = 0
+                class_name_prefix = None
+                class_name = None
+                method_prefix = None
                 if ":" in value:
-                    class_name, method_prefix = value.split(":", 1)
-                    if not current_app_classes_trie.has_node(class_name):
-                        return
-                    for _, class_method_trie in current_app_classes_trie.items(prefix=class_name):
-                        if not class_method_trie.has_node(method_prefix):
-                            continue
-                        for class_method, _ in class_method_trie.items(prefix=method_prefix):
-                            count += 1
-                            yield Completion(f"{class_name}:{class_method}", start_position=-len(value))
-                            if count >= max_items:
-                                return
+                    full_class_name, method_prefix = value.split(":", 1)
+                    temp = full_class_name.rsplit(".", 1)
+                    class_name_prefix = temp[0]
+                    class_name = temp[1]
                 else:
-                    count = 0
                     class_name_prefix = value
-                    #print("\nclass_name_prefix:"+class_name_prefix)
-                    results = query_class_name_by_prefix(class_name_prefix, limit=max_items)
-                    for row in results:
+                #print("\nclass_name_prefix:"+class_name_prefix)
+                results = query_class_name_by_prefix(class_name_prefix, class_name, limit=max_items)
+                #print(f"\nquery_class_name_by_prefix size:{len(results)}")
+                for row in results:
+                    count += 1
+                    class_package_name = row[0]
+                    class_name = row[1]
+                    yield Completion(f"{class_package_name}.{class_name}", start_position=-len(value))
+                if count >= max_items:
+                    return
+                for row in results:
+                    class_package_name = row[0]
+                    class_name = row[1]
+                    readable_proto_list = row[2]
+                    readable_proto_mehtod_list = readable_proto_list.split("|")[1:]
+                    for readable_proto_mehtod in readable_proto_mehtod_list:
                         count += 1
-                        class_package_name = row[0]
-                        class_name = row[1]
-                        yield Completion(f"{class_package_name}.{class_name}", start_position=-len(value))
-                    if count > max_items:
-                        return
-                    for row in results:
-                        class_package_name = row[0]
-                        class_name = row[1]
-                        readable_proto_list = row[2]
-                        readable_proto_mehtod_list = readable_proto_list.split("|")[1:]
-                        for readable_proto_mehtod in readable_proto_mehtod_list:
-                            count += 1
-                            yield Completion(f"{class_package_name}.{class_name}:{readable_proto_mehtod}", start_position=-len(value))
-                            if count > max_items:
-                                return
+                        yield Completion(f"{class_package_name}.{class_name}:{readable_proto_mehtod}", start_position=-len(value))
+                        if count > max_items:
+                            return
             except Exception as e:
-                traceback.print_exc()
-                yield Completion(f"[ERROR: {e}]", start_position=0)
+                #traceback.print_exc()
+                #yield Completion(f"[ERROR: {e}]", start_position=0)
                 pass
         else:
             # 其他命令提示
