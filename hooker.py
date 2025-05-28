@@ -908,8 +908,8 @@ def ensure_readonly_copy_fresh():
         shutil.copy2(base_path, readonly_path)
     else:
         readonly_ctime = os.path.getctime(readonly_path)
-        # 如果只读副本距现在小于5分钟，则不更新
-        if now - readonly_ctime < 5 * 60:
+        # 如果只读副本距现在小于30秒，则不更新
+        if now - readonly_ctime < 30:
             pass  # 不拷贝
         else:
             base_ctime = os.path.getctime(base_path)
@@ -1331,7 +1331,7 @@ def entry_debug_mode():
                 continue
             is_handled = handle_command(hooker_cmd)
             if not is_handled and hooker_cmd:
-                warn(f"hooker command not found: {hooker_cmd}")
+                info(f"hooker command not found: {hooker_cmd} Please enter \"help\" + Enter to view the help information")
                 continue
             elif not hooker_cmd:
                 continue
