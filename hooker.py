@@ -5,8 +5,6 @@ Created on 2020年3月23日
 
 @author: stephen
 '''
-from _ast import In
-
 
 default_frida_server_arm = "frida-server-16.7.19-android-arm"
 default_frida_server_arm64 = "frida-server-16.7.19-android-arm64"
@@ -850,13 +848,19 @@ def open_or_create_db():
         WHERE type='table' AND name='app_methods'
     ''')
     table_exists = cursor.fetchone()
+    if table_exists:
+        cursor.execute("PRAGMA table_info(app_methods)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'filename' not in columns:
+            cursor.execute("DROP TABLE IF EXISTS app_methods")
+            conn.commit()
+            table_exists = False
     if not table_exists:
         # 创建表
         cursor.execute('''
             CREATE TABLE app_methods (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                app_package_name TEXT NOT NULL,
-                app_version TEXT NOT NULL,
+                filename TEXT NOT NULL,
                 class_package_name TEXT NOT NULL,
                 class_name TEXT NOT NULL,
                 method_name TEXT NOT NULL,
@@ -869,7 +873,7 @@ def open_or_create_db():
         conn.commit()
     return current_identifier_cache_db
 
-def insert_if_not_exists(cursor, class_package_name, class_name,
+def insert_if_not_exists(cursor, filename, class_package_name, class_name,
                          method_name, readable_proto_list):
     # 查询是否存在相同 class_package_name 和 class_name 的记录
     cursor.execute('''
@@ -881,16 +885,15 @@ def insert_if_not_exists(cursor, class_package_name, class_name,
     if not exists:
         cursor.execute('''
             INSERT INTO app_methods (
-                app_package_name, app_version,
-                class_package_name, class_name,
+                filename, class_package_name, class_name,
                 method_name, readable_proto_list
-            ) VALUES (?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?)
         ''', (
-            current_identifier, current_identifier_version,
-            class_package_name, class_name,
+            filename, class_package_name, class_name,
             method_name, readable_proto_list
         ))
         current_identifier_cache_db.commit()
+    return exists
         
 def ensure_readonly_copy_fresh():
     """
@@ -925,10 +928,7 @@ def ensure_readonly_copy_fresh():
 def count_methods_by_app_version():
     ensure_readonly_copy_fresh()
     cursor = current_identifier_cache_readonly_db.cursor()
-    cursor.execute('''
-        SELECT COUNT(*) FROM app_methods
-        WHERE app_package_name = ? AND app_version = ?
-    ''', (current_identifier, current_identifier_version))
+    cursor.execute('SELECT COUNT(*) FROM app_methods')
     count = cursor.fetchone()[0]
     return count
 
@@ -1015,22 +1015,25 @@ def get_need_to_cache_pkg_prefix():
     counter = Counter(prefixes)
     # 找出现次数最多的前两个
     most_common_two = counter.most_common(2)
-    results = ["okhttp3", "retrofit2", "javax.crypto", "java.security"]
+    results = {"okhttp3", "retrofit2", "javax.crypto", "java.security"}
     for prefix, count in most_common_two:
-        results.append(prefix)
-    return results
+        results.add(prefix)
+    package_name = current_identifier    
+    parts = package_name.split('.')
+    results.add('.'.join(parts[:2]) if len(parts) >= 2 else package_name)
+    #info(f"need_to_cache_pkg_prefix:{results}")
+    return list(results)
 
 def load_dexes_to_cache():
     open_or_create_db()
     def process_dex():
         need_to_cache_pkg_prefix = get_need_to_cache_pkg_prefix()
-        #info(f"need_to_cache_pkg_prefix:{need_to_cache_pkg_prefix}")
         with zipfile.ZipFile(current_local_apk_path, 'r') as zip_ref:
             for file_info in zip_ref.infolist():
                 if file_info.filename.endswith('.dex'):
                     with zip_ref.open(file_info.filename) as dex_file:
                         dex_data = dex_file.read()  # 读取为 bytes
-                        load_classes_and_methods_to_db(dex_data, need_to_cache_pkg_prefix)
+                        load_classes_and_methods_to_db(file_info.filename, dex_data, need_to_cache_pkg_prefix)
                         if current_identifier_stop_event == None or current_identifier_stop_event.is_set():
                             # info("中断线程3")
                             break
@@ -1042,14 +1045,38 @@ def load_dexes_to_cache():
     t.daemon = True
     t.start()
     
-def load_classes_and_methods_to_db(dex_bytes, need_to_cache_pkg_prefix):
+def load_classes_and_methods_to_db(filename, dex_bytes, need_to_cache_pkg_prefix):
     if not current_identifier_cache_db:
         return
     if current_identifier_stop_event == None or current_identifier_stop_event.is_set():
         return
     cursor = current_identifier_cache_db.cursor()
     need_to_cache_pkg = tuple(need_to_cache_pkg_prefix)
-    def should_skip_class(class_package_name):
+    obfuscated_package_cahce = set()
+    def is_obfuscated_package(pkg_name: str) -> bool:
+        if pkg_name in obfuscated_package_cahce:
+            return True
+        parts = pkg_name.split(".")
+        if len(parts) > 3 or (len(parts) == 1 and len(parts[0]) > 3):
+            return False
+        if len(parts) < 2 and len(parts[0]) <= 3:
+            obfuscated_package_cahce.add(pkg_name)
+            #info(f"混淆包名1:{class_package_name}")
+            return True
+        short_count = sum(1 for part in parts if len(part) <= 1)
+        upper_count = sum(1 for part in parts if part.isupper())
+        if short_count >= len(parts) // 2:
+            obfuscated_package_cahce.add(pkg_name)
+            #info(f"混淆包名2:{class_package_name}")
+            return True
+        if upper_count >= len(parts) // 2:
+            obfuscated_package_cahce.add(pkg_name)
+            #info(f"混淆包名3:{class_package_name}")
+            return True
+        return False
+    def should_skip_class_package(class_package_name):
+        if is_obfuscated_package(class_package_name):
+            return False
         if not class_package_name.startswith(need_to_cache_pkg):
             return True
         return False
@@ -1057,6 +1084,9 @@ def load_classes_and_methods_to_db(dex_bytes, need_to_cache_pkg_prefix):
     try:
         dex = dvm.DalvikVMFormat(dex_bytes)
         for cls in dex.get_classes():
+            if loaded_count > 2000:
+                #info(f"already loaded dex {filename}")
+                return
             access_flags = cls.get_access_flags()
             # （0x200 = ACC_INTERFACE）（0x400 = ACC_ABSTRACT）
             if (cls.get_access_flags() & 0x200) or (cls.get_access_flags() & 0x400):
@@ -1067,7 +1097,7 @@ def load_classes_and_methods_to_db(dex_bytes, need_to_cache_pkg_prefix):
             class_name = cls.get_name().strip('L;').replace('/', '.')
             temp = class_name.rsplit(".", 1)
             class_package_name = temp[0]
-            if should_skip_class(class_package_name):
+            if len(temp) != 2 or should_skip_class_package(class_package_name):
                 continue
             class_name = temp[1]
             readable_proto_list = ""
@@ -1077,11 +1107,12 @@ def load_classes_and_methods_to_db(dex_bytes, need_to_cache_pkg_prefix):
                 # 转换描述符为更易读格式
                 readable_proto = convert_descriptor_to_readable(proto)
                 readable_proto_list += f"|{method_name}{readable_proto}"
+            already_exists = insert_if_not_exists(cursor, filename, class_package_name, class_name, "", readable_proto_list)
+            if already_exists:
                 loaded_count += 1
-            insert_if_not_exists(cursor, class_package_name, class_name, "", readable_proto_list)
     except Exception as e:
         print(traceback.format_exc())  
-        print(f"[!] Error processing {dex_path}: {e}")
+        print(f"[!] Error processing {filename}: {e}")
 
 def convert_descriptor_to_readable(descriptor):
     def type_map(d):

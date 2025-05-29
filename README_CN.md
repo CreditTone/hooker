@@ -567,54 +567,9 @@ com.android.okhttp.Request.Builder.build()（系统自带 okhttp）
 
 android.net.Uri.parse(String) 方法（处理 URI 的常用工具方法）
 
-执行命令：frida url.js
+推荐命令：frida url.js
 
-```shell
-抖音 > frida url.js
-------------startFlag:p1ojn6vr,objectHash:Class,thread(id:19650,name:#NetNormal#434),timestamp:1748425136726---------------
-https://ib.snssdk.com/cloudpush/promotion/keep_alive/?alliance_sdk_version_code=30912&country=CN&push_sdk_version=30912&iid=3801434875822153&channel=vivo_1128_64&is_foreground=1&device_type=MI+MAX+3&language=zh&os_detail_type=android&device_manufacturer=Xiaomi&platform=phone&update_version_code=33909900&rom=MIUI-9.9.3&os_api=28&tz_name=Asia%2FShanghai&push_sdk_version_name=3.9.12-rc.1.5-bugfix&tz_offset=28800&alliance_sdk_version_name=3.9.12-rc.1.5-bugfix&dpi=440&ac=wifi&package=com.ss.android.ugc.aweme&device_id=3675046342828212&os=android&os_version=9&version_code=330900&proxy_support_type=3&app_name=aweme&version_name=33.9.0&device_brand=Xiaomi&region=cn&aid=1128&rom_version=miui_v10_9.9.3&klink_egdi=AALcC3Nad7kZlXSau99SG54AWCQwafDgT_v77VbFQz915iprrubo9Wst&device_platform=android&ssmix=a&manifest_version_code=330901&resolution=1080*2030&_rticket=1748425136447&mcc_mnc=46000&first_launch_timestamp=1747477393&last_deeplink_update_version_code=0&cpu_support64=true&host_abi=arm64-v8a&is_guest_mode=0&app_type=normal&minor_status=0&appTheme=light&is_preinstall=0&need_personal_recommend=1&is_android_pad=0&is_android_fold=0&ts=1748425135&cdid=a240c124-bbdc-4245-ae82-e4315ba3fbb5
-public static android.net.Uri android.net.Uri.parse(java.lang.String)
-	at android.net.Uri.parse(Native Method)
-	at X.0sus.LIZ(SourceFile:17039373)
-	at X.0suo.LJJIJ(SourceFile:16908298)
-	at com.ss.android.ugc.aweme.routemonitor.RouteMonitor.LJJIJ(Unknown Source:7)
-	at com.ss.android.ugc.aweme.statistic.AppLogNetworkInterceptor.intercept(SourceFile:16973849)
-	at com.bytedance.retrofit2.intercept.RealInterceptorChain.com_bytedance_retrofit2_intercept_RealInterceptorChain__proceed$___twin___(SourceFile:17170564)
-	at com.bytedance.retrofit2.intercept.RealInterceptorChain.com_bytedance_retrofit2_intercept_RealInterceptorChain_com_ss_android_ugc_aweme_lancet_network_ApiTimeLancet_proceed(SourceFile:33882116)
-	at com.bytedance.retrofit2.intercept.RealInterceptorChain.proceed(Unknown Source:0)
-	at com.ss.android.ugc.aweme.lancet.ssretrofitchain.VerifyInterceptor.realHandleInterceptor(SourceFile:50790414)
-	at com.ss.android.ugc.aweme.lancet.ssretrofitchain.VerifyInterceptor.intercept(SourceFile:16908293)
-	at com.bytedance.retrofit2.intercept.RealInterceptorChain.com_bytedance_retrofit2_intercept_RealInterceptorChain__proceed$___twin___(SourceFile:17170564)
-	at com.bytedance.retrofit2.intercept.RealInterceptorChain.com_bytedance_retrofit2_intercept_RealInterceptorChain_com_ss_android_ugc_aweme_lancet_network_ApiTimeLancet_proceed(SourceFile:33882116)
-	at com.bytedance.retrofit2.intercept.RealInterceptorChain.proceed(Unknown Source:0)
-	at com.bytedance.frameworks.baselib.netx.partner.NetworkPartnerGroup$PartnerInterceptor.intercept(SourceFile:17301666)
-	at com.bytedance.retrofit2.intercept.RealInterceptorChain.com_bytedance_retrofit2_intercept_RealInterceptorChain__proceed$___twin___(SourceFile:17170564)
-	at com.bytedance.retrofit2.intercept.RealInterceptorChain.com_bytedance_retrofit2_intercept_RealInterceptorChain_com_ss_android_ugc_aweme_lancet_network_ApiTimeLancet_proceed(SourceFile:33882116)
-	at com.bytedance.retrofit2.intercept.RealInterceptorChain.proceed(Unknown Source:0)
-	at com.bytedance.retrofit2.SsHttpCall.getResponseWithInterceptorChain(SourceFile:327758)
-	at com.bytedance.retrofit2.SsHttpCall$1.run(SourceFile:393255)
-	at X.0tF0.run(SourceFile:131084)
-	at com.ss.android.ugc.bytex.async.stack.delegate.ThreadPoolComparableRunnable.run(SourceFile:65538)
-	at X.0UV1.run(SourceFile:65538)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
-	at java.lang.Thread.run(Thread.java:764)
-	at com.ss.android.ugc.bytex.pthread.base.proxy.PthreadThreadV2.run(Unknown Source:20)
-	at com.ss.android.ugc.bytex.async.stack.delegate.TransmitThread.run(SourceFile:327764)
-	at X.0Dg1.run(SourceFile:196616)
-	at com.ss.android.ugc.nimbleworker.task.RunnableSessionThreadWrapper.doWork(SourceFile:393227)
-	at com.ss.android.ugc.nimbleworker.task.RunnableSessionScheduleWrapper.run(SourceFile:327762)
-	at kotlin.jvm.internal.ALambdaS976S0100000_50.invoke$86(SourceFile:33816634)
-	at kotlin.jvm.internal.ALambdaS976S0100000_50.invoke(Unknown Source:698)
-	at com.ss.android.ugc.bytex.pthread.base.convergence.core.ThreadWorker.run(Unknown Source:101)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
-	at com.ss.android.ugc.bytex.pthread.base.convergence.core.ExemptThreadFactory$newThread$t$1.run(Unknown Source:33)
-	at java.lang.Thread.run(Thread.java:764)
-------------endFlag:p1ojn6vr,usedtime:1---------------
-省略.........
-CTRL + C to stop >
-```
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/url.jpg)
 ***
 
 ### just_trust_me.js
@@ -630,7 +585,7 @@ frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网�
 ### activity_events.js
 当你需要跟踪start某个Activity启动时可执行，获取startActivity的intent信息和调用堆栈。
 
-执行命令：frida activity_events.js
+推荐命令：frida activity_events.js
 
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/activity_events.gif)
 ***
@@ -638,14 +593,16 @@ frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网�
 ### click.js
 跟踪点击事件时可执行，并获取被点击View的真实View ClassName
 
-执行命令：frida click.js
+推荐命令：frida click.js
+
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/click.gif)
 ***
 
 ### android_ui.js
 封装一些操作原生Android UI的函数。如startActivity(activityName)、home()、back()、finishCurrentActivity()、clickByText(text) 等等，命令使用得用attach './attach android_ui.js' 原理是借助radar.dex作为代理操作Android原生View。
 
-执行命令：frida android_ui.js
+推荐命令：frida android_ui.js
+
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/android_ui.gif)
 ***
 
@@ -653,6 +610,7 @@ frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网�
 在https双向认证的情况下，dump客户端证书为p12。存储位置:/data/user/0/{packagename}/client_keystore_{nowtime}.p12 证书密码: hooker。原理是hook java.security.KeyStore的getPrivateKey和getCertificate方法，因为客户端向服务发送证书必调这个方法。强烈建议keystore_dump.js用spawn模式启动，
 
 推荐命令：spawn keystore_dump.js
+
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_01.png)
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_02.png)
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_03.png)
@@ -662,7 +620,8 @@ frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网�
 ### edit_text.js
 跟踪获取Editview的getText()事件，并获取Editview的真实Class（很重要）。Editview一般绑定Search Action的实现代码，如果你抓取“搜索”接口。那么这个一定可以帮助你定位发送搜索请求的相关代码。
 
-执行命令：frida edit_text.js
+推荐命令：frida edit_text.js
+
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/edit_text.png)
 ***
 
@@ -670,7 +629,15 @@ frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网�
 trace JNI register_natives函数
 
 推荐命令：spawn hook_register_natives.js
+
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/hook_RN.gif)
 ***
 
 
+## hooker命令行快捷键
+
+- Ctrl + U：整行清空
+
+- Ctrl + W：删除一个单词
+
+- Ctrl + K：从光标删到行尾
