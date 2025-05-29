@@ -22,10 +22,10 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
 
 为什么你需要hooker？
 =================
-* [1. frida版JustTrustMe](#11-frida版JustTrustMe包括boringgssl)
-* [2. 自动化生成frida脚本](#7-自动化生成frida脚本)
-* [3. 快捷设置socks5无感代理](#10-快捷设置socks5无感代理)
-* [4. 整个使用过程非常舒适的命令行提示]()
+* [1. frida版JustTrustMe，通杀全网APP，且作者一直在持续维护升级](#11-frida版JustTrustMe包括boringgssl)
+* [2. 自动化生成frida脚本，1秒钟生成一个脚本，脚本备注详细可扩展性强](#7-自动化生成frida脚本)
+* [3. 快捷设置socks5代理，无需额外安装socksdroid等三方app实现无感知代理](#10-快捷设置socks5无感代理)
+* [4. 整个使用过程非常舒适的命令行提示，让你享受逆向的过程]()
 
 
 
