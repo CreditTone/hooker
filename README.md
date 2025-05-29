@@ -20,6 +20,15 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
 一张图证明你需要hooker
 ![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
 
+为什么你需要hooker？
+=================
+* [1. frida版JustTrustMe](#11-frida版JustTrustMe包括boringgssl)
+* [2. 自动化生成frida脚本](#7-自动化生成frida脚本)
+* [3. 快捷设置socks5无感代理](#10-快捷设置socks5无感代理)
+* [4. 整个使用过程非常舒适的命令行提示]()
+
+
+
 目录
 =================
 
@@ -30,11 +39,11 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
     * [4. 启动hooker](#4-启动hooker)
     * [5. 输入调试应用包名](#5-输入调试应用包名)
     * [6. 查看help信息](#6-查看help信息)
-    * [7. 生成指定类方法frida脚本](#7-生成指定类方法frida脚本)
+    * [7. 自动化生成frida脚本](#7-自动化生成frida脚本)
     * [8. 查看当前所有frida脚本](#8-查看当前所有frida脚本)
     * [9. attach执行指定frida脚本](#9-attach执行指定frida脚本)
-    * [10. 为app设置一个socks5代理](#10-为app设置一个socks5代理)
-    * [11. 执行justtrustme kill掉所有ssl验证（包括boringgssl）](#11-执行justtrustme-kill掉所有ssl验证包括boringgssl)
+    * [10. 快捷设置socks5无感代理](#10-快捷设置socks5无感代理)
+    * [11. frida版JustTrustMe](#11-frida版JustTrustMe包括boringgssl)
     * [12. spawn执行指定frida脚本](#12-spawn执行指定frida脚本)
     * [13. 取消代理设置](#13-取消代理设置)
     * [14. 重启app](#14-重启app)
@@ -174,7 +183,7 @@ exit                                         return to the previous level
 ***
 
 
-### 7. 生成指定类方法frida脚本
+### 7. 自动化生成frida脚本
 ![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
 - Command语法：gs, generatescript [class_name:method_name]
 
@@ -458,7 +467,7 @@ com.android.okhttp.Request.Builder.build()
 ```
 ***
 
-### 10. 为app设置一个socks5代理
+### 10. 快捷设置socks5无感代理
 ```shell
 某音 > proxy socks5://10.112.99.11:9998
 proxy socks5://10.112.99.11:9998 OK
@@ -467,7 +476,7 @@ proxy socks5://10.112.99.11:9998 OK
 ***
 
 
-### 11. 执行justtrustme kill掉所有ssl验证（包括boringgssl）
+### 11. frida版JustTrustMe（包括boringgssl）
 
 ```shell
 某音 > justtrustme
