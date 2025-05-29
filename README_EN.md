@@ -1,74 +1,75 @@
-免责声明
-本项目的所有内容仅供学习与技术交流使用，旨在帮助开发者理解移动应用的结构和工作原理。
+⚠️ Disclaimer
+All contents of this project are intended solely for learning and technical exchange purposes. The goal is to help developers understand the structure and internal mechanisms of mobile applications.
 
-本项目不包含任何针对特定应用的破解操作或侵权内容。
-针对某些app存在的简单解包技术内容在各大技术论坛网站均大量存在，并无对这些app造成实际损害
-本项目无意协助任何非法用途，包括但不限于绕过版权保护、修改应用功能或获取未经授权的数据。
-请确保在使用本项目工具时遵守相关法律法规，并仅用于个人学习或研究目的。
+This project does not contain any cracking operations or infringing content targeting specific applications.
+Some simple unpacking techniques related to certain apps are widely available on major technical forums and do not cause actual harm to the applications.
+This project is not intended to assist with any illegal activities, including but not limited to bypassing copyright protection, modifying app functionality, or accessing unauthorized data.
+Please ensure compliance with relevant laws and regulations when using the tools provided by this project, and use them only for personal learning or research purposes.
 
-<p>简体中文 | <a href="README_EN.md">English</a></p>
+<p>English | <a href="README.md">简体中文</a></p>
 
-# 欢迎使用hooker逆向工作台
+# 👋 Welcome to Hooker Reverse Engineering Toolkit
 ![GitHub stars](https://img.shields.io/github/stars/CreditTone/hooker?style=flat-square)
 ![GitHub forks](https://img.shields.io/github/forks/CreditTone/hooker?style=flat-square)
 ![GitHub code size](https://img.shields.io/github/languages/code-size/CreditTone/hooker?style=flat-square)
 ![Python](https://img.shields.io/badge/python-3.8.8-blue?style=flat-square)
 ![frida](https://img.shields.io/badge/frida-16.7.19-blue?style=flat-square)
 
-hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发人员提供一个舒适的命令行界面和一些常用的通杀脚本、自动化生成hook脚本、内存漫游探测activity和service、frida版JustTrustMe、boringssl unpinning全网app通杀
+Hooker is a reverse engineering toolkit based on Frida, designed to provide Android reverse engineers with a comfortable command-line interface,
 
-一张图证明你需要hooker
+A unified script package management system
+
+Universal (通杀) scripts
+
+Automated hook script generation
+
+In-memory roaming for detecting Activity and Service components
+
+A Frida-based implementation of JustTrustMe
+
+Global app support for boringssl unpinning
+
+One picture to prove why you need Hooker:
 ![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
 
-为什么你需要hooker？
-=================
-* [1. frida版JustTrustMe](#11-frida版JustTrustMe包括boringgssl)
-* [2. 自动化生成frida脚本](#7-自动化生成frida脚本)
-* [3. 快捷设置socks5无感代理](#10-快捷设置socks5无感代理)
-* [4. 整个使用过程非常舒适的命令行提示]()
+## 📚 Table of Contents
+
+- [Quick Start](#quick-start)
+  - [1. Clone the repository](#1-clone-the-repository)
+  - [2. Install Python dependencies](#2-install-python-dependencies)
+  - [3. Connect your rooted device via USB](#3-connect-your-rooted-device-via-usb)
+  - [4. Launch Hooker](#4-launch-hooker)
+  - [5. Enter the package name of the target app](#5-enter-the-package-name-of-the-target-app)
+  - [6. View help information](#6-view-help-information)
+  - [7. Generate Frida hook scripts for a specific class and method](#7-generate-frida-hook-scripts-for-a-specific-class-and-method)
+  - [8. List all available Frida scripts](#8-list-all-available-frida-scripts)
+  - [9. Attach and execute a specific Frida script](#9-attach-and-execute-a-specific-frida-script)
+  - [10. Set a SOCKS5 proxy for the app](#10-set-a-socks5-proxy-for-the-app)
+  - [11. Run JustTrustMe to disable all SSL pinning (including boringssl)](#11-run-justtrustme-to-disable-all-ssl-pinning-including-boringssl)
+  - [12. Spawn the app and execute a specific Frida script](#12-spawn-the-app-and-execute-a-specific-frida-script)
+  - [13. Clear the proxy settings](#13-clear-the-proxy-settings)
+  - [14. Restart the app](#14-restart-the-app)
+  - [15. Get the app's UID and PID](#15-get-uid-and-pid)
 
 
+# 🚀 Quick Start
 
-目录
-=================
-
-* [快速开始](#快速开始)
-    * [1. git clone项目](#1-git-clone项目)
-    * [2. 安装依赖](#2-安装python3依赖)
-    * [3. root手机usb连接](#3-root手机usb连接PC)
-    * [4. 启动hooker](#4-启动hooker)
-    * [5. 输入调试应用包名](#5-输入调试应用包名)
-    * [6. 查看help信息](#6-查看help信息)
-    * [7. 自动化生成frida脚本](#7-自动化生成frida脚本)
-    * [8. 查看当前所有frida脚本](#8-查看当前所有frida脚本)
-    * [9. attach执行指定frida脚本](#9-attach执行指定frida脚本)
-    * [10. 快捷设置socks5无感代理](#10-快捷设置socks5无感代理)
-    * [11. frida版JustTrustMe](#11-frida版JustTrustMe包括boringgssl)
-    * [12. spawn执行指定frida脚本](#12-spawn执行指定frida脚本)
-    * [13. 取消代理设置](#13-取消代理设置)
-    * [14. 重启app](#14-重启app)
-    * [15. 获取uid和pid](#15-获取uid和pid)
-    
-    
+Ensure your device is rooted. No need to manually start frida-server or do any configuration—Hooker handles everything for you.
 
 
-# 快速开始
-
-手机保证root，无需任何手动启动frida-server等一切配置，hooker会帮你搞定一切
-
-### 1. git clone项目
+### 1. Clone the repository
 ```shell
 stephen@ubuntu:~$ git clone https://github.com/CreditTone/hooker.git
 stephen@ubuntu:~$ cd hooker
 ```
 
-### 2. 安装python3依赖
+### 2. Install Python dependencies
 ```shell
 stephen@ubuntu:~/hooker$ pip3 install -r requirements.txt
 ```
 
 
-### 3. root手机usb连接PC
+### 3. Connect your rooted device via USB
 ```shell
 stephen@ubuntu:~/hooker$ adb devices
 List of devices attached
@@ -76,10 +77,9 @@ FA77C0301476	device
 ```
 
 
-### 4. 启动hooker
+### 4. Launch Hooker
 ```shell
 stephen@ubuntu:~/hooker$ python3 hooker.py
-bogon:hooker stephen256$ ./hooker.py
 hooker Let's enjoy reverse engineering together
 -----------------------------------------------------------------------------------------------
 PID   	APP                 	IDENTIFIER                         	EXIST_REVERSE_DIRECTORY
@@ -129,8 +129,7 @@ hooker(Identifier):
 ```
 ***
 
-
-### 5. 输入调试应用包名
+### 5. Enter the package name of the target app
 ```shell
 hooker(Identifier): cxm.shxpxx.sg
 ✅ App cxm.shxpxx.sg is already in the foreground
@@ -155,7 +154,7 @@ text_view.js                                     find_anit_frida_so.js
 
 
 
-### 6. 查看help信息
+### 6. View help information
 
 ```shell
 某皮 > help
@@ -183,13 +182,15 @@ exit                                         return to the previous level
 ***
 
 
-### 7. 自动化生成frida脚本
+### 7. Generate Frida hook scripts for a specific class and method
+
 ![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
-- Command语法：gs, generatescript [class_name:method_name]
+
+- Command Syntax：gs, generatescript [class_name:method_name]
 
 
-- 7.1 生成指定方法的frida hook脚本：
-gs okhttp3.Request$Builder:addHeader，参数部分(String, String)不是必须写的
+- 7.1 Generate a Frida hook script for a specific method:
+gs okhttp3.Request$Builder:addHeader — the parameter part (String, String) is not required.
 
 ```shell
 某信拍 > gs okhttp3.Request$Builder:addHeader(String, String)
@@ -218,7 +219,7 @@ Java.perform(function() {
 
 
 
-- 7.2 生成指定类的所有成员方法的frida hook脚本：
+- 7.2 Generate a Frida hook script for all member methods of a specified class:
 gs okhttp3.Request$Builder
 
 ```shell
@@ -347,8 +348,8 @@ Java.perform(function() {
 
 
 
-- 7.3 生成指定类的构造方法的frida hook脚本：
-gs okhttp3.Request$Builder:_ 或者gs okhttp3.Request$Builder:\<init\>
+- 7.3 Generate a Frida hook script for the constructor(s) of a specified class:
+gs okhttp3.Request$Builder:_ or gs okhttp3.Request$Builder:\<init\>
 
 ```shell
 某信拍 > gs okhttp3.Request$Builder:<init>()
@@ -383,10 +384,7 @@ Java.perform(function() {
 ```
 ***
 
-
-
-
-### 8. 查看当前所有frida脚本
+### 8. List all available Frida scripts
 ```shell
 某皮 > ls
 just_trust_me.js                                 empty.js                                         keystore_dump.js
@@ -401,7 +399,7 @@ just_trust_me_okhttp_hook_finder_for_android.js  text_view.js                   
 ```
 ***
 
-### 9. attach执行指定frida脚本
+### 9. Attach and execute a specific Frida script
 ```shell
 某信拍 > attach url.js
 ------------startFlag:0755liv1,objectHash:-915348569,thread(id:810,name:Wmda.EventUploadThread),timestamp:1747836814835---------------
@@ -467,7 +465,7 @@ com.android.okhttp.Request.Builder.build()
 ```
 ***
 
-### 10. 快捷设置socks5无感代理
+### 10. Set a SOCKS5 proxy for the app
 ```shell
 某音 > proxy socks5://10.112.99.11:9998
 proxy socks5://10.112.99.11:9998 OK
@@ -476,7 +474,7 @@ proxy socks5://10.112.99.11:9998 OK
 ***
 
 
-### 11. frida版JustTrustMe（包括boringgssl）
+### 11. Run JustTrustMe to disable all SSL pinning (including boringssl)
 
 ```shell
 某音 > justtrustme
@@ -518,7 +516,7 @@ okhttp3.CertificatePinner.check('java.lang.String', 'java.util.List') was hooked
 ***
 
 
-### 12. spawn执行指定frida脚本
+### 12. Spawn the app and execute a specific Frida script
 ```shell
 某信拍 > spawn just_trust_me.js
 Package name: com.xxx.buyxxphone
@@ -530,7 +528,7 @@ javax.net.ssl.SSLContext.init('[Ljavax.net.ssl.KeyManager;', '[Ljavax.net.ssl.Tr
 ***
 
 
-### 13. 取消代理设置
+### 13. Clear the proxy settings
 ```shell
 某音 > unproxy
 unproxy OK
@@ -540,7 +538,7 @@ unproxy OK
 
 
 
-### 14. 重启app
+### 14. Restart the app
 
 ```shell
 某信拍 > restart
@@ -549,8 +547,7 @@ restarts com.xxx.buyxxphone
 ***
 
 
-### 15. 获取uid和pid
-
+### 15. Get UID and PID
 ```shell
 某信拍 > uid
 10189
@@ -559,94 +556,3 @@ restarts com.xxx.buyxxphone
 ```
 ***
 
-# 应用目录通杀脚本
-
-### url.js
-
-该脚本会 hook 应用中 构造 URL 或 URI 对象的多个关键方法，用于打印或分析网络请求相关的信息（如目标 URL）
-
-Hook 的目标方法
-java.net.URI(String) 构造函数
-
-java.net.URL(String) 构造函数
-
-okhttp3.Request.Builder.build() 方法（常用于创建 HTTP 请求）
-
-com.android.okhttp.Request.Builder.build()（系统自带 okhttp）
-
-android.net.Uri.parse(String) 方法（处理 URI 的常用工具方法）
-
-推荐命令：frida url.js
-
-![](https://raw.githubusercontent.com/CreditTone/img_resources/main/url.jpg)
-***
-
-### just_trust_me.js
-frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网所有app，除非像美团一样做了登录风控抓不了。
-
-在hooker命令行模式封装了快捷命令justtrustme
-这在上文 [执行justtrustme kill掉所有ssl验证](#11-执行justtrustme-kill掉所有ssl验证包括boringgssl)有介绍
-
-亦可直接执行脚本 spawn just_trust_me.js
-![](https://raw.githubusercontent.com/CreditTone/img_resources/main/just_trust_me.gif)
-***
-
-### activity_events.js
-当你需要跟踪start某个Activity启动时可执行，获取startActivity的intent信息和调用堆栈。
-
-推荐命令：frida activity_events.js
-
-![](https://raw.githubusercontent.com/CreditTone/img_resources/main/activity_events.gif)
-***
-
-### click.js
-跟踪点击事件时可执行，并获取被点击View的真实View ClassName
-
-推荐命令：frida click.js
-
-![](https://raw.githubusercontent.com/CreditTone/img_resources/main/click.gif)
-***
-
-### android_ui.js
-封装一些操作原生Android UI的函数。如startActivity(activityName)、home()、back()、finishCurrentActivity()、clickByText(text) 等等，命令使用得用attach './attach android_ui.js' 原理是借助radar.dex作为代理操作Android原生View。
-
-推荐命令：frida android_ui.js
-
-![](https://raw.githubusercontent.com/CreditTone/img_resources/main/android_ui.gif)
-***
-
-### keystore_dump.js
-在https双向认证的情况下，dump客户端证书为p12。存储位置:/data/user/0/{packagename}/client_keystore_{nowtime}.p12 证书密码: hooker。原理是hook java.security.KeyStore的getPrivateKey和getCertificate方法，因为客户端向服务发送证书必调这个方法。强烈建议keystore_dump.js用spawn模式启动，
-
-推荐命令：spawn keystore_dump.js
-
-![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_01.png)
-![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_02.png)
-![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_03.png)
-![](https://raw.githubusercontent.com/CreditTone/img_resources/main/https_bothway_04.png)
-***
-
-### edit_text.js
-跟踪获取Editview的getText()事件，并获取Editview的真实Class（很重要）。Editview一般绑定Search Action的实现代码，如果你抓取“搜索”接口。那么这个一定可以帮助你定位发送搜索请求的相关代码。
-
-推荐命令：frida edit_text.js
-
-![](https://raw.githubusercontent.com/CreditTone/img_resources/main/edit_text.png)
-***
-
-### hook_register_natives.js
-trace JNI register_natives函数
-
-推荐命令：spawn hook_register_natives.js
-
-![](https://raw.githubusercontent.com/CreditTone/img_resources/main/hook_RN.gif)
-***
-
-
-## hooker命令行快捷键
-
-- Ctrl + U：整行清空
-
-- Ctrl + W：删除一个单词
-
-- Ctrl + K：从光标删到行尾
