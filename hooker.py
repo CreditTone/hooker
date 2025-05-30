@@ -35,6 +35,8 @@ import sqlite3
 import itertools
 import jsbeautifier
 import subprocess
+import filecmp
+from git import Repo
 from datetime import datetime
 from collections import Counter
 from androguard.core.bytecodes import apk
@@ -464,7 +466,7 @@ def attach_rpc(use_v8=False):
     # print(f"rpc_jscode:{resource_rpc_jscode}")
     online_script.on('message', on_message)
     online_script.load()
-    online_script.exports_sync.loadradardex()
+    # online_script.exports_sync.loadradardex()
     return online_session, online_script
 
 def attach(script_file, use_v8=False):
@@ -622,7 +624,7 @@ def hook_js(hookCmdArg, savePath = None):
     packageName = current_identifier
     try:
         ganaretoionJscode = ""
-        online_session, online_script = attach_rpc(use_v8=True);
+        online_session, online_script = attach_rpc(use_v8=False);
         appversion = current_identifier_version
         spaceSpatrater = hookCmdArg.find(":")
         className = hookCmdArg
@@ -1411,19 +1413,65 @@ def list_third_party_apps():
             print(f"{pad_display(app.pid, 6)}\t{pad_display(app.name, 20)}\t{pad_display(app.identifier, 35)}\t{'✅' if reverse_directory_exist else '❌'}")
             identifier_list.append(app.identifier)
     return identifier_list
-        
+
+def upgrade():
+    info("Upgrading hooker")
+    repo_url = "https://github.com/CreditTone/hooker.git"
+    upgrade_dir = "./.upgrade_hooker"
+    Repo.clone_from(repo_url, upgrade_dir)
+    info("Clone completed!")
+    def copy_if_different(a: str, b: str):
+        """
+        如果文件 b 不存在，或者 a 和 b 内容不同，
+        则把 a 覆盖复制到 b。
+        """
+        # 如果 b 不存在，直接复制
+        if not os.path.exists(b):
+            shutil.copy2(a, b)
+            print(f"{b} 不存在，已复制 {a} 到 {b}")
+            return
+        # 如果 a 和 b 内容相同，不做操作
+        if filecmp.cmp(a, b, shallow=False):
+            print(f"{a} 和 {b} 内容相同，不复制")
+            return
+        # 内容不同，复制
+        shutil.copy2(a, b)
+        print(f"{a} 和 {b} 内容不同，已覆盖复制")
+    def update_dir_files(remote_dir, local_dir):
+        for root, dirs, files in os.walk(f"{remote_dir}/js/"):
+            for file in files:
+                file_path = os.path.join(root, file)
+                copy_if_different(file_path, f"{local_dir}/{file}")
+    update_dir_files(f"{upgrade_dir}/js", "js")
+    update_dir_files(f"{upgrade_dir}/mobile-deploy", "mobile-deploy")
+    copy_if_different(f"{upgrade_dir}/hooker.py", "hooker.py")
+    copy_if_different(f"{upgrade_dir}/README.md", "README.md")
+    copy_if_different(f"{upgrade_dir}/README_EN.md", "README_EN.md")
+    shutil.rmtree(upgrade_dir)
+    info('Please restart hooker')
+    sys.exit(2);
+    
+if len(sys.argv) > 1:
+    arg = sys.argv[1]
+    if arg == "upgrade":
+        upgrade()
+    
 while True:
     try:
         info("hooker Let's enjoy reverse engineering together")
         info("-----------------------------------------------------------------------------------------------")
-        identifier_list = list_third_party_apps()
-        identifier_list.append("exit")
-        identifier_list.append("quit")
+        first_command_list = list_third_party_apps()
+        first_command_list.append("exit")
+        first_command_list.append("quit")
+        first_command_list.append("upgrade")
         print("Please enter the identifier that needs to be reversed")
-        identifier = cmd_session.prompt('hooker(Identifier): ', completer=WordCompleter(identifier_list, ignore_case=False, match_middle=True, WORD=True))  
+        identifier = cmd_session.prompt('hooker(Identifier): ', completer=WordCompleter(first_command_list, ignore_case=False, match_middle=True, WORD=True))  
         if identifier == 'exit' or identifier == 'exit()' or identifier == 'quit':
             info('ByeBye!')
             sys.exit(2);
+            break
+        if identifier == 'upgrade':
+            upgrade()
             break
         if identifier not in identifier_list:
             warn("The application does not exist. Please enter an existing application")
