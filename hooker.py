@@ -1418,8 +1418,19 @@ def upgrade():
     info("Upgrading hooker")
     repo_url = "https://github.com/CreditTone/hooker.git"
     upgrade_dir = "./.upgrade_hooker"
-    Repo.clone_from(repo_url, upgrade_dir)
-    info("Clone completed!")
+    if os.path.exists(upgrade_dir):
+        # 目录存在，执行 git pull
+        try:
+            repo = Repo(upgrade_dir)
+            origin = repo.remotes.origin
+            origin.pull()
+            info("Repository updated with 'git pull'.")
+        except Exception as e:
+            info(f"Failed to update repository: {e}")
+    else:
+        # 目录不存在，执行 git clone
+        Repo.clone_from(repo_url, upgrade_dir)
+        info("Repository cloned.")
     def copy_if_different(a: str, b: str):
         """
         如果文件 b 不存在，或者 a 和 b 内容不同，
@@ -1428,16 +1439,17 @@ def upgrade():
         # 如果 b 不存在，直接复制
         if not os.path.exists(b):
             shutil.copy2(a, b)
-            info(f"The contents of {a} and {b} are different. Overwrote {b} with {a}.")
+            info(f"Updating {b}")
             return
         # 如果 a 和 b 内容相同，不做操作
         if filecmp.cmp(a, b, shallow=False):
+            #info(f"a 和 b 内容相同，不做操作 {a} {b}")
             return
         # 内容不同，复制
         shutil.copy2(a, b)
-        info(f"The contents of {a} and {b} are different. Overwrote {b} with {a}.")
+        info(f"Updating {b}")
     def update_dir_files(remote_dir, local_dir):
-        for root, dirs, files in os.walk(f"{remote_dir}/js/"):
+        for root, dirs, files in os.walk(remote_dir):
             for file in files:
                 file_path = os.path.join(root, file)
                 copy_if_different(file_path, f"{local_dir}/{file}")
