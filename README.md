@@ -27,6 +27,10 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
 * [4. 整个使用过程非常舒适的命令行提示，让你享受逆向的过程]()
 ![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
 
+
+### Hooker逆向工作台交流群
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/Wechat_Group.jpg)
+
 目录
 =================
 
@@ -53,6 +57,7 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
 # 快速开始
 
 手机保证root，无需任何手动启动frida-server等一切配置，hooker会帮你搞定一切
+兼容Mac/Linux
 
 ### 1. git clone项目
 ```shell
