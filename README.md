@@ -50,7 +50,7 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
     * [13. 取消代理设置](#13-取消代理设置)
     * [14. 重启app](#14-重启app)
     * [15. 获取uid和pid](#15-获取uid和pid)
-    * [16. upgrade](#16-upgrade)
+    * [16. hooker自动升级](#16-upgrade)
     
     
 
