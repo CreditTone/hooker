@@ -1418,8 +1418,19 @@ def upgrade():
     info("Upgrading hooker")
     repo_url = "https://github.com/CreditTone/hooker.git"
     upgrade_dir = "./.upgrade_hooker"
-    Repo.clone_from(repo_url, upgrade_dir)
-    info("Clone completed!")
+    if os.path.exists(upgrade_dir):
+        # 目录存在，执行 git pull
+        try:
+            repo = Repo(upgrade_dir)
+            origin = repo.remotes.origin
+            origin.pull()
+            info("Repository updated with 'git pull'.")
+        except Exception as e:
+            info(f"Failed to update repository: {e}")
+    else:
+        # 目录不存在，执行 git clone
+        Repo.clone_from(repo_url, upgrade_dir)
+        info("Repository cloned.")
     def copy_if_different(a: str, b: str):
         """
         如果文件 b 不存在，或者 a 和 b 内容不同，
