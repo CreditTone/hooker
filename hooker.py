@@ -1428,15 +1428,14 @@ def upgrade():
         # 如果 b 不存在，直接复制
         if not os.path.exists(b):
             shutil.copy2(a, b)
-            print(f"{b} 不存在，已复制 {a} 到 {b}")
+            info(f"The contents of {a} and {b} are different. Overwrote {b} with {a}.")
             return
         # 如果 a 和 b 内容相同，不做操作
         if filecmp.cmp(a, b, shallow=False):
-            print(f"{a} 和 {b} 内容相同，不复制")
             return
         # 内容不同，复制
         shutil.copy2(a, b)
-        print(f"{a} 和 {b} 内容不同，已覆盖复制")
+        info(f"The contents of {a} and {b} are different. Overwrote {b} with {a}.")
     def update_dir_files(remote_dir, local_dir):
         for root, dirs, files in os.walk(f"{remote_dir}/js/"):
             for file in files:
