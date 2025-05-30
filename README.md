@@ -565,8 +565,16 @@ restarts com.xxx.buyxxphone
 
 ### 16. upgrade
 
+hooker更新频繁，平均日更约10次。upgrade帮助您随时同步最新代码和相关文件到本地。
+
 ```shell
-stephen@ubuntu:~/hooker$ python3 hooker.py upgrade
+MacBook-Pro-32G-2T:hooker stephen256$ python3 hooker.py upgrade
+Upgrading hooker
+Repository updated with 'git pull'.
+Updating mobile-deploy/libext64.so
+Updating mobile-deploy/libext.so
+Updating mobile-deploy/libevent-2.1.so
+Please restart hooker
 ```
 ***
 
