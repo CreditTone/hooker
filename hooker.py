@@ -1458,7 +1458,6 @@ def upgrade():
     copy_if_different(f"{upgrade_dir}/hooker.py", "hooker.py")
     copy_if_different(f"{upgrade_dir}/README.md", "README.md")
     copy_if_different(f"{upgrade_dir}/README_EN.md", "README_EN.md")
-    shutil.rmtree(upgrade_dir)
     info('Please restart hooker')
     sys.exit(2);
     
