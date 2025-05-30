@@ -51,6 +51,8 @@ from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.patch_stdout import patch_stdout
 from wcwidth import wcswidth
 
+from adbutils.errors import AdbError
+
 def withColor(string, fg, bg=49):
     print("\33[0m\33[%d;%dm%s\33[0m" % (fg, bg, string))
 #front color
@@ -1476,7 +1478,8 @@ while True:
         first_command_list.append("quit")
         first_command_list.append("upgrade")
         print("Please enter the identifier that needs to be reversed")
-        identifier = cmd_session.prompt('hooker(Identifier): ', completer=WordCompleter(first_command_list, ignore_case=False, match_middle=True, WORD=True))  
+        identifier = cmd_session.prompt('hooker(Identifier): ', completer=WordCompleter(first_command_list, ignore_case=False, match_middle=True, WORD=True)) 
+        identifier = identifier.strip()
         if identifier == 'exit' or identifier == 'exit()' or identifier == 'quit':
             info('ByeBye!')
             sys.exit(2);
