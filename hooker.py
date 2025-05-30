@@ -34,6 +34,7 @@ import queue
 import sqlite3
 import itertools
 import jsbeautifier
+import subprocess
 from datetime import datetime
 from collections import Counter
 from androguard.core.bytecodes import apk
@@ -171,10 +172,22 @@ def pull_file_to_local(remote_file, local_path, is_debug=True):
     adb_device.sync.pull(remote_file, local_path)
     if is_debug:
         info(f"pull {remote_file} to {local_path} successful")
-
+        
 def push_file_to_remote(local_path, remote_path, is_debug=True):
     # info(f"push {local_path} to {remote_path}")
-    adb_device.sync.push(local_path, remote_path)
+    try:
+        # 先尝试标准推送
+        adb_device.sync.push(local_path, remote_path)
+    except AdbError as e:
+        if "API level" in str(e):
+            info("检测到API兼容性问题，降级到更基本的adb push命令")
+            # 降级到更基本的adb push命令
+            subprocess.run(
+                ["adb", "push", local_path, remote_path],
+                check=True
+            )
+        else:
+            raise
     if is_debug:
         info(f"push {local_path} to {remote_path} successful")
     
@@ -311,7 +324,7 @@ def ensure_app_in_foreground(package_name):
     else:
         warn("UID not found.")
     apk_path = adb_device.shell(f"pm path {package_name}").strip().replace("package:", "")
-    apk_path = re.search(r"/data/app/[^/]+/base.apk", apk_path).group(0)
+    apk_path = apk_path[:apk_path.index("base.apk")+8]
     #print(f"apk_path:{apk_path}")
     appinstall_path = apk_path.rsplit("/", 1)[0]
     appinfo = None
@@ -462,6 +475,7 @@ def attach(script_file, use_v8=False):
         warn(f"attach {script_file} File Not found")
         return None, None
     script_jscode = read_local_file(script_file)
+    script_jscode = script_jscode
     global frida_device
     online_session = None
     online_script = None
@@ -474,7 +488,7 @@ def attach(script_file, use_v8=False):
         online_script = online_session.create_script(script_jscode, runtime="v8")
     else:
         online_script = online_session.create_script(script_jscode)
-    online_script.on('message', on_message)
+    #online_script.on('message', on_message)
     online_script.load()
     #sys.stdin.read()
     return online_session, online_script
@@ -506,7 +520,7 @@ def detach(online_session):
     if online_session != None:
         online_session.detach()
  
-def existsClass(target,className):
+def exists_class(target, className):
     online_session = None
     online_script = None
     try:
@@ -605,7 +619,6 @@ def init_working_dir_enverment():
     pull_file_to_local(f"{current_identifier_install_path}/base.apk", current_local_apk_path)
     info(f"Working directory init successful")
         
-
 def hook_js(hookCmdArg, savePath = None):
     online_session = None
     online_script = None
@@ -725,11 +738,12 @@ def execute_script(script_file, is_spawn=False):
         return
     online_session = None
     online_script = None
+    use_v8 = "just_trust_me.js" in script_file
     try:
         if is_spawn:
-            online_session, online_script = spawn(f"{current_identifier}/{script_file}", True)
+            online_session, online_script = spawn(f"{current_identifier}/{script_file}", use_v8)
         else:
-            online_session, online_script = attach(f"{current_identifier}/{script_file}", True)
+            online_session, online_script = attach(f"{current_identifier}/{script_file}", use_v8)
         while online_session != None:
             try:
                 with patch_stdout():
@@ -743,7 +757,9 @@ def execute_script(script_file, is_spawn=False):
     except Exception:
         print(traceback.format_exc())  
     finally:
+        info(f"detach {script_file}")
         detach(online_session)
+        info(f"detach {script_file} success")
         info(f"{script_file} exits successful")
         if is_spawn:
             restart_app(current_identifier)
