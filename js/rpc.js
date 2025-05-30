@@ -212,7 +212,6 @@ rpc.exports = {
                 Java.openClassFile('/data/local/tmp/radar.dex').load();
             }
         });
-
     },
     containsclass: function(className) {
         var result = false;
@@ -416,3 +415,11 @@ rpc.exports = {
         return mainactivityName;
     },
 };
+
+Java.perform(function() {
+    if (!class_exists("gz.radar.ClassRadar")) {
+        var context = Java.use("android.app.ActivityThread").currentApplication().getApplicationContext();
+        var packageName = context.getPackageName();
+        Java.openClassFile('/data/local/tmp/radar.dex').load();
+    }
+});

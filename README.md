@@ -28,7 +28,7 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
 ![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
 
 
-### Hooker逆向工作台交流群
+### Hooker逆向工作交流群
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/Wechat_Group.jpg)
 
 目录
@@ -50,6 +50,7 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
     * [13. 取消代理设置](#13-取消代理设置)
     * [14. 重启app](#14-重启app)
     * [15. 获取uid和pid](#15-获取uid和pid)
+    * [16. upgrade](#16-upgrade)
     
     
 
@@ -559,6 +560,13 @@ restarts com.xxx.buyxxphone
 10189
 某信拍 > pid
 3509
+```
+***
+
+### 16. upgrade
+
+```shell
+stephen@ubuntu:~/hooker$ python3 hooker.py upgrade
 ```
 ***
 
