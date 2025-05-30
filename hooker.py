@@ -179,15 +179,12 @@ def push_file_to_remote(local_path, remote_path, is_debug=True):
         # 先尝试标准推送
         adb_device.sync.push(local_path, remote_path)
     except AdbError as e:
-        if "API level" in str(e):
-            info("检测到API兼容性问题，降级到更基本的adb push命令")
-            # 降级到更基本的adb push命令
-            subprocess.run(
-                ["adb", "push", local_path, remote_path],
-                check=True
-            )
-        else:
-            raise
+        #info("检测到API兼容性问题，降级到更基本的adb push命令")
+        # 降级到更基本的adb push命令
+        subprocess.run(
+            ["adb", "push", local_path, remote_path],
+            check=True
+        )
     if is_debug:
         info(f"push {local_path} to {remote_path} successful")
     
@@ -816,11 +813,11 @@ def set_proxy(proxy):
             "}"
         )
     if not check_remote_file_exists("/sdcard/redsocks"):
-        push_file_to_remote(f"mobile-deploy/redsocks", "/sdcard/redsocks")
+        push_file_to_remote(f"mobile-deploy/redsocks", "/sdcard/redsocks", False)
         run_su_command(f"cp /sdcard/redsocks /data/local/tmp/redsocks")
         run_su_command(f"chmod 700 /data/local/tmp/redsocks")
     if not check_remote_file_exists("/sdcard/libevent-2.1.so"):
-        push_file_to_remote(f"mobile-deploy/libevent-2.1.so", "/sdcard/libevent-2.1.so")
+        push_file_to_remote(f"mobile-deploy/libevent-2.1.so", "/sdcard/libevent-2.1.so", False)
         run_su_command(f"cp /sdcard/libevent-2.1.so /data/local/tmp/libevent-2.1.so")
     if not check_remote_file_exists("/data/local/tmp/redsocks"):
         run_su_command(f"cp /sdcard/redsocks /data/local/tmp/redsocks")
