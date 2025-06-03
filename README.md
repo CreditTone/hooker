@@ -29,7 +29,7 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
 
 
 ### Hooker逆向工作交流群
-![](https://raw.githubusercontent.com/CreditTone/img_resources/main/Wechat_Group.jpg)
+<img src="https://raw.githubusercontent.com/CreditTone/img_resources/main/Wechat_Group.jpg" width="300">
 
 目录
 =================
@@ -52,38 +52,43 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
     * [15. 获取uid和pid](#15-获取uid和pid)
     * [16. hooker自动升级](#16-upgrade)
     
-    
-
-
-# 快速开始
-
-手机保证root，无需任何手动启动frida-server等一切配置，hooker会帮你搞定一切
+手机保证root，无需任何手动启动frida-server等一切配置，hooker会帮你搞定一切    
 兼容Mac/Linux
+
+# Mac/Linux配置hooker运行环境
 
 ### 1. git clone项目
 ```shell
-stephen@ubuntu:~$ git clone https://github.com/CreditTone/hooker.git
-stephen@ubuntu:~$ cd hooker
+stephen@Mac:~$ git clone https://github.com/CreditTone/hooker.git
+stephen@Mac:~$ cd hooker
 ```
 
 ### 2. 安装python3依赖
 ```shell
-stephen@ubuntu:~/hooker$ pip3 install -r requirements.txt
+stephen@Mac:~/hooker$ pip3 install -r requirements.txt
 ```
 
 
 ### 3. root手机usb连接PC
 ```shell
-stephen@ubuntu:~/hooker$ adb devices
+stephen@Mac:~/hooker$ adb devices
 List of devices attached
 FA77C0301476	device
 ```
 
 
 ### 4. 启动hooker
+
+这里注意，一定要cd到hooker目录下执行python3 hooker.py。不要用绝对路径去执行，否则会报错
+
+字段含义如下
+- PID：当前app的主进程id，如果app没有启动则为0
+- APP：app的名称
+- IDENTIFIER：app的包名
+- EXIST_REVERSE_DIRECTORY：如果app曾经被调试过就是✅，从没被调试过就是❌
+
 ```shell
-stephen@ubuntu:~/hooker$ python3 hooker.py
-bogon:hooker stephen256$ ./hooker.py
+stephen@Mac:~/hooker$ python3 hooker.py
 hooker Let's enjoy reverse engineering together
 -----------------------------------------------------------------------------------------------
 PID   	APP                 	IDENTIFIER                         	EXIST_REVERSE_DIRECTORY
@@ -133,8 +138,50 @@ hooker(Identifier):
 ```
 ***
 
+# Windows配置hooker运行环境
+
+
+### 1. 安装wsl ubuntn24.04
+访问：https://learn.microsoft.com/zh-cn/windows/wsl/install-manual#downloading-distributions下载Ubuntu24.04
+双击Ubuntu2404-240425.AppxBundle安装Ubuntu的wsl
+
+
+### 2. 进入wsl，配置代理
+- cmd窗口输入wsl进入ubuntu命令行
+- sudo su
+配置一下翻墙代理，如果你有的化
+- export http_proxy="http://10.115.164.50:8080"
+- export https_proxy="http://10.115.164.50:8080"
+
+### 3. 安装python3.8和frida
+- apt update
+- apt apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev 
+libreadline-dev libsqlite3-dev wget curl llvm xz-utils tk-dev 
+libffi-dev liblzma-dev
+- apt install -y git
+- apt install -y pyenv
+- pyenv install 3.8.8
+- pyenv local 3.8
+- git clone https://github.com/CreditTone/hooker
+- cd hooker
+- pip3.8 install -r requirements.txt
+
+### 4. 安装python3.8和frida
+- python3.8 hooker.py
+
+
 
 ### 5. 输入调试应用包名
+
+
+- 保证应用活跃是frida逆向的必要条件，hooker将帮你检测当前app是否启动且在手机前台，如不在启动帮你启动，如不在前台帮你切到前台
+
+- 每个app一个独立的frida脚本工作目录，hooker将在当前目录下创建应用工作目录，应用目录名称为应用的Identifier。主要存放一些你可能需要的frida通杀脚本和快捷命令。
+
+- frida通杀脚本可以在hooker交互式命令行下用attach/spawm执行，也可以手动cd到应用目录用快捷命令或原生的frida命令执行。
+
+- 你可以修改应用工作目录下任何脚本
+
 ```shell
 hooker(Identifier): cxm.shxpxx.sg
 ✅ App cxm.shxpxx.sg is already in the foreground
