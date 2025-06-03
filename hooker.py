@@ -15,8 +15,6 @@ import os
 import io
 import re
 import stat
-import pwd
-import grp
 import time
 import json
 import getopt
@@ -756,10 +754,8 @@ def execute_script(script_file, is_spawn=False):
     except Exception:
         print(traceback.format_exc())  
     finally:
-        info(f"detach {script_file}")
         detach(online_session)
-        info(f"detach {script_file} success")
-        info(f"{script_file} exits successful")
+        info(f"{script_file} detach successful")
         if is_spawn:
             restart_app(current_identifier)
             
