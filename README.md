@@ -57,7 +57,7 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
 
 # Mac/Linux配置hooker运行环境
 
-windows请先完成[WSL安装](#windows%E5%AE%89%E8%A3%85wsl)，然后跳回到这里
+Windows请先完成[WSL安装](#windows%E5%AE%89%E8%A3%85wsl)，然后跳回到这里
 
 ### 1. git clone项目
 ```shell
@@ -143,10 +143,9 @@ hooker(Identifier):
 
 ### 5. 输入调试应用包名
 
+- 输入调试应用包名回车后，如果是第一次调试应用，hooker将创建应用目录，应用目录名称为应用的Identifier，用于存放所有js脚本和快捷命令。
 
-- 保证应用活跃是frida逆向的必要条件，hooker将帮你检测当前app是否启动且在手机前台，如不在启动帮你启动，如不在前台帮你切到前台
-
-- 每个app一个独立的frida脚本工作目录，hooker将在当前目录下创建应用工作目录，应用目录名称为应用的Identifier。主要存放一些你可能需要的frida通杀脚本和快捷命令。
+- hooker将帮你检测当前app是否启动且在手机前台，如不在启动帮你启动，如不在前台帮你切到前台
 
 - frida通杀脚本可以在hooker交互式命令行下用attach/spawm执行，也可以手动cd到应用目录用快捷命令或原生的frida命令执行。
 
@@ -178,6 +177,8 @@ text_view.js                                     find_anit_frida_so.js
 
 ### 6. 查看help信息
 
+在使用hooker过程中，如不记得命令，可随时调出help查看操作手册。
+
 ```shell
 某皮 > help
 h, help                                      show this help message
@@ -205,6 +206,9 @@ exit                                         return to the previous level
 
 
 ### 7. 自动化生成frida脚本
+自动化生成脚本是hooker的杀器。虽然现在AI大模型也可以写，但是我们离内存近，更快，也不需要联网。生成的脚本自带打印堆栈等信息，和一些你可能需要的扩展方法。
+另外在生成脚本的过程中，命令行类名、方法名提示也可以当作搜索使用，能通过关键词快速搜索定位类方法。hooker搜索类比jadx快很多，不信就试试......
+
 ![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
 - Command语法：gs, generatescript [class_name:method_name]
 
@@ -408,6 +412,9 @@ Java.perform(function() {
 
 
 ### 8. 查看当前所有frida脚本
+
+查看应用目录下所有的脚本，这里有hooker给你生成的通杀脚本，也有您生成的指定hook脚本，您可以修改定制。
+
 ```shell
 某皮 > ls
 just_trust_me.js                                 empty.js                                         keystore_dump.js
@@ -423,6 +430,10 @@ just_trust_me_okhttp_hook_finder_for_android.js  text_view.js                   
 ***
 
 ### 9. attach执行指定frida脚本
+
+在hooker下执行frida脚本，您只需要输入attach【空格】脚本名称会自动弹出提示。上下选择需要的脚本按tab键即可自动输入全名称。
+这是hooker在追求极致的工匠精神，帮助您从开波音737到开空客320的跳跃。
+
 ```shell
 某信拍 > attach url.js
 ------------startFlag:0755liv1,objectHash:-915348569,thread(id:810,name:Wmda.EventUploadThread),timestamp:1747836814835---------------
@@ -489,6 +500,10 @@ com.android.okhttp.Request.Builder.build()
 ***
 
 ### 10. 快捷设置socks5无感代理
+
+一键设置代理。
+
+
 ```shell
 某音 > proxy socks5://10.112.99.11:9998
 proxy socks5://10.112.99.11:9998 OK
@@ -498,6 +513,8 @@ proxy socks5://10.112.99.11:9998 OK
 
 
 ### 11. frida版JustTrustMe（包括boringgssl）
+
+关掉SSL证书校验
 
 ```shell
 某音 > justtrustme
@@ -552,6 +569,9 @@ javax.net.ssl.SSLContext.init('[Ljavax.net.ssl.KeyManager;', '[Ljavax.net.ssl.Tr
 
 
 ### 13. 取消代理设置
+
+一键取消代理
+
 ```shell
 某音 > unproxy
 unproxy OK
@@ -562,6 +582,7 @@ unproxy OK
 
 
 ### 14. 重启app
+
 
 ```shell
 某信拍 > restart
@@ -582,7 +603,7 @@ restarts com.xxx.buyxxphone
 
 ### 16. upgrade
 
-hooker更新频繁，平均日更约10次。upgrade帮助您随时同步最新代码和相关文件到本地。
+hooker更新频繁，平均周更约10次。upgrade帮助您随时同步最新代码和相关文件到本地。
 
 ```shell
 MacBook-Pro-32G-2T:hooker stephen256$ python3 hooker.py upgrade
@@ -696,6 +717,8 @@ WSL是适用于Linux 的Windows 子系统（WSL）允许开发人员直接在Win
 窗口输入wsl进入ubuntu命令行
 
 - cmd
+
+- wsl
 
 切换到root用户
 
