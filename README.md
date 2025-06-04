@@ -57,6 +57,8 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
 
 # Mac/Linux配置hooker运行环境
 
+windows请先完成[WSL安装](Windows安装WSL)，然后跳回到这里
+
 ### 1. git clone项目
 ```shell
 stephen@Mac:~$ git clone https://github.com/CreditTone/hooker.git
@@ -137,38 +139,6 @@ Please enter the identifier that needs to be reversed
 hooker(Identifier):
 ```
 ***
-
-# Windows配置hooker运行环境
-
-
-### 1. 安装wsl ubuntn24.04
-访问：https://learn.microsoft.com/zh-cn/windows/wsl/install-manual#downloading-distributions下载Ubuntu24.04
-双击Ubuntu2404-240425.AppxBundle安装Ubuntu的wsl
-
-
-### 2. 进入wsl，配置代理
-- cmd窗口输入wsl进入ubuntu命令行
-- sudo su
-配置一下翻墙代理，如果你有的化
-- export http_proxy="http://10.115.164.50:8080"
-- export https_proxy="http://10.115.164.50:8080"
-
-### 3. 安装python3.8和frida
-- apt update
-- apt apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev 
-libreadline-dev libsqlite3-dev wget curl llvm xz-utils tk-dev 
-libffi-dev liblzma-dev
-- apt install -y git
-- apt install -y pyenv
-- pyenv install 3.8.8
-- pyenv local 3.8
-- git clone https://github.com/CreditTone/hooker
-- cd hooker
-- pip3.8 install -r requirements.txt
-
-### 4. 安装python3.8和frida
-- python3.8 hooker.py
-
 
 
 ### 5. 输入调试应用包名
@@ -708,6 +678,43 @@ trace JNI register_natives函数
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/hook_RN.gif)
 ***
 
+
+
+## Windows安装WSL
+
+WSL是适用于Linux 的Windows 子系统（WSL）允许开发人员直接在Windows 上运行GNU/Linux 环境（包括大多数命令行工具、实用工具和应用程序），无需传统虚拟机或双启动设置的开销。
+
+### 1. 安装wsl ubuntn24.04
+访问：https://learn.microsoft.com/zh-cn/windows/wsl/install-manual#downloading-distributions
+
+下载Ubuntu24.04
+
+双击Ubuntu2404-240425.AppxBundle 安装Ubuntu
+
+
+### 2. 进入wsl，配置代理
+窗口输入wsl进入ubuntu命令行
+
+- cmd
+
+切换到root用户
+
+- sudo su
+
+配置翻墙代理，如果你有
+
+- export http_proxy="http://10.115.164.50:8080"
+- export https_proxy="http://10.115.164.50:8080"
+
+### 3. 安装python3.8和frida
+- apt update
+- apt apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev 
+libreadline-dev libsqlite3-dev wget curl llvm xz-utils tk-dev 
+libffi-dev liblzma-dev
+- apt install -y git
+- apt install -y pyenv
+- pyenv install 3.8.8
+- pyenv local 3.8
 
 ## hooker命令行快捷键
 
