@@ -81,9 +81,9 @@ FA77C0301476	device
 
 ### 4. 启动hooker
 
-这里注意，一定要cd到hooker目录下执行python3 hooker.py。不要用绝对路径去执行，否则会报错
+这里注意，不要用绝对路径去执行，一定要cd到hooker目录下执行python3 hooker.py
 
-字段含义如下
+hooker启动后将收集收集所有可调试app的信息，字段含义如下
 - PID：当前app的主进程id，如果app没有启动则为0
 - APP：app的名称
 - IDENTIFIER：app的包名
