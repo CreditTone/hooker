@@ -57,6 +57,8 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
 
 # Mac/Linux配置hooker运行环境
 
+Windows请先完成[WSL安装](#windows%E5%AE%89%E8%A3%85wsl)，然后跳回到这里
+
 ### 1. git clone项目
 ```shell
 stephen@Mac:~$ git clone https://github.com/CreditTone/hooker.git
@@ -79,9 +81,9 @@ FA77C0301476	device
 
 ### 4. 启动hooker
 
-这里注意，一定要cd到hooker目录下执行python3 hooker.py。不要用绝对路径去执行，否则会报错
+这里注意，不要用绝对路径去执行，一定要cd到hooker目录下执行python3 hooker.py
 
-字段含义如下
+hooker启动后将收集所有可调试app的信息，字段含义如下
 - PID：当前app的主进程id，如果app没有启动则为0
 - APP：app的名称
 - IDENTIFIER：app的包名
@@ -138,45 +140,12 @@ hooker(Identifier):
 ```
 ***
 
-# Windows配置hooker运行环境
-
-
-### 1. 安装wsl ubuntn24.04
-访问：https://learn.microsoft.com/zh-cn/windows/wsl/install-manual#downloading-distributions下载Ubuntu24.04
-双击Ubuntu2404-240425.AppxBundle安装Ubuntu的wsl
-
-
-### 2. 进入wsl，配置代理
-- cmd窗口输入wsl进入ubuntu命令行
-- sudo su
-配置一下翻墙代理，如果你有的化
-- export http_proxy="http://10.115.164.50:8080"
-- export https_proxy="http://10.115.164.50:8080"
-
-### 3. 安装python3.8和frida
-- apt update
-- apt apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev 
-libreadline-dev libsqlite3-dev wget curl llvm xz-utils tk-dev 
-libffi-dev liblzma-dev
-- apt install -y git
-- apt install -y pyenv
-- pyenv install 3.8.8
-- pyenv local 3.8
-- git clone https://github.com/CreditTone/hooker
-- cd hooker
-- pip3.8 install -r requirements.txt
-
-### 4. 安装python3.8和frida
-- python3.8 hooker.py
-
-
 
 ### 5. 输入调试应用包名
 
+- 输入调试应用包名回车后，如果是第一次调试应用，hooker将创建应用目录，应用目录名称为应用的Identifier，用于存放所有js脚本和快捷命令。
 
-- 保证应用活跃是frida逆向的必要条件，hooker将帮你检测当前app是否启动且在手机前台，如不在启动帮你启动，如不在前台帮你切到前台
-
-- 每个app一个独立的frida脚本工作目录，hooker将在当前目录下创建应用工作目录，应用目录名称为应用的Identifier。主要存放一些你可能需要的frida通杀脚本和快捷命令。
+- hooker将帮你检测当前app是否启动且在手机前台，如不在启动帮你启动，如不在前台帮你切到前台
 
 - frida通杀脚本可以在hooker交互式命令行下用attach/spawm执行，也可以手动cd到应用目录用快捷命令或原生的frida命令执行。
 
@@ -208,6 +177,8 @@ text_view.js                                     find_anit_frida_so.js
 
 ### 6. 查看help信息
 
+在使用hooker过程中，如不记得命令，可随时调出help查看操作手册。
+
 ```shell
 某皮 > help
 h, help                                      show this help message
@@ -235,6 +206,9 @@ exit                                         return to the previous level
 
 
 ### 7. 自动化生成frida脚本
+自动化生成脚本是hooker的杀器。虽然现在AI大模型也可以写，但是我们离内存近，更快，也不需要联网。生成的脚本自带打印堆栈等信息，和一些你可能需要的扩展方法。
+另外在生成脚本的过程中，命令行类名、方法名提示也可以当作搜索使用，能通过关键词快速搜索定位类方法。hooker搜索类比jadx快很多，不信就试试......
+
 ![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
 - Command语法：gs, generatescript [class_name:method_name]
 
@@ -438,6 +412,9 @@ Java.perform(function() {
 
 
 ### 8. 查看当前所有frida脚本
+
+查看应用目录下所有的脚本，这里有hooker给你生成的通杀脚本，也有您生成的指定hook脚本，您可以修改定制。
+
 ```shell
 某皮 > ls
 just_trust_me.js                                 empty.js                                         keystore_dump.js
@@ -453,6 +430,10 @@ just_trust_me_okhttp_hook_finder_for_android.js  text_view.js                   
 ***
 
 ### 9. attach执行指定frida脚本
+
+在hooker下执行frida脚本，您只需要输入attach【空格】脚本名称会自动弹出提示。上下选择需要的脚本按tab键即可自动输入全名称。
+这是hooker在追求极致的工匠精神，帮助您从开波音737到开空客320的跳跃。
+
 ```shell
 某信拍 > attach url.js
 ------------startFlag:0755liv1,objectHash:-915348569,thread(id:810,name:Wmda.EventUploadThread),timestamp:1747836814835---------------
@@ -519,6 +500,10 @@ com.android.okhttp.Request.Builder.build()
 ***
 
 ### 10. 快捷设置socks5无感代理
+
+一键设置代理。
+
+
 ```shell
 某音 > proxy socks5://10.112.99.11:9998
 proxy socks5://10.112.99.11:9998 OK
@@ -528,6 +513,8 @@ proxy socks5://10.112.99.11:9998 OK
 
 
 ### 11. frida版JustTrustMe（包括boringgssl）
+
+关掉SSL证书校验
 
 ```shell
 某音 > justtrustme
@@ -582,6 +569,9 @@ javax.net.ssl.SSLContext.init('[Ljavax.net.ssl.KeyManager;', '[Ljavax.net.ssl.Tr
 
 
 ### 13. 取消代理设置
+
+一键取消代理
+
 ```shell
 某音 > unproxy
 unproxy OK
@@ -592,6 +582,7 @@ unproxy OK
 
 
 ### 14. 重启app
+
 
 ```shell
 某信拍 > restart
@@ -612,7 +603,7 @@ restarts com.xxx.buyxxphone
 
 ### 16. upgrade
 
-hooker更新频繁，平均日更约10次。upgrade帮助您随时同步最新代码和相关文件到本地。
+hooker更新频繁，平均周更约10次。upgrade帮助您随时同步最新代码和相关文件到本地。
 
 ```shell
 MacBook-Pro-32G-2T:hooker stephen256$ python3 hooker.py upgrade
@@ -708,6 +699,45 @@ trace JNI register_natives函数
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/hook_RN.gif)
 ***
 
+
+
+## Windows安装WSL
+
+WSL是适用于Linux 的Windows 子系统（WSL）允许开发人员直接在Windows 上运行GNU/Linux 环境（包括大多数命令行工具、实用工具和应用程序），无需传统虚拟机或双启动设置的开销。
+
+### 1. 安装wsl ubuntn24.04
+访问：https://learn.microsoft.com/zh-cn/windows/wsl/install-manual#downloading-distributions
+
+下载Ubuntu24.04
+
+双击Ubuntu2404-240425.AppxBundle 安装Ubuntu
+
+
+### 2. 进入wsl，配置代理
+窗口输入wsl进入ubuntu命令行
+
+- cmd
+
+- wsl
+
+切换到root用户
+
+- sudo su
+
+配置翻墙代理，如果你有
+
+- export http_proxy="http://10.115.164.50:8080"
+- export https_proxy="http://10.115.164.50:8080"
+
+### 3. 安装python3.8和frida
+- apt update
+- apt apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev 
+libreadline-dev libsqlite3-dev wget curl llvm xz-utils tk-dev 
+libffi-dev liblzma-dev
+- apt install -y git
+- apt install -y pyenv
+- pyenv install 3.8.8
+- pyenv local 3.8
 
 ## hooker命令行快捷键
 
