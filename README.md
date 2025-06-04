@@ -57,7 +57,7 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
 
 # Mac/Linux配置hooker运行环境
 
-windows请先完成[WSL安装](Windows安装WSL)，然后跳回到这里
+windows请先完成[WSL安装](#windows%E5%AE%89%E8%A3%85wsl)，然后跳回到这里
 
 ### 1. git clone项目
 ```shell
@@ -83,7 +83,7 @@ FA77C0301476	device
 
 这里注意，不要用绝对路径去执行，一定要cd到hooker目录下执行python3 hooker.py
 
-hooker启动后将收集收集所有可调试app的信息，字段含义如下
+hooker启动后将收集所有可调试app的信息，字段含义如下
 - PID：当前app的主进程id，如果app没有启动则为0
 - APP：app的名称
 - IDENTIFIER：app的包名
