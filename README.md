@@ -147,7 +147,7 @@ hooker(Identifier):
 
 - hooker将帮你检测当前app是否启动且在手机前台，如不在启动帮你启动，如不在前台帮你切到前台
 
-- frida通杀脚本可以在hooker交互式命令行下用attach/spawm执行，也可以手动cd到应用目录用快捷命令或原生的frida命令执行。
+- frida通杀脚本可以在hooker交互式命令行下用attach/spawn执行，也可以手动cd到应用目录用快捷命令或原生的frida命令执行。
 
 - 你可以修改应用工作目录下任何脚本
 
@@ -738,6 +738,16 @@ libffi-dev liblzma-dev
 - apt install -y pyenv
 - pyenv install 3.8.8
 - pyenv local 3.8
+
+
+## 自定义frida-server
+- 将您自定义的frida-server文件拷贝到mobile-deploy文件夹下
+- 修改hooker.py，default_frida_server_arm和default_frida_server_arm64变量的名字为你自定义的文件名
+
+```python
+default_frida_server_arm = "your-custom-frida-server-android-arm"
+default_frida_server_arm64 = "your-custom-frida-server-android-arm64"
+```
 
 ## hooker命令行快捷键
 
