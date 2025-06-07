@@ -42,18 +42,18 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
     * [5. 输入调试应用包名](#5-输入调试应用包名)
     * [6. 查看help信息](#6-查看help信息)
     * [7. 自动化生成frida脚本](#7-自动化生成frida脚本)
-    * [8. 查看当前所有frida脚本](#8-查看当前所有frida脚本)
-    * [9. attach执行指定frida脚本](#9-attach执行指定frida脚本)
+    * [8. 列出所有frida脚本](#8-列出应用目录所有frida脚本)
+    * [9. attach执行frida脚本](#9-attach执行frida脚本)
     * [10. 快捷设置socks5无感代理](#10-快捷设置socks5无感代理)
     * [11. frida版JustTrustMe](#11-frida版JustTrustMe包括boringgssl)
-    * [12. spawn执行指定frida脚本](#12-spawn执行指定frida脚本)
+    * [12. spawn执行frida脚本](#12-spawn执行frida脚本)
     * [13. 取消代理设置](#13-取消代理设置)
     * [14. 重启app](#14-重启app)
     * [15. 获取uid和pid](#15-获取uid和pid)
     * [16. hooker自动升级](#16-upgrade)
     
-手机保证root，无需任何手动启动frida-server等一切配置，hooker会帮你搞定一切    
-兼容Mac/Linux
+手机保证root，无需任何手动启动frida-server等一切配置，hooker会帮你搞定一切。x86架构的模拟器兼容不好，不建议使用。  
+兼容Mac/Linux/Windows
 
 # Mac/Linux配置hooker运行环境
 
@@ -411,7 +411,7 @@ Java.perform(function() {
 
 
 
-### 8. 查看当前所有frida脚本
+### 8. 列出应用目录所有frida脚本
 
 查看应用目录下所有的脚本，这里有hooker给你生成的通杀脚本，也有您生成的指定hook脚本，您可以修改定制。
 
@@ -429,7 +429,7 @@ just_trust_me_okhttp_hook_finder_for_android.js  text_view.js                   
 ```
 ***
 
-### 9. attach执行指定frida脚本
+### 9. attach执行frida脚本
 
 在hooker下执行frida脚本，您只需要输入attach【空格】脚本名称会自动弹出提示。上下选择需要的脚本按tab键即可自动输入全名称。
 这是hooker在追求极致的工匠精神，帮助您从开波音737到开空客320的跳跃。
@@ -501,7 +501,9 @@ com.android.okhttp.Request.Builder.build()
 
 ### 10. 快捷设置socks5无感代理
 
-一键设置代理。
+通过iptables链路层转发包实现一键设置代理，优势是APP完全无感知被代理。支持http/socks5，推荐使用charles的socks5性能更高。
+
+设置代理后必须主动去[关闭代理](#13-取消代理设置)，代理不会自动取消
 
 
 ```shell
@@ -556,7 +558,7 @@ okhttp3.CertificatePinner.check('java.lang.String', 'java.util.List') was hooked
 ***
 
 
-### 12. spawn执行指定frida脚本
+### 12. spawn执行frida脚本
 ```shell
 某信拍 > spawn just_trust_me.js
 Package name: com.xxx.buyxxphone

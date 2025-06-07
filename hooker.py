@@ -841,7 +841,6 @@ def set_proxy(proxy):
     else:
         warn(f"Cannot set proxy {proxy}")
         return
-    
 if not os.path.exists('.cache'):
     os.makedirs('.cache')
     
