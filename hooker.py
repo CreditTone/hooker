@@ -508,7 +508,7 @@ def spawn(script_file, use_v8=False):
         online_script = online_session.create_script(script_jscode)
     # online_script.on('message', on_message)
     online_script.load()
-    frida_device.resume(current_identifier_pid)
+    frida_device.resume(current_identifier)
     #sys.stdin.read()
     return online_session, online_script
     
@@ -1350,7 +1350,7 @@ def entry_debug_mode():
         ("spawn, fridaf [script_file_name]", "quickly spawn a frida script, similar to executing the command \"frida -U -f -n com.example.app -l xxx.js\". For example: spawn just_trust_me.js"),
         ("restart", "restart this app"),
         ("pid", "get pid of this app main process"),
-        ("uid", "get pid of this app"),
+        ("uid", "get uid of this app"),
         ("exit", "return to the previous level"),
     ]
     def print_help_msg():
