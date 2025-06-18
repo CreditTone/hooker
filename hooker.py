@@ -34,6 +34,15 @@ import itertools
 import jsbeautifier
 import subprocess
 import filecmp
+import argparse
+import pprint
+import random
+import signal
+import socket
+import struct
+import binascii
+from pathlib import Path
+from loguru import logger
 from git import Repo
 from datetime import datetime
 from collections import Counter
@@ -419,36 +428,6 @@ def compara_and_update_file(local_file, remote_file):
 def on_message(message, data):
     pass
 
-def is_number(s):
-    try:
-        int(s)
-        return True
-    except ValueError:
-        pass
-    try:
-        import unicodedata
-        unicodedata.numeric(s)
-        return True
-    except (TypeError, ValueError):
-        pass
-    return False
-
-def _get_min_pid_by_name(process_name):
-    # 获取所有进程
-    processes = frida_device.enumerate_processes()
-    # 存储符合条件的进程 ID
-    matching_pids = []
-    for process in processes:
-        # 如果进程名包含目标进程名
-        if process_name in process.name:
-            matching_pids.append(process.pid)
-    # 如果找到符合条件的进程，返回最小的进程 ID
-    if matching_pids:
-        return min(matching_pids)
-    else:
-        # 如果没有找到匹配的进程，返回 None
-        return None
-
 def attach_rpc(use_v8=False):
     global frida_device
     online_session = None
@@ -761,8 +740,244 @@ def execute_script(script_file, is_spawn=False):
             
 def just_trust_me():
     execute_script("just_trust_me.js", True)
-        
+    
 
+def r0capture():
+    PY3K = sys.version_info >= (3, 0)
+    # --- workaround against Python consistency issues
+    def normalize_py():
+        if sys.platform == "win32":
+            # set sys.stdout to binary mode on Windows
+            import os, msvcrt
+            msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+    
+    # --- - chunking helpers
+    def chunks(seq, size):
+        d, m = divmod(len(seq), size)
+        for i in range(d):
+            yield seq[i * size:(i + 1) * size]
+        if m:
+            yield seq[d * size:]
+    
+    
+    def chunkread(f, size):
+        c = f.read(size)
+        while len(c):
+            yield c
+            c = f.read(size)
+    
+    
+    def genchunks(mixed, size):
+        if hasattr(mixed, 'read'):
+            return chunkread(mixed, size)
+        else:
+            return chunks(mixed, size)
+    
+    
+    # --- - /chunking helpers
+    def dehex(hextext):
+        if PY3K:
+            return bytes.fromhex(hextext)
+        else:
+            hextext = "".join(hextext.split())
+            return hextext.decode('hex')
+        
+    def dump(binary, size=2, sep=' '):
+        hexstr = binascii.hexlify(binary)
+        if PY3K:
+            hexstr = hexstr.decode('ascii')
+        return sep.join(chunks(hexstr.upper(), size))
+    
+    
+    def dumpgen(data, only_str):
+        generator = genchunks(data, 16)
+        for addr, d in enumerate(generator):
+            line = ""
+            if not only_str:
+                # 00000000:
+                line = '%08X: ' % (addr * 16)
+                # 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00
+                dumpstr = dump(d)
+                line += dumpstr[:8 * 3]
+                if len(d) > 8:  # insert separator if needed
+                    line += ' ' + dumpstr[8 * 3:]
+                # ................
+                # calculate indentation, which may be different for the last line
+                pad = 2
+                if len(d) < 16:
+                    pad += 3 * (16 - len(d))
+                if len(d) <= 8:
+                    pad += 1
+                line += ' ' * pad
+    
+            for byte in d:
+                # printable ASCII range 0x20 to 0x7E
+                if not PY3K:
+                    byte = ord(byte)
+                if 0x20 <= byte <= 0x7E:
+                    line += chr(byte)
+                else:
+                    line += '.'
+            yield line
+    
+    
+    def hexdump(data, result='print', only_str=False):
+        if PY3K and type(data) == str:
+            raise TypeError('Abstract unicode data (expected bytes sequence)')
+        gen = dumpgen(data, only_str=only_str)
+        if result == 'generator':
+            return gen
+        elif result == 'return':
+            return '\n'.join(gen)
+        elif result == 'print':
+            for line in gen:
+                print(line)
+        else:
+            raise ValueError('Unknown value of `result` argument')
+    banner = (
+        "--------------------------------------------------------------------------------------------\n"
+        "           .oooo.                                      .                                  \n"
+        "          d8P'`Y8b                                   .o8                                  \n"
+        "oooo d8b 888    888  .ooooo.   .oooo.   oo.ooooo.  .o888oo oooo  oooo  oooo d8b  .ooooo.  \n"
+        "`888\"\"8P 888    888 d88' `\"Y8 `P  )88b   888' `88b   888   `888  `888  `888\"\"8P d88' `88b \n"
+        " 888     888    888 888        .oP\"888   888   888   888    888   888   888     888ooo888 \n"
+        " 888     `88b  d88' 888   .o8 d8(  888   888   888   888 .  888   888   888     888    .o \n"
+        "d888b     `Y8bd8P'  `Y8bod8P' `Y888\"\"8o  888bod8P'   \"888\"  `V88V\"V8P' d888b    `Y8bod8P' \n"
+        "                                         888                                               \n"
+        "                                        o888o                                              \n"
+        "                    https://github.com/r0ysue/r0capture\n"
+        "--------------------------------------------------------------------------------------------\n"
+    )
+    print(banner)
+    ssl_sessions = {}
+    def ssl_log(pcap=None, verbose=False, ssllib="", wait=0):
+        # if platform.system() not in ("Darwin", "Linux"):
+        #   raise NotImplementedError("This function is only implemented for Linux and "
+        #                             "macOS systems.")
+    
+        def log_pcap(pcap_file, ssl_session_id, function, src_addr, src_port,
+                     dst_addr, dst_port, data):
+            t = time.time()
+            if ssl_session_id not in ssl_sessions:
+                ssl_sessions[ssl_session_id] = (random.randint(0, 0xFFFFFFFF),
+                                                random.randint(0, 0xFFFFFFFF))
+            client_sent, server_sent = ssl_sessions[ssl_session_id]
+            if function == "SSL_read":
+                seq, ack = (server_sent, client_sent)
+            else:
+                seq, ack = (client_sent, server_sent)
+            for writes in (
+                    # PCAP record (packet) header
+                    ("=I", int(t)),  # Timestamp seconds
+                    ("=I", int((t * 1000000) % 1000000)),  # Timestamp microseconds
+                    ("=I", 40 + len(data)),  # Number of octets saved
+                    ("=i", 40 + len(data)),  # Actual length of packet
+                    # IPv4 header
+                    (">B", 0x45),  # Version and Header Length
+                    (">B", 0),  # Type of Service
+                    (">H", 40 + len(data)),  # Total Length
+                    (">H", 0),  # Identification
+                    (">H", 0x4000),  # Flags and Fragment Offset
+                    (">B", 0xFF),  # Time to Live
+                    (">B", 6),  # Protocol
+                    (">H", 0),  # Header Checksum
+                    (">I", src_addr),  # Source Address
+                    (">I", dst_addr),  # Destination Address
+                    # TCP header
+                    (">H", src_port),  # Source Port
+                    (">H", dst_port),  # Destination Port
+                    (">I", seq),  # Sequence Number
+                    (">I", ack),  # Acknowledgment Number
+                    (">H", 0x5018),  # Header Length and Flags
+                    (">H", 0xFFFF),  # Window Size
+                    (">H", 0),  # Checksum
+                    (">H", 0)):  # Urgent Pointer
+                pcap_file.write(struct.pack(writes[0], writes[1]))
+            pcap_file.write(data)
+            if function == "SSL_read":
+                server_sent += len(data)
+            else:
+                client_sent += len(data)
+            ssl_sessions[ssl_session_id] = (client_sent, server_sent)
+    
+        def r0capture_on_message(message, data):
+            if message["type"] == "error":
+                logger.info(f"{message}")
+                os.kill(os.getpid(), signal.SIGTERM)
+                return
+            if len(data) == 1:
+                logger.info(f'{message["payload"]["function"]}')
+                logger.info(f'{message["payload"]["stack"]}')
+                return
+            p = message["payload"]
+            if verbose:
+                src_addr = socket.inet_ntop(socket.AF_INET,
+                                            struct.pack(">I", p["src_addr"]))
+                dst_addr = socket.inet_ntop(socket.AF_INET,
+                                            struct.pack(">I", p["dst_addr"]))
+                session_id = p['ssl_session_id']
+                logger.info(f"SSL Session: {session_id}")
+                logger.info("[%s] %s:%d --> %s:%d" % (
+                    p["function"],
+                    src_addr,
+                    p["src_port"],
+                    dst_addr,
+                    p["dst_port"]))
+                gen = hexdump(data, result="generator",only_str=True)
+                str_gen = ''.join(gen)
+                logger.info(f"{str_gen}")
+                logger.info(f"{p['stack']}")
+            if pcap:
+                log_pcap(pcap_file, p["ssl_session_id"], p["function"], p["src_addr"],
+                         p["src_port"], p["dst_addr"], p["dst_port"], data)
+        current_identifier_pid = frida_device.spawn([current_identifier])        
+        online_session = frida_device.attach(current_identifier_pid)
+        time.sleep(1)
+        if wait > 0:
+            print(f"wait for {wait} seconds")
+            time.sleep(wait)
+            
+        if pcap:
+            pcap_file = open(pcap, "wb", 0)
+            for writes in (
+                    ("=I", 0xa1b2c3d4),  # Magic number
+                    ("=H", 2),  # Major version number
+                    ("=H", 4),  # Minor version number
+                    ("=i", time.timezone),  # GMT to local correction
+                    ("=I", 0),  # Accuracy of timestamps
+                    ("=I", 65535),  # Max length of captured packets
+                    ("=I", 228)):  # Data link type (LINKTYPE_IPV4)
+                pcap_file.write(struct.pack(writes[0], writes[1]))
+        r0capture_script = read_js_resource("r0capture.js")
+        online_script = online_session.create_script(r0capture_script, runtime="v8")
+        online_script.on("message", r0capture_on_message)
+        online_script.load()
+        frida_device.resume(current_identifier)
+        if ssllib != "":
+            script.exports.setssllib(ssllib)
+        try:
+            while online_session != None:
+                try:
+                    with patch_stdout():
+                        text = cmd_session.prompt("CTRL + C to stop > ", handle_sigint=True)
+                except KeyboardInterrupt:
+                    info(f"Interrupting")
+                    break
+                except EOFError:
+                    warn("Exiting...")
+                    break
+        except Exception:
+            print(traceback.format_exc())  
+        finally:
+            detach(online_session)
+            if pcap:
+                pcap_file.flush()
+                pcap_file.close()
+                info(f"flushing {current_identifier}/r0capture_ssl.pcap successful")
+            info("r0capture.js detach successful")
+            restart_app(current_identifier)
+    ssl_log(f"{current_identifier}/r0capture_ssl.pcap", True)
+    
 def un_proxy():
     run_su_command("for i in $(iptables -t nat -L OUTPUT --line-numbers | grep REDIRECT |grep 12345 | awk \"{print \$1}\" | sort -rn); do iptables -t nat -D OUTPUT $i; done")
     run_su_command("iptables -t nat -F REDSOCKS")
@@ -1194,6 +1409,7 @@ class ClassNameCompleter(Completer):
             'up': None,
             'justtrustme': None,
             'trust': None,
+            'r0capture': None,
             'ls': None,
             'attach': js_files,
             'frida': js_files,
@@ -1297,6 +1513,9 @@ def entry_debug_mode():
         elif cmd == "justtrustme" or cmd == "trust":
             just_trust_me()
             return True
+        elif cmd == "r0capture":
+            r0capture()
+            return True
         elif (cmd.startswith("proxy ") or cmd.startswith("p ")) and re.search(r"(proxy|p)\s+([^\s]+)", cmd):
             m = re.search(r"(proxy|p)\s+([^\s]+)", cmd)
             if m:
@@ -1345,6 +1564,7 @@ def entry_debug_mode():
         ("p, proxy [socks5_proxy_server]", "set up a socks5 proxy for this app. For example: proxy socks5://192.168.0.100:9998"),
         ("up, unproxy", "remove socks5 proxy for this app"),
         ("trust, justtrustme", "quickly spawn just_trust_me.js script to kill all ssl pinning"),
+        ("r0capture", "quickly spawn r0capture.js script to capture ssl/tls packages"),
         ("ls", "list all the frida scripts of the current app"),
         ("attach, frida [script_file_name]", "quickly execute a frida script, similar to executing the command \"frida -U com.example.app -l xxx.js\". For example: attach url.js"),
         ("spawn, fridaf [script_file_name]", "quickly spawn a frida script, similar to executing the command \"frida -U -f -n com.example.app -l xxx.js\". For example: spawn just_trust_me.js"),
