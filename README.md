@@ -24,9 +24,9 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
 * [1. frida版JustTrustMe，通杀全网APP，且作者一直在持续维护升级](#11-frida版JustTrustMe包括boringgssl)
 * [2. 自动化生成frida脚本，1秒钟生成一个脚本，脚本备注详细可扩展性强](#7-自动化生成frida脚本)
 * [3. 快捷设置socks5代理，无需额外安装socksdroid等三方app实现无感知代理](#10-快捷设置socks5无感代理)
-* [4. 整个使用过程非常舒适的命令行提示，让你享受逆向的过程]()
-![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
+* [4. 整个使用过程非常舒适的命令行提示，让你享受逆向的过程](#7-自动化生成frida脚本)
 
+<img src="https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg" width="1000">
 
 ### Hooker逆向工作交流群
 <img src="https://raw.githubusercontent.com/CreditTone/img_resources/main/Wechat_Group.jpg" width="300">
@@ -51,9 +51,42 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
     * [14. 重启app](#14-重启app)
     * [15. 获取uid和pid](#15-获取uid和pid)
     * [16. hooker自动升级](#16-upgrade)
+* [应用工作目录脚本](#应用工作目录脚本)
+    * [url.js](#urljs)
+    * [just_trust_me.js](#just_trust_mejs)
+    * [activity_events.js](#activity_eventsjs)
+    * [click.js](#clickjs)
+    * [android_ui.js](#android_uijs)
+    * [keystore_dump.js](#keystore_dumpjs)
+    * [edit_text.js](#edit_textjs)
+    * [hook_register_natives.js](#hook_register_nativesjs)
+    * [text_view.js](#text_viewjs)
+    * [ssl_log.js](#ssllogjs)
+    * [just_trust_me_for_ios.js](#just_trust_me_for_iosjs)
+    * [dump_dex.js](#dump_dexjs)
+    * [trace_init_proc.js](#trace_init_procjs)
+    * [hook_artmethod_register.js](#hook_artmethod_registerjs)
+    * [find_anit_frida_so.js](#find_anit_frida_sojs)
+    * [hook_jni_method_trace.js](#hook_jni_method_tracejs)
+    * [replace_dlsym_get_pthread_create.js](#replace_dlsym_get_pthread_createjs)
+    * [find_boringssl_custom_verify_func.js](#find_boringssl_custom_verify_funcjs)
+    * [get_device_info.js](#get_device_infojs)
+    * [apk_shell_scanner.js](#apk_shell_scannerjs)
+    * [bypass_frida_svc_detect.js](#bypass_frida_svc_detectjs)
+    * [bypass_root_detect.js](#bypass_root_detectjs)
+    * [bypass_vpn_detect.js](#bypass_vpn_detectjs)
+    * [hook_encryption_algo.js](#hook_encryption_algojs)
+    * [hook_encryption_algo2.js](#hook_encryption_algo2js)
+* [Windows安装WSL](#windows安装wsl)
+	  * [1. 安装wsl ubuntn24.04](#1-安装wsl-ubuntn2404)
+	  * [2. 进入wsl，配置代理](#2-进入wsl配置代理)
+	  * [3. 安装python3.8和frida](#3-安装python38和frida)
+* [自定义frida-server](#自定义frida-server)
+* [hooker命令行快捷键](#hooker命令行快捷键)
+
     
-手机保证root，无需任何手动启动frida-server等一切配置，hooker会帮你搞定一切。x86架构的模拟器兼容不好，不建议使用。  
-兼容Mac/Linux/Windows
+    
+手机保证root，无需任何手动启动frida-server等一切配置，hooker会帮你搞定一切。x86架构的模拟器不兼容
 
 # Mac/Linux配置hooker运行环境
 
@@ -618,6 +651,42 @@ Please restart hooker
 ```
 ***
 
+### 17. r0capture
+hooker集成了r0capture，抓包产生的pcap文件保存在{应用包名}/r0capture_ssl.pcap路径下，如酷安：com.coolapk.market/r0capture_ssl.pcap
+
+```shell
+JqgvBRe45o4QLyGguX+eVDoN0CPLTcPXqRVBhh13z2PTch2W7Hgv\/xlp4x2v\/QemWXrjWuifc2el1gzK1+8YPW+1NyTFCC8P10+zpCAPRgBwxpjKp4ecSQngU32yY2daIbaEwj0fvAg12VZNCdtI8jtpGtgds5xe61cihcBaYg\/CTvUIEylZqE6cbWsbuiBf7OuJLAnofXi3JtUaD+kJxFQ4fsZOTxhpZqANHIVv17GPcG4CoJEMws8UzawN3xPMqVYdzv+bpAnbDRhZy6LsVxS5S6yYtrawQdroJqVfsaLXlzgTBQe6RVPYqWG38QKJ1cuOGttk0ukigGIce3QAUcJl0c3fsi973ydYnSY60PBSKumqZAFh4VM0jk5tmRUtZlrqfQDVmfgIaocPQ=="}
+2025-06-19 11:35:59.794 | INFO     | __main__:r0capture_on_message:939 - java.lang.Throwable
+	at com.android.org.conscrypt.ConscryptFileDescriptorSocket$SSLOutputStream.write(Native Method)
+	at com.android.okhttp.okio.Okio$1.write(Okio.java:76)
+	at com.android.okhttp.okio.AsyncTimeout$1.write(AsyncTimeout.java:155)
+	at com.android.okhttp.okio.RealBufferedSink.flush(RealBufferedSink.java:221)
+	at com.android.okhttp.internal.http.Http1xStream.finishRequest(Http1xStream.java:161)
+	at com.android.okhttp.internal.http.HttpEngine.readNetworkResponse(HttpEngine.java:735)
+	at com.android.okhttp.internal.http.HttpEngine.readResponse(HttpEngine.java:609)
+	at com.android.okhttp.internal.huc.HttpURLConnectionImpl.execute(HttpURLConnectionImpl.java:471)
+	at com.android.okhttp.internal.huc.HttpURLConnectionImpl.getResponse(HttpURLConnectionImpl.java:407)
+	at com.android.okhttp.internal.huc.HttpURLConnectionImpl.getInputStream(HttpURLConnectionImpl.java:244)
+	at com.android.okhttp.internal.huc.DelegatingHttpsURLConnection.getInputStream(DelegatingHttpsURLConnection.java:210)
+	at com.android.okhttp.internal.huc.HttpsURLConnectionImpl.getInputStream(HttpsURLConnectionImpl.java:26)
+	at com.tencent.msdk.dns.core.rest.share.a.a(AbsHttpDns.java:23)
+	at com.tencent.msdk.dns.core.k$a.run(LookupHelper.java:24)
+	at com.tencent.msdk.dns.core.c$b.run(CountDownManager.java:3)
+	at com.tencent.msdk.dns.core.c$a.run(CountDownManager.java:3)
+	at com.tencent.msdk.dns.base.executor.DnsExecutors$a.run(DnsExecutors.java:38)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+	at java.lang.Thread.run(Thread.java:764)
+
+CTRL + C to stop >
+Interrupting
+flushing com.coolapk.market/r0capture_ssl.pcap successful
+r0capture.js detach successful
+Restarting 酷安 Please wait for a few seconds
+```
+***
+
+
 # 应用目录通杀脚本
 
 ### url.js
@@ -641,7 +710,9 @@ android.net.Uri.parse(String) 方法（处理 URI 的常用工具方法）
 ***
 
 ### just_trust_me.js
-frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网所有app，除非像美团一样做了登录风控抓不了。
+frida版本的just_trust_me，用于绕过 Android 系统中的证书校验逻辑，允许抓取 HTTPS 流量，适用于基于 OkHttp、HttpURLConnection 等网络库的应用。
+
+支持boringssl unpinning，理论上支持全网所有app，除非像美团一样做了登录风控抓不了。
 
 在hooker命令行模式封装了快捷命令justtrustme
 这在上文 [执行justtrustme kill掉所有ssl验证](#11-执行justtrustme-kill掉所有ssl验证包括boringgssl)有介绍
@@ -659,7 +730,7 @@ frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网�
 ***
 
 ### click.js
-跟踪点击事件时可执行，并获取被点击View的真实View ClassName
+用于监听 Android 应用中点击事件（`OnClickListener`），主要用于分析用户交互操作，获取被点击View的真实ViewClass
 
 推荐命令：frida click.js
 
@@ -686,7 +757,9 @@ frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网�
 ***
 
 ### edit_text.js
-跟踪获取Editview的getText()事件，并获取Editview的真实Class（很重要）。Editview一般绑定Search Action的实现代码，如果你抓取“搜索”接口。那么这个一定可以帮助你定位发送搜索请求的相关代码。
+
+用于跟踪获取 EditText 的 `getText()` 事件，并获取其真实 Class 类型。  
+EditText 通常绑定搜索按钮或输入事件，是定位“搜索”接口实现代码的有效入口，辅助识别核心业务逻辑。
 
 推荐命令：frida edit_text.js
 
@@ -694,16 +767,191 @@ frida版本的just_trust_me，支持boringssl unpinning，理论上支持全网�
 ***
 
 ### hook_register_natives.js
-trace JNI register_natives函数
+用于拦截 Android JNI RegisterNatives 函数的 Frida 脚本，主要用于分析和修改原生方法(native methods)的注册过程
 
 推荐命令：spawn hook_register_natives.js
 
 ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/hook_RN.gif)
 ***
 
+### text_view.js
+
+用于跟踪 TextView 的 `setText()` 和 `getText()` 调用，并输出其真实 Class。  
+常用于提取页面展示的明文数据，以及获取堆栈调用信息，从而追踪业务层的 model 构造逻辑和数据源。
+
+推荐命令：spawn/attach text_view.js  
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/text_view.png)
+
+---
 
 
-## Windows安装WSL
+### activity_events.js
+
+用于跟踪 Android Activity 生命周期（如 `onCreate`、`onResume`）的 Frida 脚本，帮助分析 Activity 初始化逻辑。
+
+推荐命令：spawn/attach activity_events.js
+
+---
+
+
+### ssl_log.js
+
+用于在 native 层跟踪 SSL 握手过程并记录 `CLIENT_RANDOM`，配合 tcpdump 抓包数据后可用于 TLS 明文还原分析。
+
+推荐命令：spawn/attach ssl_log.js
+
+---
+
+### just_trust_me_for_ios.js
+
+iOS 版的证书校验绕过脚本，配合抓包代理使用，适用于 SSL Pinning 场景。
+
+推荐命令：spawn/attach just_trust_me_for_ios.js
+
+---
+
+### dump_dex.js
+
+执行 spawn dump_dex.js 可直接脱壳，适用于多数简单壳场景。  
+Android ART 使用 dex2oat 编译 DEX 为 native 指令，有些脱壳失败时建议手动清除 `/data/app/<package>-*/oat/arm64/`。
+
+推荐命令：spawn dump_dex.js
+
+---
+
+### trace_init_proc.js
+
+用于 trace `init_proc` 函数调用流程的脚本。  
+需手动指定 `startAddr`、`endAddr` 和模块名 `somodule`，适合分析 native 启动流程。
+
+推荐命令：spawn/attach trace_init_proc.js  
+![trace_init_proc.png](https://raw.githubusercontent.com/CreditTone/img_resources/main/trace_init_proc.png)
+
+---
+
+### hook_artmethod_register.js
+
+用于拦截 Android ART 虚拟机中 `ArtMethod` 的注册函数，适合深入分析虚拟机行为与 native 方法绑定。
+
+推荐命令：spawn/attach hook_artmethod_register.js
+
+---
+
+### find_anit_frida_so.js
+
+用于发现 app 中加载的可疑 anti-frida 动态库，识别顺序为：**谁最后加载、谁让 app 崩溃，谁就是反调试的嫌疑人**。
+
+推荐命令：spawn/attach find_anit_frida_so.js  
+![find_anti_frida_so.png](https://raw.githubusercontent.com/CreditTone/img_resources/main/find_anti_frida_so.png)
+
+---
+
+### hook_jni_method_trace.js
+
+用于追踪 Native 层回调 Java 方法的行为，可观察 so 层与 Java 的交互，帮助分析 JNI 层调用栈。
+
+推荐命令：spawn/attach hook_jni_method_trace.js
+
+---
+
+### replace_dlsym_get_pthread_create.js
+
+专门对抗 `libmsaoaidsec.so` 中使用 `dlsym` 获取 `pthread_create` 的反调试方式。  
+本脚本 hook `dlsym`，用于劫持线程创建行为，从而对抗动态加载的反调试代码。
+
+推荐命令：spawn/attach replace_dlsym_get_pthread_create.js  
+![replace_pthread_create.png](https://raw.githubusercontent.com/CreditTone/img_resources/main/replace_pthread_create.png)
+
+---
+
+### find_boringssl_custom_verify_func.js
+
+用于查找 `boringssl` 中注册的自定义证书验证函数，通过 hook `SSL_CTX_set_custom_verify` 定位目标函数，并实现强制信任（返回 0）。
+
+**使用建议：**  
+执行前请清除目标 app（如某音）的缓存，以保证函数重新注册。
+
+推荐命令：spawn find_boringssl_custom_verify_func.js  
+![find_boringssl_custom_verify.png](https://raw.githubusercontent.com/CreditTone/img_resources/main/find_boringssl_custom_verify.png)  
+![hook_verify.png](https://raw.githubusercontent.com/CreditTone/img_resources/main/hook_verify.png)  
+![mouyin_capture_33.9.0.png](https://raw.githubusercontent.com/CreditTone/img_resources/main/mouyin_capture_33.9.0.png)
+
+---
+
+### get_device_info.js
+
+用于全面获取设备指纹信息，包括：
+
+- Android ID、IMEI、指纹、厂商、系统信息
+- 安装的所有应用（含系统 app）
+- 传感器信息（如名称、厂商、延迟）
+- 系统状态（是否 root、运行时、内核信息等）
+
+推荐命令：attach get_device_info.js  
+![](https://raw.githubusercontent.com/CreditTone/img_resources/main/get_device_info_attach.png)
+
+提供以下 4 个调用方法：
+
+- `getBasicInfo()`：基础信息
+- `getInstalledPackages()`：应用列表
+- `getSensos()`：传感器信息
+- `getSystemInfo()`：系统与运行环境  
+  ![](https://raw.githubusercontent.com/CreditTone/img_resources/main/get_device_info_functions.png)
+
+---
+
+### apk_shell_scanner.js
+
+动态识别 APK 加壳技术的脚本，支持多种主流壳，如娜迦、爱加密、360、梆梆、腾讯御、网易易盾等。
+
+推荐命令：attach apk_shell_scanner.js
+
+识别结果示例：
+- This app is protected by {爱加密}
+- This app is not protected or uses an unknown protection scheme
+
+---
+
+### bypass_frida_svc_detect.js
+
+绕过 app 对 Frida Server 的检测逻辑，适用于反调试保护较强的目标应用。
+
+推荐命令：spawn/attach bypass_frida_svc_detect.js
+
+---
+
+### bypass_root_detect.js
+
+用于绕过 root 检测逻辑，使得 root 环境下也能正常运行 app。
+
+推荐命令：spawn/attach bypass_root_detect.js
+
+---
+
+### bypass_vpn_detect.js
+
+用于绕过 VPN 检测逻辑，避免 app 阻止使用代理、VPN 或抓包工具。
+
+推荐命令：spawn/attach bypass_vpn_detect.js
+
+---
+
+### hook_encryption_algo.js
+
+用于 hook 典型加密算法（如 AES、RSA、HMAC 等）的实现函数，分析加密参数、明文与密文数据。
+
+推荐命令：spawn/attach hook_encryption_algo.js
+
+---
+
+### hook_encryption_algo2.js
+
+拓展版本的加密算法 hook 脚本，适用于更复杂的加密场景或多路加密调用链。
+
+推荐命令：spawn/attach hook_encryption_algo2.js
+
+
+# Windows安装WSL
 
 WSL是适用于Linux 的Windows 子系统（WSL）允许开发人员直接在Windows 上运行GNU/Linux 环境（包括大多数命令行工具、实用工具和应用程序），无需传统虚拟机或双启动设置的开销。
 
@@ -742,7 +990,7 @@ libffi-dev liblzma-dev
 - pyenv local 3.8
 
 
-## 自定义frida-server
+# 自定义frida-server
 - 将您自定义的frida-server文件拷贝到mobile-deploy文件夹下
 - 修改hooker.py，default_frida_server_arm和default_frida_server_arm64变量的名字为你自定义的文件名
 
@@ -751,7 +999,7 @@ default_frida_server_arm = "your-custom-frida-server-android-arm"
 default_frida_server_arm64 = "your-custom-frida-server-android-arm64"
 ```
 
-## hooker命令行快捷键
+# hooker命令行快捷键
 
 - Ctrl + U：整行清空
 
