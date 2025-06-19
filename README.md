@@ -50,7 +50,8 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
     * [13. 取消代理设置](#13-取消代理设置)
     * [14. 重启app](#14-重启app)
     * [15. 获取uid和pid](#15-获取uid和pid)
-    * [16. hooker自动升级](#16-upgrade)
+    * [16. r0capture](#16-r0capture)
+    * [17. hooker自动升级](#17-upgrade)
 * [应用工作目录脚本](#应用工作目录脚本)
     * [url.js](#urljs)
     * [just_trust_me.js](#just_trust_mejs)
@@ -636,22 +637,8 @@ restarts com.xxx.buyxxphone
 ```
 ***
 
-### 16. upgrade
 
-hooker更新频繁，平均周更约10次。upgrade帮助您随时同步最新代码和相关文件到本地。
-
-```shell
-MacBook-Pro-32G-2T:hooker stephen256$ python3 hooker.py upgrade
-Upgrading hooker
-Repository updated with 'git pull'.
-Updating mobile-deploy/libext64.so
-Updating mobile-deploy/libext.so
-Updating mobile-deploy/libevent-2.1.so
-Please restart hooker
-```
-***
-
-### 17. r0capture
+### 16. r0capture
 hooker集成了r0capture，抓包产生的pcap文件保存在{应用包名}/r0capture_ssl.pcap路径下，如酷安：com.coolapk.market/r0capture_ssl.pcap
 
 ```shell
@@ -683,6 +670,22 @@ Interrupting
 flushing com.coolapk.market/r0capture_ssl.pcap successful
 r0capture.js detach successful
 Restarting 酷安 Please wait for a few seconds
+```
+***
+
+
+### 17. upgrade
+
+hooker更新频繁，平均周更约10次。upgrade帮助您随时同步最新代码和相关文件到本地。
+
+```shell
+MacBook-Pro-32G-2T:hooker stephen256$ python3 hooker.py upgrade
+Upgrading hooker
+Repository updated with 'git pull'.
+Updating mobile-deploy/libext64.so
+Updating mobile-deploy/libext.so
+Updating mobile-deploy/libevent-2.1.so
+Please restart hooker
 ```
 ***
 
