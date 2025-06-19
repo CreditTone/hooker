@@ -184,6 +184,7 @@ def pull_file_to_local(remote_file, local_path, is_debug=True):
         
 def push_file_to_remote(local_path, remote_path, is_debug=True):
     # info(f"push {local_path} to {remote_path}")
+    from adbutils.errors import AdbError
     try:
         # 先尝试标准推送
         adb_device.sync.push(local_path, remote_path)
@@ -259,6 +260,7 @@ frida_device = None
 resource_rpc_jscode = read_js_resource("rpc.js")
 resource_hook_js_prepare_jscode = read_js_resource("_hook_js_prepare.js")
 resource_hook_js_enhance_jscode = read_js_resource("_hook_js_enhance.js")
+resource_hook_js_warp_jscode = read_js_resource("_hook_js_warp.js")
 
 def _init_resource_jscode():
     global resource_rpc_jscode
@@ -423,8 +425,6 @@ def compara_and_update_file(local_file, remote_file):
         run_su_command(f"chmod 777 {remote_file}", True)
         
 
-    
-
 def on_message(message, data):
     pass
 
@@ -440,8 +440,7 @@ def attach_rpc(use_v8=False):
         online_script = online_session.create_script(resource_rpc_jscode, runtime="v8")
     else:
         online_script = online_session.create_script(resource_rpc_jscode)
-    # print(f"rpc_jscode:{resource_rpc_jscode}")
-    online_script.on('message', on_message)
+    #online_script.on('message', on_message)
     online_script.load()
     # online_script.exports_sync.loadradardex()
     return online_session, online_script
@@ -451,7 +450,7 @@ def attach(script_file, use_v8=False):
         warn(f"attach {script_file} File Not found")
         return None, None
     script_jscode = read_local_file(script_file)
-    script_jscode = script_jscode
+    script_jscode = script_jscode + "\n\n\n" + resource_hook_js_warp_jscode
     global frida_device
     online_session = None
     online_script = None
@@ -474,6 +473,7 @@ def spawn(script_file, use_v8=False):
         warn(f"{script_file} File Not found")
         return None, None
     script_jscode = read_local_file(script_file)
+    script_jscode = script_jscode + "\n\n\n" + resource_hook_js_warp_jscode
     global frida_device
     current_identifier_pid = frida_device.spawn([current_identifier])
     online_script = None
@@ -492,9 +492,19 @@ def spawn(script_file, use_v8=False):
     return online_session, online_script
     
 
-def detach(online_session):
+def detach(online_session, online_script):
+    if online_script != None:
+        try:
+            online_script.exports_sync.cleanup()
+            online_script.unload()
+        except Exception as e:
+            info("RPC cleanup failed:", e)
     if online_session != None:
-        online_session.detach()
+        try:
+            online_session.detach()
+        except Exception as e:
+            info("detach failed:", e)
+        
  
 def exists_class(target, className):
     online_session = None
@@ -505,7 +515,7 @@ def exists_class(target, className):
     except Exception:
         warn(traceback.format_exc())  
     finally:    
-        detach(online_session)
+        detach(online_session, online_script)
 
 def create_workingdir_file(filename, text):
     file = None
@@ -640,7 +650,7 @@ def hook_js(hookCmdArg, savePath = None):
     except Exception:
         warn(traceback.format_exc())  
     finally:    
-        detach(online_session)
+        detach(online_session, online_script)
         
 def print_activitys():
     online_session = None
@@ -651,7 +661,7 @@ def print_activitys():
     except Exception:
         print(traceback.format_exc())  
     finally:
-        detach(online_session)
+        detach(online_session, online_script)
         
 def print_services():
     online_session = None
@@ -662,7 +672,7 @@ def print_services():
     except Exception:
         print(traceback.format_exc())  
     finally:
-        detach(online_session)
+        detach(online_session, online_script)
 
 def print_object(objectId):
     online_session = None
@@ -673,7 +683,7 @@ def print_object(objectId):
     except Exception:
         print(traceback.format_exc())  
     finally:
-        detach(online_session)
+        detach(online_session, online_script)
         
 def object_to_explain(objectId):
     online_session = None
@@ -684,7 +694,7 @@ def object_to_explain(objectId):
     except Exception:
         print(traceback.format_exc())  
     finally:
-        detach(online_session)
+        detach(online_session, online_script)
 
 def print_view(viewId):
     online_session = None
@@ -696,7 +706,7 @@ def print_view(viewId):
     except Exception:
         print(traceback.format_exc())  
     finally:
-        detach(online_session)
+        detach(online_session, online_script)
         
 
 def list_working_dir():
@@ -733,7 +743,7 @@ def execute_script(script_file, is_spawn=False):
     except Exception:
         print(traceback.format_exc())  
     finally:
-        detach(online_session)
+        detach(online_session, online_script)
         info(f"{script_file} detach successful")
         if is_spawn:
             restart_app(current_identifier)
@@ -954,7 +964,7 @@ def r0capture():
         online_script.load()
         frida_device.resume(current_identifier)
         if ssllib != "":
-            script.exports.setssllib(ssllib)
+            online_script.exports.setssllib(ssllib)
         try:
             while online_session != None:
                 try:
@@ -969,7 +979,7 @@ def r0capture():
         except Exception:
             print(traceback.format_exc())  
         finally:
-            detach(online_session)
+            detach(online_session, online_script)
             if pcap:
                 pcap_file.flush()
                 pcap_file.close()
