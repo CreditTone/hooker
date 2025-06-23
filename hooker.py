@@ -282,7 +282,7 @@ def _init_frida_device():
         text = io.open(".hooker_driver",'r',encoding= 'utf8').read()
         if not text:
             return None
-        searchResult = re.search('\d+\.\d+\.\d+\.\d+:\d+', text)
+        searchResult = re.search(r'\d+\.\d+\.\d+\.\d+:\d+', text)
         if searchResult:
             return searchResult.group()
         return None
@@ -378,7 +378,7 @@ def get_remote_file_md5(file_path):
         return ""
     try:
         # 56cf2745f4884b4dfcc1e193d0118c05  radar.dex
-        m = re.search("[\w]{32}", result)
+        m = re.search(r"[\w]{32}", result)
         if m:
             return m.group()
         else:
@@ -552,7 +552,6 @@ def create_working_dir_enverment():
         create_workingdir_file(packageName+"/objection", shellPrefix + "objection -d -g "+packageName+" explore")
         os.popen('chmod 777 ' + packageName +'/hooking').readlines()
         os.popen('chmod 777 ' + packageName +'/attach').readlines()
-        os.popen('chmod 777 ' + packageName +'/kill').readlines()
         os.popen('chmod 777 ' + packageName +'/objection').readlines()
         os.popen('chmod 777 ' + packageName +'/spawn').readlines()
         info(f"Generating built-in frida script...")
@@ -991,7 +990,7 @@ def r0capture():
     ssl_log(f"{current_identifier}/r0capture_ssl.pcap", True)
     
 def un_proxy():
-    run_su_command("for i in $(iptables -t nat -L OUTPUT --line-numbers | grep REDIRECT |grep 12345 | awk \"{print \$1}\" | sort -rn); do iptables -t nat -D OUTPUT $i; done")
+    run_su_command(r"for i in $(iptables -t nat -L OUTPUT --line-numbers | grep REDIRECT |grep 12345 | awk \"{print \$1}\" | sort -rn); do iptables -t nat -D OUTPUT $i; done")
     run_su_command("iptables -t nat -F REDSOCKS")
     run_su_command("iptables -t nat -D OUTPUT -p tcp -j REDSOCKS")
     run_su_command("iptables -t nat -X REDSOCKS")
@@ -1044,9 +1043,13 @@ def set_proxy(proxy):
     if not check_remote_file_exists("/sdcard/libevent-2.1.so"):
         push_file_to_remote(f"mobile-deploy/libevent-2.1.so", "/sdcard/libevent-2.1.so", False)
         run_su_command(f"cp /sdcard/libevent-2.1.so /data/local/tmp/libevent-2.1.so")
+    if not check_remote_file_exists("/sdcard/libevent_core-2.1.so"):
+        push_file_to_remote(f"mobile-deploy/libevent_core-2.1.so", "/sdcard/libevent_core-2.1.so", False)
+        run_su_command(f"cp /sdcard/libevent_core-2.1.so /data/local/tmp/libevent_core-2.1.so")
     if not check_remote_file_exists("/data/local/tmp/redsocks"):
         run_su_command(f"cp /sdcard/redsocks /data/local/tmp/redsocks")
         run_su_command(f"cp /sdcard/libevent-2.1.so /data/local/tmp/libevent-2.1.so")
+        run_su_command(f"cp /sdcard/libevent_core-2.1.so /data/local/tmp/libevent_core-2.1.so")
         run_su_command(f"chmod 700 /data/local/tmp/redsocks")
     un_proxy()
     adb_device.shell(f"rm -f /data/local/tmp/redsocks.conf")

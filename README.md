@@ -185,6 +185,7 @@ hooker(Identifier):
 
 - 你可以修改应用工作目录下任何脚本
 
+
 ```shell
 hooker(Identifier): cxm.shxpxx.sg
 ✅ App cxm.shxpxx.sg is already in the foreground
@@ -447,7 +448,9 @@ Java.perform(function() {
 
 ### 8. 列出应用目录所有frida脚本
 
-查看应用目录下所有的脚本，这里有hooker给你生成的通杀脚本，也有您生成的指定hook脚本，您可以修改定制。
+- 查看应用目录下所有的脚本，这里有hooker给你生成的通杀脚本，也有您生成的指定hook脚本，您可以修改定制。
+
+- 如果您有自定义的脚本放到应用目录下，ls命令可以将脚本名称刷入命令行提示缓存
 
 ```shell
 某皮 > ls
@@ -535,7 +538,7 @@ com.android.okhttp.Request.Builder.build()
 
 ### 10. 快捷设置socks5无感代理
 
-通过iptables链路层转发包实现一键设置代理，优势是APP完全无感知被代理。支持http/socks5，推荐使用charles的socks5性能更高。
+通过iptables链路层转发包实现一键设置代理，优势是APP完全无感知被代理。推荐使用charles的socks5性能更高。
 
 设置代理后必须主动去[关闭代理](#13-取消代理设置)，代理不会自动取消
 
