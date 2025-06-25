@@ -987,7 +987,7 @@ WSL是适用于Linux 的Windows 子系统（WSL）允许开发人员直接在Win
 
 ### 3. 安装python3.8和frida
 - apt update
-- apt apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev 
+- apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev 
 libreadline-dev libsqlite3-dev wget curl llvm xz-utils tk-dev 
 libffi-dev liblzma-dev
 - apt install -y git
