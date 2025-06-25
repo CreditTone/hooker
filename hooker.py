@@ -255,6 +255,8 @@ current_identifier_cache_db = None
 current_identifier_cache_readonly_db = None
 current_identifier_stop_event = None
 
+
+
 frida_device = None
 
 resource_rpc_jscode = read_js_resource("rpc.js")
@@ -487,7 +489,11 @@ def spawn(script_file, use_v8=False):
         online_script = online_session.create_script(script_jscode)
     # online_script.on('message', on_message)
     online_script.load()
-    frida_device.resume(current_identifier)
+    release_version = int(adb_device.prop.get("ro.build.version.release"))
+    if release_version >= 12:
+        frida_device.resume(current_identifier_pid)
+    else:
+        frida_device.resume(current_identifier)
     #sys.stdin.read()
     return online_session, online_script
     
@@ -961,7 +967,11 @@ def r0capture():
         online_script = online_session.create_script(r0capture_script, runtime="v8")
         online_script.on("message", r0capture_on_message)
         online_script.load()
-        frida_device.resume(current_identifier)
+        release_version = int(adb_device.prop.get("ro.build.version.release"))
+        if release_version >= 12:
+            frida_device.resume(current_identifier_pid)
+        else:
+            frida_device.resume(current_identifier)
         if ssllib != "":
             online_script.exports.setssllib(ssllib)
         try:
