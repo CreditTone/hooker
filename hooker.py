@@ -1077,6 +1077,7 @@ def set_proxy(proxy):
         # run_su_command(f"iptables -t nat -A OUTPUT -p tcp  --dport 443 -j REDIRECT --to 12345")
     elif proxy_type.startswith("socks"):
         run_su_command(f"iptables -t nat -A OUTPUT -p tcp -m owner --uid-owner {current_identifier_uid} -j REDIRECT --to-ports 12345")
+        #run_su_command(f"iptables -t nat -A PREROUTING -i wlan0 -p tcp -j REDIRECT --to-ports 12345")
         info(f"proxy {proxy} OK")
     else:
         warn(f"Cannot set proxy {proxy}")
@@ -1125,24 +1126,27 @@ def open_or_create_db():
 
 def insert_if_not_exists(cursor, filename, class_package_name, class_name,
                          method_name, readable_proto_list):
-    # 查询是否存在相同 class_package_name 和 class_name 的记录
-    cursor.execute('''
-        SELECT 1 FROM app_methods
-        WHERE class_package_name = ? AND class_name = ?
-        LIMIT 1
-    ''', (class_package_name, class_name))
-    exists = cursor.fetchone()
-    if not exists:
+    try:
+        # 查询是否存在相同 class_package_name 和 class_name 的记录
         cursor.execute('''
-            INSERT INTO app_methods (
+            SELECT 1 FROM app_methods
+            WHERE class_package_name = ? AND class_name = ?
+            LIMIT 1
+        ''', (class_package_name, class_name))
+        exists = cursor.fetchone()
+        if not exists:
+            cursor.execute('''
+                INSERT INTO app_methods (
+                    filename, class_package_name, class_name,
+                    method_name, readable_proto_list
+                ) VALUES (?, ?, ?, ?, ?)
+            ''', (
                 filename, class_package_name, class_name,
                 method_name, readable_proto_list
-            ) VALUES (?, ?, ?, ?, ?)
-        ''', (
-            filename, class_package_name, class_name,
-            method_name, readable_proto_list
-        ))
-        current_identifier_cache_db.commit()
+            ))
+            current_identifier_cache_db.commit()
+    except sqlite3.DatabaseError as e:
+        pass
     return exists
         
 def ensure_readonly_copy_fresh():
