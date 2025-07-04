@@ -68,7 +68,7 @@ Blue = 4
 Magenta = 5
 Cyan = 6
 White = 7
- 
+
 def red(string):
     return withColor(string, Red+30) # Red
 def green(string):
