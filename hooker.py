@@ -70,7 +70,7 @@ Blue = 4
 Magenta = 5
 Cyan = 6
 White = 7
- 
+
 def red(string):
     return withColor(string, Red+30) # Red
 def green(string):
@@ -251,6 +251,7 @@ current_identifier_name = None
 current_identifier_version = None
 current_identifier_pid = None
 current_identifier_install_path = None
+current_identifier_install_apkfilename = None
 current_identifier_uid = None
 current_local_apk_path = None
 current_identifier_cache_db = None
@@ -329,16 +330,20 @@ def restart_app(package_name):
 
 def ensure_app_in_foreground(package_name):
     uid = None
-    shell_result = adb_device.shell(f"dumpsys package {package_name} | grep userId=").strip()
-    matchx = re.search(r"userId=(\d+)", shell_result)
+    shell_result = adb_device.shell(f"dumpsys package {package_name}").strip()
+    matchx = re.search(r"(userId|uid)=(\d+)", shell_result)
     if matchx:
-        uid = int(matchx.group(1))
+        uid = int(matchx.group(2))
     else:
         warn("UID not found.")
     apk_path = adb_device.shell(f"pm path {package_name}").strip().replace("package:", "")
-    apk_path = apk_path[:apk_path.index("base.apk")+8]
+    if "priv-app" in apk_path:
+        apk_path = apk_path[:apk_path.index(".apk")+8]
+    else:
+        apk_path = apk_path[:apk_path.index("base.apk")+8]
     #print(f"apk_path:{apk_path}")
     appinstall_path = apk_path.rsplit("/", 1)[0]
+    appinstall_path_apkfilename = apk_path.rsplit("/", 1)[1]
     appinfo = None
     version_name = None
     if 'app_info' in dir(adb_device):
@@ -364,12 +369,13 @@ def ensure_app_in_foreground(package_name):
             info(f"📲 App {package_name} is running in the background, bringing it to the foreground...")
             # 通过 am 启动主 Activity，会自动 bring 到前台
             adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
-        return proc_map[package_name][0], proc_map[package_name][1], version_name, appinstall_path, uid
+            print("proc_map[package_name][1]", proc_map[package_name][1])
+        return proc_map[package_name][0], proc_map[package_name][1], version_name, appinstall_path, appinstall_path_apkfilename, uid
     else:
         info(f"🚀 App {package_name} is not running, starting it now...")
         #adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
         app_pid, app_name = start_app(package_name)
-        return app_pid, app_name, version_name, appinstall_path, uid
+        return app_pid, app_name, version_name, appinstall_path, appinstall_path_apkfilename, uid
 
 def get_remote_file_md5(file_path):
     # 检查文件是否存在并获取长度
@@ -595,10 +601,10 @@ def create_working_dir_enverment():
                 continue
             jscode = read_js_resource(js_file)
             create_workingdir_file(f"{packageName}/{js_file}", jscode.replace("com.smile.gifmaker", packageName))
-        info(f"Copying APK {current_identifier_install_path}/base.apk to working directory please waiting for a few seconds")
+        info(f"Copying APK {current_identifier_install_path}/{current_identifier_install_apkfilename} to working directory please waiting for a few seconds")
         global current_local_apk_path
         current_local_apk_path = f"{packageName}/{current_identifier_name.replace(' ', '')}_{current_identifier_version}.apk"
-        pull_file_to_local(f"{current_identifier_install_path}/base.apk", current_local_apk_path)
+        pull_file_to_local(f"{current_identifier_install_path}/{current_identifier_install_apkfilename}", current_local_apk_path)
         info(f"Working directory create successful")
         
 def init_working_dir_enverment():
@@ -609,7 +615,7 @@ def init_working_dir_enverment():
     if os.path.isdir(current_local_apk_path):
         os.popen(f'rm -rf {current_local_apk_path}').readlines()
     #print(f"current_identifier_install_path:{current_identifier_install_path}")
-    pull_file_to_local(f"{current_identifier_install_path}/base.apk", current_local_apk_path)
+    pull_file_to_local(f"{current_identifier_install_path}/{current_identifier_install_apkfilename}", current_local_apk_path)
     info(f"Working directory init successful")
         
 def hook_js(hookCmdArg, savePath = None):
@@ -1733,7 +1739,7 @@ while True:
             warn("The application does not exist. Please enter an existing application")
             continue
         current_identifier = identifier
-        current_identifier_pid, current_identifier_name, current_identifier_version, current_identifier_install_path, current_identifier_uid  = ensure_app_in_foreground(current_identifier)
+        current_identifier_pid, current_identifier_name, current_identifier_version, current_identifier_install_path, current_identifier_install_apkfilename, current_identifier_uid  = ensure_app_in_foreground(current_identifier)
         if not os.path.isdir(identifier):
             create_working_dir_enverment()
         else:
