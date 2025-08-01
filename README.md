@@ -50,8 +50,9 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
     * [13. 取消代理设置](#13-取消代理设置)
     * [14. 重启app](#14-重启app)
     * [15. 获取uid和pid](#15-获取uid和pid)
-    * [16. r0capture](#16-r0capture)
-    * [17. hooker自动升级](#17-upgrade)
+    * [16. pull文件](#16-pull文件)
+    * [17. r0capture](#16-r0capture)
+    * [18. hooker自动升级](#17-upgrade)
 * [应用工作目录脚本](#应用工作目录脚本)
     * [url.js](#urljs)
     * [just_trust_me.js](#just_trust_mejs)
@@ -641,7 +642,24 @@ restarts com.xxx.buyxxphone
 ***
 
 
-### 16. r0capture
+### 16. pull文件
+
+快捷拉取文件到本地应用工作目录
+
+```shell
+转某 > pull /data/app/com.xxx.zhuanmou-o1ZYFILxnOCIpvvqJQKrpQ==/lib/arm64/libmsaoaidsec.so
+pull /data/app/com.xxx.zhuanmou-o1ZYFILxnOCIpvvqJQKrpQ==/lib/arm64/libmsaoaidsec.so to com.xxx.zhuanmou/libmsaoaidsec.so successful
+转某 > pull /data/app/com.xxx.zhuanmou-o1ZYFILxnOCIpvvqJQKrpQ==/lib/arm64/libsignLib.so
+pull /data/app/com.xxx.zhuanmou-o1ZYFILxnOCIpvvqJQKrpQ==/lib/arm64/libsignLib.so to com.xxx.zhuanmou/libsignLib.so successful
+转某 > pull /data/app/com.xxx.zhuanmou-o1ZYFILxnOCIpvvqJQKrpQ==/lib/arm64/libweconvert.so
+pull /data/app/com.xxx.zhuanmou-o1ZYFILxnOCIpvvqJQKrpQ==/lib/arm64/libweconvert.so to com.xxx.zhuanmou/libweconvert.so successful
+```
+***
+
+
+
+
+### 17. r0capture
 hooker集成了r0capture，抓包产生的pcap文件保存在{应用包名}/r0capture_ssl.pcap路径下，如酷安：com.coolapk.market/r0capture_ssl.pcap
 
 ```shell
@@ -677,7 +695,7 @@ Restarting 酷安 Please wait for a few seconds
 ***
 
 
-### 17. upgrade
+### 18. upgrade
 
 hooker更新频繁，平均周更约10次。upgrade帮助您随时同步最新代码和相关文件到本地。
 
