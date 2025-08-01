@@ -1423,6 +1423,12 @@ class ClassNameCompleter(Completer):
             for filename in os.listdir(current_identifier)
             if filename.endswith(".js")
         }
+        output = adb_device.shell(f"find {current_identifier_install_path}/lib/ -type f")
+        self.so_files = {
+            path.split('/')[-1]: path
+            for path in output.strip().split("\n")
+            if path.endswith(".so")
+        }
         self.nested_dict = {
             'help': None,
             'h': None,
@@ -1451,6 +1457,7 @@ class ClassNameCompleter(Completer):
             'restart': None,
             'pid': None,
             'uid': None,
+            'pull': None,
             'exit': None,
         }
         self.debug_completer = NestedCompleter.from_nested_dict(self.nested_dict)
@@ -1471,6 +1478,7 @@ class ClassNameCompleter(Completer):
         text = document.text_before_cursor.strip()
         #print("\nget_completions:"+text)
         generatescript_cmd_match = re.search(r"(generatescript|gs)\s+([^\s]+)", text)
+        pull_cmd_match = re.search(r"pull\s+([^\s]+)", text)
         if generatescript_cmd_match:
             try:
                 value = generatescript_cmd_match.group(2)
@@ -1512,6 +1520,11 @@ class ClassNameCompleter(Completer):
                 traceback.print_exc()
                 #yield Completion(f"[ERROR: {e}]", start_position=0)
                 pass
+        if pull_cmd_match:
+            filepath = pull_cmd_match.group(1)
+            for so_name, so_path in self.so_files.items():
+                if filepath in so_path:
+                    yield Completion(so_path, start_position=-len(filepath))
         else:
             # 其他命令提示
             for c in self.debug_completer.get_completions(document, complete_event):
@@ -1577,6 +1590,13 @@ def entry_debug_mode():
         elif cmd == "uid":
             info(current_identifier_uid)
             return True
+        elif cmd.startswith("pull ") and re.search(r"pull\s+([^\s]+)", cmd):
+            m = re.search(r"pull\s+([^\s]+)", cmd)
+            if m:
+                path = m.group(1)
+                filename = path.split('/')[-1]
+                pull_file_to_local(path, f"{current_identifier}/{filename}", True)
+                return True
         elif (cmd.startswith("generatescript ") or cmd.startswith("gs ")) and re.search(r"(generatescript|gs)\s+([^\s]+)", cmd):
             m = re.search(r"(generatescript|gs)\s+([^\s]+)", cmd)
             if m:
@@ -1604,6 +1624,7 @@ def entry_debug_mode():
         ("restart", "restart this app"),
         ("pid", "get pid of this app main process"),
         ("uid", "get uid of this app"),
+        ("pull", "quickly pull a file to the local application's working directory with a filepath or so filename. For example: pull libmsaoaidsec.so"),
         ("exit", "return to the previous level"),
     ]
     def print_help_msg():
