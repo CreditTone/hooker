@@ -510,12 +510,12 @@ def detach(online_session, online_script):
             online_script.exports_sync.cleanup()
             online_script.unload()
         except Exception as e:
-            info("RPC cleanup failed:", e)
+            info(f"RPC cleanup failed: {e}")
     if online_session != None:
         try:
             online_session.detach()
         except Exception as e:
-            info("detach failed:", e)
+            info(f"detach failed: {e}")
         
  
 def exists_class(target, className):
@@ -591,7 +591,8 @@ def create_working_dir_enverment():
             "bypass_root_detect.js",
             "bypass_vpn_detect.js",
             "hook_encryption_algo.js",
-            "hook_encryption_algo2.js"
+            "hook_encryption_algo2.js",
+            "webview_enable_debug.js"
         ]
         for js_file in init_js_files:
             if not os.path.exists(f"js/{js_file}"):
