@@ -79,6 +79,7 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
     * [bypass_vpn_detect.js](#bypass_vpn_detectjs)
     * [hook_encryption_algo.js](#hook_encryption_algojs)
     * [hook_encryption_algo2.js](#hook_encryption_algo2js)
+    * [webview_enable_debug.js](#webview_enable_debugjs)
 * [Windows安装WSL](#windows安装wsl)
 	  * [1. 安装wsl ubuntn24.04](#1-安装wsl-ubuntn2404)
 	  * [2. 进入wsl，配置代理](#2-进入wsl配置代理)
@@ -974,6 +975,13 @@ Android ART 使用 dex2oat 编译 DEX 为 native 指令，有些脱壳失败时�
 
 推荐命令：spawn/attach hook_encryption_algo2.js
 
+### webview_enable_debug.js
+
+该脚本用于 Hook Android 应用中的 WebView 行为，特别是在 WebView 初始化和执行 JavaScript 时进行监控和调试。适用于分析 WebView 加载的页面、动态注入的 JavaScript 代码，以及定位 JS 调用位置，常用于逆向分析、抓取数据或识别加固方案中的 Web 容器。
+
+推荐命令：spawn webview_enable_debug.js
+
+<img src="https://raw.githubusercontent.com/CreditTone/img_resources/main/webview_debugging.png" width="1000">
 
 # Windows安装WSL
 
