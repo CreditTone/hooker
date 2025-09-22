@@ -592,7 +592,8 @@ def create_working_dir_enverment():
             "bypass_vpn_detect.js",
             "hook_encryption_algo.js",
             "hook_encryption_algo2.js",
-            "webview_enable_debug.js"
+            "webview_enable_debug.js",
+            "hook_proxy_check.js"
         ]
         for js_file in init_js_files:
             if not os.path.exists(f"js/{js_file}"):
