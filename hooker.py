@@ -430,7 +430,7 @@ def compara_and_update_file(local_file, remote_file):
     if local_md5 != remote_md5:
         #info(f"update {filename} into {remote_file}")
         run_su_command(f"cp /sdcard/{filename} {remote_file}", True)
-        run_su_command(f"chmod 777 {remote_file}", True)
+        run_su_command(f"chmod 555 {remote_file}", True)
         
 
 def on_message(message, data):
