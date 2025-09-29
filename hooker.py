@@ -367,7 +367,7 @@ def ensure_app_in_foreground(package_name):
             info(f"📲 App {package_name} is running in the background, bringing it to the foreground...")
             # 通过 am 启动主 Activity，会自动 bring 到前台
             adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
-            print("proc_map[package_name][1]", proc_map[package_name][1])
+            #print("proc_map[package_name][1]", proc_map[package_name][1])
         return proc_map[package_name][0], proc_map[package_name][1], version_name, appinstall_path, appinstall_path_apkfilename, uid
     else:
         info(f"🚀 App {package_name} is not running, starting it now...")
@@ -1260,31 +1260,37 @@ def query_class_name_by_prefix(class_name_prefix, class_name, limit=15):
     return query_class_name_by_prefix(class_name_prefix, class_name, limit)
 
 def get_need_to_cache_pkg_prefix():
-    a = apk.APK(current_local_apk_path)
-    activities = a.get_activities()
-    # 取每个activity包名前两段
-    prefixes = []
-    for activity in activities:
-        parts = activity.split('.')
-        if len(parts) >= 2:
-            prefix = '.'.join(parts[:2])
-        else:
-            prefix = activity
-        prefixes.append(prefix)
-    # 统计出现次数
-    counter = Counter(prefixes)
-    # 找出现次数最多的前两个
-    most_common_two = counter.most_common(2)
     results = {"okhttp3", "retrofit2", "javax.crypto", "java.security"}
-    for prefix, count in most_common_two:
-        results.add(prefix)
-    package_name = current_identifier    
-    parts = package_name.split('.')
-    results.add('.'.join(parts[:2]) if len(parts) >= 2 else package_name)
-    #info(f"need_to_cache_pkg_prefix:{results}")
+    try:
+        a = apk.APK(current_local_apk_path)
+        activities = a.get_activities()
+        # 取每个activity包名前两段
+        prefixes = []
+        for activity in activities:
+            parts = activity.split('.')
+            if len(parts) >= 2:
+                prefix = '.'.join(parts[:2])
+            else:
+                prefix = activity
+            prefixes.append(prefix)
+        # 统计出现次数
+        counter = Counter(prefixes)
+        # 找出现次数最多的前两个
+        most_common_two = counter.most_common(2)
+        for prefix, count in most_common_two:
+            results.add(prefix)
+        package_name = current_identifier    
+        parts = package_name.split('.')
+        results.add('.'.join(parts[:2]) if len(parts) >= 2 else package_name)
+        #info(f"need_to_cache_pkg_prefix:{results}")
+    except Exception as e:
+        return []
     return list(results)
 
 def load_dexes_to_cache():
+    if not zipfile.is_zipfile(current_local_apk_path):
+        warn(f"{current_local_apk_path} is not a legal zip file")
+        return
     open_or_create_db()
     def process_dex():
         need_to_cache_pkg_prefix = get_need_to_cache_pkg_prefix()
@@ -1778,7 +1784,8 @@ while True:
         current_local_apk_path = None
         current_identifier_cache_db = None
         current_identifier_cache_readonly_db = None
-        current_identifier_stop_event.set()
+        if current_identifier_stop_event:
+            current_identifier_stop_event.set()
         # current_identifier_stop_event = None
     except (EOFError, KeyboardInterrupt):
         sys.exit(2);
