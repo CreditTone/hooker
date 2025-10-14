@@ -1486,7 +1486,6 @@ class ClassNameCompleter(Completer):
         text = document.text_before_cursor.strip()
         #print("\nget_completions:"+text)
         generatescript_cmd_match = re.search(r"(generatescript|gs)\s+([^\s]+)", text)
-        pull_cmd_match = re.search(r"pull\s+([^\s]+)", text)
         if generatescript_cmd_match:
             try:
                 value = generatescript_cmd_match.group(2)
@@ -1528,6 +1527,7 @@ class ClassNameCompleter(Completer):
                 traceback.print_exc()
                 #yield Completion(f"[ERROR: {e}]", start_position=0)
                 pass
+        pull_cmd_match = re.search(r"pull\s+([^\s]+)", text)
         if pull_cmd_match:
             filepath = pull_cmd_match.group(1)
             for so_name, so_path in self.so_files.items():
@@ -1619,7 +1619,7 @@ def entry_debug_mode():
         ("h, help", "show this help message"),
         ("a, activitys", "show the activity stack"),
         ("s, services", "show the service stack"),
-        ("o, object [object_id]", "show object info by object_id"),
+        ("o, object [object_id]", "show object info by object_id or classname."),
         ("v, view [view_id]", "show view info by view_id of view"),
         ("gs, generatescript [class_name:method_name]", "specify the class name and method name to generate a frida hook java script file. For example: generatescript okhttp3.Request$Builder:addHeader"),
         ("p, proxy [socks5_proxy_server]", "set up a socks5 proxy for this app. For example: proxy socks5://192.168.0.100:9998"),

@@ -320,28 +320,53 @@ rpc.exports = {
     },
     objectinfo: function(objectId) {
         var report = "";
-        Java.perform(function() {
-            var radarAndroidClz = Java.use("gz.radar.Android");
-            var objectInfo = radarAndroidClz.getObjectInfo(objectId);
-            if (!objectInfo) {
-                report += "Not Found Any Object."
-                return;
-            }
-            report += ("------------------Object--------------------") + "\n";
-            report += ("Object Class: " + objectInfo.getName()) + "\n";
-            report += ("Object SuperClass: " + objectInfo.getSuperClazz()) + "\n";
-            report += ("Object ImplementInterfaces: " + objectInfo.getImplementInterfaces()) + "\n";
-            var androidApkFields = objectInfo.getAndroidApkFields();
-            report += ("Object Fields: " + androidApkFields.length) + "\n";
-            for (var j = 0; j < androidApkFields.length; j++) {
-                report += ("\t" + androidApkFields[j].toLine()) + "\n";
-            }
-            var methods = objectInfo.methods();
-            report += ("Object Methods: " + methods.length) + "\n";
-            for (var j = 0; j < methods.length; j++) {
-                report += ("\t" + methods[j]) + "\n";
-            }
-        });
+		if (class_exists(objectId)) {
+			//判断是否是类名
+			var max = 3;
+			var found = [];
+			var class_name = objectId;
+			Java.perform(function () {
+				var ObjectsStore = Java.use("gz.radar.objects.ObjectsStore");
+			    Java.choose(class_name, {
+			        onMatch: function (instance) {
+						if (found.length >= max) {
+			                // 已达上限，直接忽略后续回调
+							console.warn("The upper limit has been reached.");
+			                return;
+			            }
+						var newObjectId = ObjectsStore.storeObject(instance);
+						console.log("Found " + class_name + " instance: " + instance + " ObjectId: " + newObjectId);
+			        },
+			        onComplete: function () {
+			            console.log("Search complete. Please continue exploring using object with [ObjectId]");
+			        }
+			    });
+			});
+		}else{
+			//不是类名就是object_id
+			Java.perform(function() {
+	            var radarAndroidClz = Java.use("gz.radar.Android");
+	            var objectInfo = radarAndroidClz.getObjectInfo(objectId);
+	            if (!objectInfo) {
+	                report += "Not Found Any Object."
+	                return;
+	            }
+	            report += ("------------------Object--------------------") + "\n";
+	            report += ("Object Class: " + objectInfo.getName()) + "\n";
+	            report += ("Object SuperClass: " + objectInfo.getSuperClazz()) + "\n";
+	            report += ("Object ImplementInterfaces: " + objectInfo.getImplementInterfaces()) + "\n";
+	            var androidApkFields = objectInfo.getAndroidApkFields();
+	            report += ("Object Fields: " + androidApkFields.length) + "\n";
+	            for (var j = 0; j < androidApkFields.length; j++) {
+	                report += ("\t" + androidApkFields[j].toLine()) + "\n";
+	            }
+	            var methods = objectInfo.methods();
+	            report += ("Object Methods: " + methods.length) + "\n";
+	            for (var j = 0; j < methods.length; j++) {
+	                report += ("\t" + methods[j]) + "\n";
+	            }
+	        });
+		}
         return report;
     },
     objecttoexplain: function(objectId) {
