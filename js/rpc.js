@@ -322,7 +322,7 @@ rpc.exports = {
         var report = "";
 		if (class_exists(objectId)) {
 			//判断是否是类名
-			var max = 3;
+			var max = 10;
 			var found = [];
 			var class_name = objectId;
 			Java.perform(function () {
@@ -334,6 +334,7 @@ rpc.exports = {
 							console.warn("The upper limit has been reached.");
 			                return;
 			            }
+						found.push(class_name);
 						var newObjectId = ObjectsStore.storeObject(instance);
 						console.log("Found " + class_name + " instance: " + instance + " ObjectId: " + newObjectId);
 			        },
