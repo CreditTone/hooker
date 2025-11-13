@@ -436,8 +436,13 @@ def compara_and_update_file(local_file, remote_file):
         
 
 def on_message(message, data):
-    pass
-
+    if message['type'] == 'send':
+        print("[*] {0}".format(message['payload']))
+    elif message['type'] == 'error':
+        warn("[!] {0}".format(message['stack']))
+    else:
+        print(message)
+        
 def attach_rpc(use_v8=False):
     global frida_device
     online_session = None
@@ -450,7 +455,7 @@ def attach_rpc(use_v8=False):
         online_script = online_session.create_script(resource_rpc_jscode, runtime="v8")
     else:
         online_script = online_session.create_script(resource_rpc_jscode)
-    #online_script.on('message', on_message)
+    online_script.on('message', on_message)
     online_script.load()
     # online_script.exports_sync.loadradardex()
     return online_session, online_script
@@ -473,7 +478,7 @@ def attach(script_file, use_v8=False):
         online_script = online_session.create_script(script_jscode, runtime="v8")
     else:
         online_script = online_session.create_script(script_jscode)
-    #online_script.on('message', on_message)
+    online_script.on('message', on_message)
     online_script.load()
     #sys.stdin.read()
     return online_session, online_script
@@ -495,7 +500,7 @@ def spawn(script_file, use_v8=False):
         online_script = online_session.create_script(script_jscode, runtime="v8")
     else:
         online_script = online_session.create_script(script_jscode)
-    # online_script.on('message', on_message)
+    online_script.on('message', on_message)
     online_script.load()
     release_version = int(adb_device.prop.get("ro.build.version.release"))
     if release_version >= 12:
