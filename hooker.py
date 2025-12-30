@@ -420,16 +420,18 @@ def check_dependency_files():
              
 def compara_and_update_file(local_file, remote_file):
     local_md5 = get_local_file_md5(local_file)
+    local_filename = local_file.split("/")[-1]
     filename = remote_file.split("/")[-1]
-    sdcard_remote_md5 = get_remote_file_md5(f"/sdcard/{filename}")
+    #print("filename:", filename)
+    sdcard_remote_md5 = get_remote_file_md5(f"/sdcard/{local_filename}")
     #先把radar.dex拷贝到sdcard，后期更新radar.dex直接从sdcard拷过去
     if local_md5 != sdcard_remote_md5:
         push_file_to_remote(local_file, "/sdcard/", False)
     remote_md5 = get_remote_file_md5(remote_file)
     #print(f"local_md5:{local_md5} remote_md5:{remote_md5}")
     if local_md5 != remote_md5:
-        #info(f"update {filename} into {remote_file}")
-        run_su_command(f"cp /sdcard/{filename} {remote_file}", True)
+        #info(f"update file {local_filename} to {remote_file}")
+        run_su_command(f"cp /sdcard/{local_filename} {remote_file}", True)
         run_su_command(f"chmod 555 {remote_file}", True)
         
 
@@ -1436,6 +1438,11 @@ class ClassNameCompleter(Completer):
             for filename in os.listdir(current_identifier)
             if filename.endswith(".js")
         }
+        pushable_files = {
+            filename: None
+            for filename in os.listdir(current_identifier)
+            if filename.endswith(".dex") or filename.endswith(".so") or filename.endswith(".jpg")
+        }
         output = adb_device.shell(f"find {current_identifier_install_path}/lib/ -type f")
         self.so_files = {
             path.split('/')[-1]: path
@@ -1463,6 +1470,7 @@ class ClassNameCompleter(Completer):
             'trust': None,
             'r0capture': None,
             'ls': None,
+            'push': pushable_files,
             'attach': js_files,
             'frida': js_files,
             'spawn': js_files,
@@ -1481,10 +1489,16 @@ class ClassNameCompleter(Completer):
             for filename in os.listdir(current_identifier)
             if filename.endswith(".js")
         }
+        pushable_files = {
+            filename: None
+            for filename in os.listdir(current_identifier)
+            if filename.endswith(".dex") or filename.endswith(".so") or filename.endswith(".jpg")
+        }
         self.nested_dict["attach"] = js_files
         self.nested_dict["frida"] = js_files
         self.nested_dict["spawn"] = js_files
         self.nested_dict["fridaf"] = js_files
+        self.nested_dict["push"] = pushable_files
         self.debug_completer = NestedCompleter.from_nested_dict(self.nested_dict)
         
     def get_completions(self, document, complete_event):
@@ -1572,6 +1586,21 @@ def entry_debug_mode():
         elif cmd == "justtrustme" or cmd == "trust":
             just_trust_me()
             return True
+        elif cmd.startswith("push ") and re.search(r"push\s+([^\s]+)", cmd):
+            m = re.search(r"push\s+([^\s]+)", cmd)
+            if m:
+                local_file = m.group(1)
+                filename = local_file.split("/")[-1]
+                remote_file = f"/data/user/0/{current_identifier}/{filename}"
+                m2 = re.search(r"push\s+[^\s]+\s+([^\s]+)", cmd)
+                if m2 is not None:
+                    remote_file = m2.group(1)
+                compara_and_update_file(f"{current_identifier}/{local_file}", remote_file)
+                user_group_id = f"u0_a{(int(current_identifier_uid) - 10000)}"
+                run_su_command(f"chown {user_group_id}:{user_group_id} {remote_file}")
+                run_su_command(f"chmod 777 {remote_file}")
+                info(f"push file OK {remote_file}")
+            return True
         elif cmd == "r0capture":
             r0capture()
             return True
@@ -1638,6 +1667,8 @@ def entry_debug_mode():
         ("pid", "get pid of this app main process"),
         ("uid", "get uid of this app"),
         ("pull", "quickly pull a file to the local application's working directory with a filepath or so filename. For example: pull libmsaoaidsec.so"),
+        ("push",
+         "quickly push a file to mobile storage with specify path. eg: push douyin-patch.dex"),
         ("exit", "return to the previous level"),
     ]
     def print_help_msg():
@@ -1778,6 +1809,7 @@ while True:
             init_working_dir_enverment()
         load_dexes_to_cache()
         check_dependency_files()
+        info(f"current working directory: hooker/{current_identifier}")
         entry_debug_mode()
         # 从debug模式跳出来
         current_identifier = None
