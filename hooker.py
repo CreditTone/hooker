@@ -1932,7 +1932,7 @@ def entry_debug_mode():
         ("uid", "get uid of this app"),
         ("pull", "quickly pull a file to the local application's working directory with a filepath or so filename. For example: pull libmsaoaidsec.so"),
         ("push",
-         "quickly push a file to mobile storage with specify path. eg: push douyin-patch.dex"),
+         "quickly push a file to mobile storage with specify path. eg: push example-patch.dex"),
         ("httpserver",
          "quickly start a httpserver with a jar file developed by radar4hooker"),
         ("exit", "return to the previous level"),
