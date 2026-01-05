@@ -204,6 +204,31 @@ function class_exists(className) {
 
 //可能会超时 为了防止这个发生，可以在函数 setImmediate 中给你的脚本添加一层包装
 rpc.exports = {
+    starthttpserver: function (dex_file, allClz) {
+        var result = "";
+        Java.perform(function() {
+            if (dex_file) {
+                Java.openClassFile("/data/local/tmp/radar.dex").load();
+                Java.openClassFile(dex_file).load();
+                var httpServerBoot = Java.use('gz.httpserver.HttpServerBoot');
+                var ArrayList = Java.use("java.util.ArrayList");
+                // JS 里分割
+                var arr = allClz.split(",");
+                // 创建 ArrayList
+                var clzList = ArrayList.$new();
+                // 填充 ArrayList<String>
+                for (var i = 0; i < arr.length; i++) {
+                    clzList.add(arr[i]);
+                }
+                result = httpServerBoot.scanAndStartHttpServer(clzList);
+            }else{
+                Java.openClassFile("/data/local/tmp/radar.dex").load();
+                var httpServerBoot2 = Java.use('gz.httpserver.HttpServerBoot');
+                result = httpServerBoot2.startDefaultHttpServer();
+            }
+        });
+        return result;
+    },
     loadradardex: function() {
         Java.perform(function() {
             if (!class_exists("gz.radar.ClassRadar")) {

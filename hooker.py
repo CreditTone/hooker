@@ -51,6 +51,8 @@ from androguard.core.bytecodes import dvm
 from androguard.core.analysis.analysis import MethodAnalysis
 from androguard.core import androconf
 
+from typing import Optional, Tuple, List
+from adbutils.errors import AdbError
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.completion import WordCompleter
@@ -58,7 +60,152 @@ from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.patch_stdout import patch_stdout
 from wcwidth import wcswidth
 
-from adbutils.errors import AdbError
+
+def find_android_home() -> Optional[str]:
+    """
+    在 macOS/Linux 上查找 Android SDK 路径
+
+    Returns:
+        Android SDK 路径，如果未找到则返回 None
+    """
+    # 1. 首先检查环境变量
+    for env_var in ['ANDROID_HOME', 'ANDROID_SDK_ROOT']:
+        sdk_path = os.environ.get(env_var)
+        if sdk_path and os.path.isdir(sdk_path):
+            return os.path.abspath(sdk_path)
+
+    # 2. 检查操作系统特定的默认安装路径
+    if sys.platform == 'darwin':  # macOS
+        default_paths = [
+            os.path.join(os.path.expanduser('~'), 'Library', 'Android', 'sdk'),
+            '/usr/local/share/android-sdk',
+            '/opt/homebrew/share/android-sdk',
+            '/opt/android-sdk',
+            '/usr/local/opt/android-sdk',
+        ]
+    else:  # Linux
+        default_paths = [
+            os.path.join(os.path.expanduser('~'), 'Android', 'Sdk'),
+            '/usr/lib/android-sdk',
+            '/opt/android-sdk',
+            '/usr/local/android-sdk',
+            '/opt/local/android-sdk',
+        ]
+
+    # 检查默认路径
+    for path in default_paths:
+        if path and os.path.isdir(path):
+            # 验证是否是有效的 Android SDK 目录
+            if os.path.exists(os.path.join(path, 'build-tools')):
+                return os.path.abspath(path)
+
+    return None
+
+
+def get_oldest_dx_d8_path(android_home: Optional[str] = None, min_version: str = "30.0.0") -> Tuple[
+    Optional[str], Optional[str]]:
+    """
+    查找最老的 dx 和最老的 d8 编译器路径，但版本号不低于 min_version
+
+    Args:
+        android_home: Android SDK 路径，如果为 None 则自动查找
+        min_version: 最小版本号，默认 30.0.0
+
+    Returns:
+        (最老的d8文件路径, 最老的dx文件路径)，如果未找到则返回 (None, None)
+    """
+    # 1. 获取 Android SDK 路径
+    if android_home is None:
+        android_home = find_android_home()
+
+    if not android_home:
+        return None, None
+
+    # 2. 检查 build-tools 目录
+    build_tools_dir = os.path.join(android_home, 'build-tools')
+    if not os.path.isdir(build_tools_dir):
+        return None, None
+
+    # 3. 解析最小版本号
+    def parse_version(version_str: str) -> List[int]:
+        """将版本号字符串转换为整数列表便于比较"""
+        parts = version_str.split('.')
+        result = []
+        for part in parts:
+            try:
+                result.append(int(part))
+            except ValueError:
+                # 如果包含非数字部分，只取数字部分
+                num_part = re.search(r'^\d+', part)
+                if num_part:
+                    result.append(int(num_part.group()))
+                else:
+                    result.append(0)
+        # 补齐到3位
+        while len(result) < 3:
+            result.append(0)
+        return result
+
+    min_version_parts = parse_version(min_version)
+
+    # 4. 遍历所有 build-tools 版本，分别收集满足条件的 dx 和 d8 文件
+    d8_files = []
+    dx_files = []
+
+    # 获取所有版本目录
+    for item in os.listdir(build_tools_dir):
+        version_dir = os.path.join(build_tools_dir, item)
+        if not os.path.isdir(version_dir):
+            continue
+
+        # 检查是否是有效的版本号格式（如 34.0.0）
+        if not re.match(r'^\d+(\.\d+)*$', item):
+            continue
+
+        # 检查版本号是否 >= 30.0.0
+        version_parts = parse_version(item)
+
+        # 版本比较函数
+        def version_gte(v1, v2):
+            """比较版本 v1 是否大于等于 v2"""
+            for part1, part2 in zip(v1, v2):
+                if part1 > part2:
+                    return True
+                elif part1 < part2:
+                    return False
+            return True  # 完全相等
+
+        # 如果版本号小于最小版本，跳过
+        if not version_gte(version_parts, min_version_parts):
+            continue
+
+        # 查找 dx 和 d8 文件
+        dx_path = os.path.join(version_dir, 'dx')
+        d8_path = os.path.join(version_dir, 'd8')
+
+        # 分别收集 d8 和 dx 文件
+        if os.path.isfile(d8_path) and os.access(d8_path, os.X_OK):
+            d8_files.append((item, d8_path))
+
+        if os.path.isfile(dx_path) and os.access(dx_path, os.X_OK):
+            dx_files.append((item, dx_path))
+
+    # 5. 获取最老的 d8 和 dx（在>=30.0.0的版本中）
+    oldest_d8_path = None
+    oldest_dx_path = None
+
+    if d8_files:
+        # 按版本号升序排列（最老的在前）
+        d8_files.sort(key=lambda x: parse_version(x[0]))
+        oldest_d8_path = d8_files[0][1]
+
+    if dx_files:
+        # 按版本号升序排列（最老的在前）
+        dx_files.sort(key=lambda x: parse_version(x[0]))
+        oldest_dx_path = dx_files[0][1]
+
+    return oldest_d8_path, oldest_dx_path
+
 
 def withColor(string, fg, bg=49):
     print("\33[0m\33[%d;%dm%s\33[0m" % (fg, bg, string))
@@ -85,6 +232,9 @@ def cyan(string):
     return withColor(string, Cyan+30) # Cyan
 def white(string):
     return withColor(string, White+30) # White
+#日志打印颜色定义
+warn = red
+info = yellow
 
 def print_js_file(filenames :list):
     if not filenames:
@@ -105,8 +255,6 @@ def read_js_resource(filename):
         
 cmd_session = None
 
-warn = red
-info = yellow
 
 adb_device = None
 
@@ -258,8 +406,6 @@ current_identifier_cache_db = None
 current_identifier_cache_readonly_db = None
 current_identifier_stop_event = None
 
-
-
 frida_device = None
 
 resource_rpc_jscode = read_js_resource("rpc.js")
@@ -277,7 +423,65 @@ def _init_resource_jscode():
 
 _init_resource_jscode()
 
-#print(f"resource_rpc_jscode:{resource_rpc_jscode}")
+def convert_jar_to_dex(jarfile: str) -> bool:
+    """
+    将 JAR 文件转换为 DEX 文件
+
+    Args:
+        jarfile: JAR 文件路径
+
+    Returns:
+        转换成功返回 dex 文件路径，失败返回 None
+    """
+    # 获取 dx/d8 文件路径
+    d8_file, dx_file = get_oldest_dx_d8_path()
+    if dx_file is None and d8_file is None:
+        warn(
+            "error: Not found ANDROID_HOME. Please install android sdk and define ANDROID_HOME environment variable in your system")
+        return None
+    # 检查输入文件
+    if not os.path.isfile(f"{current_identifier}/{jarfile}"):
+        warn(f"error: JAR file not found: {jarfile}")
+        return None
+    # 生成输出文件名（将 .jar 替换为 .dex）
+    if jarfile.endswith('.jar'):
+        dexfile = jarfile[:-4] + '.dex'
+    else:
+        dexfile = jarfile + '.dex'
+    out_put_dex_file = f'{current_identifier}/{dexfile}'
+    try:
+        if dx_file:
+            # 使用 dx 命令
+            cmd = [dx_file, '--dex', f'--output={out_put_dex_file}/', jarfile]
+        else:
+            # 使用 d8 命令
+            cmd = [d8_file, '--output', current_identifier, jarfile]
+        info(f"Converting {jarfile} to {dexfile}...")
+        # 执行转换
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        # 检查输出文件
+        if os.path.exists(out_put_dex_file):
+            file_size = os.path.getsize(out_put_dex_file)
+            info(f"Successfully converted to {dexfile} ({file_size} bytes)")
+            return dexfile
+        else:
+            info(f"error: Conversion failed, output file not created")
+            if result.stderr:
+                info(f"Error output: {result.stderr}")
+            return None
+    except subprocess.CalledProcessError as e:
+        warn(f"error: Conversion failed with exit code {e.returncode}")
+        if e.stderr:
+            warn(f"Error output: {e.stderr}")
+        return None
+    except Exception as e:
+        warn(f"error: {str(e)}")
+        return None
 
 def _init_frida_device():
     global frida_device
@@ -727,6 +931,18 @@ def print_view(viewId):
         info(report);
     except Exception:
         print(traceback.format_exc())  
+    finally:
+        detach(online_session, online_script)
+
+def rpc_start_http_server(dex_file, all_class):
+    online_session = None
+    online_script = None
+    try:
+        online_session, online_script = attach_rpc();
+        result = online_script.exports_sync.starthttpserver(dex_file, ",".join(all_class))
+        info(result)
+    except Exception:
+        print(traceback.format_exc())
     finally:
         detach(online_session, online_script)
         
@@ -1364,7 +1580,7 @@ def load_classes_and_methods_to_db(filename, dex_bytes, need_to_cache_pkg_prefix
                 return
             access_flags = cls.get_access_flags()
             # （0x200 = ACC_INTERFACE）（0x400 = ACC_ABSTRACT）
-            if (cls.get_access_flags() & 0x200) or (cls.get_access_flags() & 0x400):
+            if (access_flags & 0x200) or (access_flags & 0x400):
                 continue
             if current_identifier_stop_event == None or current_identifier_stop_event.is_set():
                 # info("中断线程")
@@ -1432,6 +1648,41 @@ def convert_descriptor_to_readable(descriptor):
             i += 1  # unknown type, skip
     return f"({', '.join(parsed)})"
 
+def push_file_to_device(local_file):
+    filename = local_file.split("/")[-1]
+    remote_file = f"/data/user/0/{current_identifier}/{filename}"
+    m2 = re.search(r"push\s+[^\s]+\s+([^\s]+)", cmd)
+    if m2 is not None:
+        remote_file = m2.group(1)
+    compara_and_update_file(f"{current_identifier}/{local_file}", remote_file)
+    user_group_id = f"u0_a{(int(current_identifier_uid) - 10000)}"
+    run_su_command(f"chown {user_group_id}:{user_group_id} {remote_file}")
+    run_su_command(f"chmod 777 {remote_file}")
+    info(f"push file OK {remote_file}")
+    return remote_file
+
+def start_http_server(jar_file:str = None):
+    if jar_file:
+        dex_file = convert_jar_to_dex(jar_file)
+        with open(f"{current_identifier}/{dex_file}", "rb") as f:
+            dex = dvm.DalvikVMFormat(f.read())
+        all_classes = []
+        for cls in dex.get_classes():
+            # 判断是否接口、抽象类、注解
+            access_flags = cls.get_access_flags()
+            # （0x200 = ACC_INTERFACE）（0x400 = ACC_ABSTRACT）（0x2000 = ACC_ANNOTATION）
+            if (access_flags & 0x200) or (access_flags & 0x400) or (access_flags & 0x2000):
+                continue
+            class_name = cls.get_name()[1:-1].replace("/", ".")
+            all_classes.append(class_name)
+        if len(all_classes) == 0:
+            warn(f"Deploy failure. not found any class in {jar_file}")
+            return
+        remote_file = push_file_to_device(dex_file)
+        rpc_start_http_server(remote_file, all_classes)
+    else:
+        rpc_start_http_server("", [])
+
 
 class ClassNameCompleter(Completer):
     def __init__(self):
@@ -1444,6 +1695,11 @@ class ClassNameCompleter(Completer):
             filename: None
             for filename in os.listdir(current_identifier)
             if filename.endswith(".dex") or filename.endswith(".so") or filename.endswith(".jpg")
+        }
+        jar_files = {
+            filename: None
+            for filename in os.listdir(current_identifier)
+            if filename.endswith(".jar")
         }
         output = adb_device.shell(f"find {current_identifier_install_path}/lib/ -type f")
         self.so_files = {
@@ -1481,6 +1737,7 @@ class ClassNameCompleter(Completer):
             'pid': None,
             'uid': None,
             'pull': None,
+            'httpserver': jar_files,
             'exit': None,
         }
         self.debug_completer = NestedCompleter.from_nested_dict(self.nested_dict)
@@ -1496,11 +1753,17 @@ class ClassNameCompleter(Completer):
             for filename in os.listdir(current_identifier)
             if filename.endswith(".dex") or filename.endswith(".so") or filename.endswith(".jpg")
         }
+        jar_files = {
+            filename: None
+            for filename in os.listdir(current_identifier)
+            if filename.endswith(".jar")
+        }
         self.nested_dict["attach"] = js_files
         self.nested_dict["frida"] = js_files
         self.nested_dict["spawn"] = js_files
         self.nested_dict["fridaf"] = js_files
         self.nested_dict["push"] = pushable_files
+        self.nested_dict["httpserver"] = jar_files
         self.debug_completer = NestedCompleter.from_nested_dict(self.nested_dict)
         
     def get_completions(self, document, complete_event):
@@ -1592,16 +1855,15 @@ def entry_debug_mode():
             m = re.search(r"push\s+([^\s]+)", cmd)
             if m:
                 local_file = m.group(1)
-                filename = local_file.split("/")[-1]
-                remote_file = f"/data/user/0/{current_identifier}/{filename}"
-                m2 = re.search(r"push\s+[^\s]+\s+([^\s]+)", cmd)
-                if m2 is not None:
-                    remote_file = m2.group(1)
-                compara_and_update_file(f"{current_identifier}/{local_file}", remote_file)
-                user_group_id = f"u0_a{(int(current_identifier_uid) - 10000)}"
-                run_su_command(f"chown {user_group_id}:{user_group_id} {remote_file}")
-                run_su_command(f"chmod 777 {remote_file}")
-                info(f"push file OK {remote_file}")
+                push_file_to_device(local_file)
+            return True
+        elif cmd.startswith("httpserver") or re.search(r"httpserver\s+([^\s]+\.jar)", cmd):
+            m = re.search(r"httpserver\s+([^\s]+\.jar)", cmd)
+            if m:
+                jar_file = m.group(1)
+                start_http_server(jar_file)
+            else:
+                start_http_server()
             return True
         elif cmd == "r0capture":
             r0capture()
@@ -1671,6 +1933,8 @@ def entry_debug_mode():
         ("pull", "quickly pull a file to the local application's working directory with a filepath or so filename. For example: pull libmsaoaidsec.so"),
         ("push",
          "quickly push a file to mobile storage with specify path. eg: push douyin-patch.dex"),
+        ("httpserver",
+         "quickly start a httpserver with a jar file developed by radar4hooker"),
         ("exit", "return to the previous level"),
     ]
     def print_help_msg():
