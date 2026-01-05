@@ -52,7 +52,7 @@ from androguard.core.analysis.analysis import MethodAnalysis
 from androguard.core import androconf
 
 from typing import Optional, Tuple, List
-
+from adbutils.errors import AdbError
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.completion import WordCompleter
@@ -708,7 +708,7 @@ def spawn(script_file, use_v8=False):
         online_script = online_session.create_script(script_jscode)
     online_script.on('message', on_message)
     online_script.load()
-    release_version = int(adb_device.prop.get("ro.build.version.release"))
+    release_version = int(adb_device.prop.get("ro.build.version.release").split('.', 1)[0])
     if release_version >= 12:
         frida_device.resume(current_identifier_pid)
     else:
@@ -1200,7 +1200,7 @@ def r0capture():
         online_script = online_session.create_script(r0capture_script, runtime="v8")
         online_script.on("message", r0capture_on_message)
         online_script.load()
-        release_version = int(adb_device.prop.get("ro.build.version.release"))
+        release_version = int(adb_device.prop.get("ro.build.version.release").split('.', 1)[0])
         if release_version >= 12:
             frida_device.resume(current_identifier_pid)
         else:
