@@ -452,10 +452,10 @@ def convert_jar_to_dex(jarfile: str) -> bool:
     try:
         if dx_file:
             # 使用 dx 命令
-            cmd = [dx_file, '--dex', f'--output={out_put_dex_file}/', jarfile]
+            cmd = [dx_file, '--dex', f'--output={out_put_dex_file}', f'{current_identifier}/{jarfile}']
         else:
             # 使用 d8 命令
-            cmd = [d8_file, '--output', current_identifier, jarfile]
+            cmd = [d8_file, '--output', current_identifier, f'{current_identifier}/{jarfile}']
         info(f"Converting {jarfile} to {dexfile}...")
         # 执行转换
         result = subprocess.run(
@@ -1648,12 +1648,10 @@ def convert_descriptor_to_readable(descriptor):
             i += 1  # unknown type, skip
     return f"({', '.join(parsed)})"
 
-def push_file_to_device(local_file):
+def push_file_to_device_with_chmod(local_file, remote_file = None):
     filename = local_file.split("/")[-1]
-    remote_file = f"/data/user/0/{current_identifier}/{filename}"
-    m2 = re.search(r"push\s+[^\s]+\s+([^\s]+)", cmd)
-    if m2 is not None:
-        remote_file = m2.group(1)
+    if remote_file == None:
+        remote_file = f"/data/user/0/{current_identifier}/{filename}"
     compara_and_update_file(f"{current_identifier}/{local_file}", remote_file)
     user_group_id = f"u0_a{(int(current_identifier_uid) - 10000)}"
     run_su_command(f"chown {user_group_id}:{user_group_id} {remote_file}")
@@ -1678,7 +1676,7 @@ def start_http_server(jar_file:str = None):
         if len(all_classes) == 0:
             warn(f"Deploy failure. not found any class in {jar_file}")
             return
-        remote_file = push_file_to_device(dex_file)
+        remote_file = push_file_to_device_with_chmod(dex_file)
         rpc_start_http_server(remote_file, all_classes)
     else:
         rpc_start_http_server("", [])
@@ -1855,7 +1853,12 @@ def entry_debug_mode():
             m = re.search(r"push\s+([^\s]+)", cmd)
             if m:
                 local_file = m.group(1)
-                push_file_to_device(local_file)
+                m2 = re.search(r"push\s+[^\s]+\s+([^\s]+)", cmd)
+                if m2 is not None:
+                    remote_file = m2.group(1)
+                    push_file_to_device_with_chmod(local_file, remote_file)
+                else:
+                    push_file_to_device_with_chmod(local_file)
             return True
         elif cmd.startswith("httpserver") or re.search(r"httpserver\s+([^\s]+\.jar)", cmd):
             m = re.search(r"httpserver\s+([^\s]+\.jar)", cmd)

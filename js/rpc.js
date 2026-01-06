@@ -208,9 +208,22 @@ rpc.exports = {
         var result = "";
         Java.perform(function() {
             if (dex_file) {
-                Java.openClassFile("/data/local/tmp/radar.dex").load();
-                Java.openClassFile(dex_file).load();
-                var httpServerBoot = Java.use('gz.httpserver.HttpServerBoot');
+                console.log(dex_file, allClz);
+                var DexClassLoader = Java.use("dalvik.system.DexClassLoader");
+                var ActivityThread = Java.use("android.app.ActivityThread");
+                var app = ActivityThread.currentApplication();
+                var context = app.getApplicationContext();
+                var cacheDir = context.getCodeCacheDir().getAbsolutePath();
+                var parent = context.getClassLoader();
+                var dexPath = "/data/local/tmp/radar.dex:" + dex_file;
+                var newLoader = DexClassLoader.$new(
+                    dexPath,
+                    cacheDir,
+                    null,
+                    parent
+                );
+                Java.classFactory.loader = newLoader;
+                var httpServerBoot = Java.use('gz.httpserver.HookerHttpServerBoot');
                 var ArrayList = Java.use("java.util.ArrayList");
                 // JS 里分割
                 var arr = allClz.split(",");
@@ -223,7 +236,7 @@ rpc.exports = {
                 result = httpServerBoot.scanAndStartHttpServer(clzList);
             }else{
                 Java.openClassFile("/data/local/tmp/radar.dex").load();
-                var httpServerBoot2 = Java.use('gz.httpserver.HttpServerBoot');
+                var httpServerBoot2 = Java.use('gz.httpserver.HookerHttpServerBoot');
                 result = httpServerBoot2.startDefaultHttpServer();
             }
         });
