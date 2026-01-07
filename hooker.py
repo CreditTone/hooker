@@ -934,7 +934,7 @@ def print_view(viewId):
     finally:
         detach(online_session, online_script)
 
-def rpc_start_http_server(dex_file, all_class):
+def rpc_start_web_server(dex_file, all_class):
     online_session = None
     online_script = None
     try:
@@ -1659,7 +1659,7 @@ def push_file_to_device_with_chmod(local_file, remote_file = None):
     info(f"push file OK {remote_file}")
     return remote_file
 
-def start_http_server(jar_file:str = None):
+def start_web_server(jar_file:str = None):
     if jar_file:
         dex_file = convert_jar_to_dex(jar_file)
         with open(f"{current_identifier}/{dex_file}", "rb") as f:
@@ -1677,10 +1677,42 @@ def start_http_server(jar_file:str = None):
             warn(f"Deploy failure. not found any class in {jar_file}")
             return
         remote_file = push_file_to_device_with_chmod(dex_file)
-        rpc_start_http_server(remote_file, all_classes)
+        rpc_start_web_server(remote_file, all_classes)
     else:
-        rpc_start_http_server("", [])
+        rpc_start_web_server("", [])
 
+def tail_android_file(filepath: str):
+    """
+    通过 adb 以 tail -f 方式实时读取安卓设备上的文件。
+    Ctrl + C 可安全退出。
+    """
+    if not check_remote_file_exists(filepath):
+        info("There is no log yet")
+        return
+    info(f"viewloging")
+    cmd = ["adb", "shell", "tail", "-f", filepath]
+    # 启动 adb 进程
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        for line in p.stdout:
+            if not line:
+                continue
+            line = line.rstrip()
+            if "[warn]" in line or "[WARN]" in line:
+                info(line)
+            elif "[error]" in line or "[ERROR]" in line:
+                warn(line)
+            else:
+                print(line)
+    except KeyboardInterrupt:
+        print("\nCtrl + C received, stopping tail...")
+    finally:
+        p.terminate()     # 结束 tail 进程
+        try:
+            p.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            p.kill()
+        print("viewlog stopped.")
 
 class ClassNameCompleter(Completer):
     def __init__(self):
@@ -1698,6 +1730,9 @@ class ClassNameCompleter(Completer):
             filename: None
             for filename in os.listdir(current_identifier)
             if filename.endswith(".jar")
+        }
+        viewlog = {
+            "webserver": None,
         }
         output = adb_device.shell(f"find {current_identifier_install_path}/lib/ -type f")
         self.so_files = {
@@ -1735,7 +1770,8 @@ class ClassNameCompleter(Completer):
             'pid': None,
             'uid': None,
             'pull': None,
-            'httpserver': jar_files,
+            'webserver': jar_files,
+            'viewlog': viewlog,
             'exit': None,
         }
         self.debug_completer = NestedCompleter.from_nested_dict(self.nested_dict)
@@ -1860,13 +1896,24 @@ def entry_debug_mode():
                 else:
                     push_file_to_device_with_chmod(local_file)
             return True
-        elif cmd.startswith("httpserver") or re.search(r"httpserver\s+([^\s]+\.jar)", cmd):
-            m = re.search(r"httpserver\s+([^\s]+\.jar)", cmd)
+        elif cmd.startswith("webserver") or re.search(r"webserver\s+([^\s]+\.jar)", cmd):
+            m = re.search(r"webserver\s+([^\s]+\.jar)", cmd)
             if m:
                 jar_file = m.group(1)
-                start_http_server(jar_file)
+                start_web_server(jar_file)
             else:
-                start_http_server()
+                start_web_server()
+            return True
+        elif cmd.startswith("viewlog") or re.search(r"viewlog\s+([^\s]+)", cmd):
+            m = re.search(r"webserver\s+([^\s]+)", cmd)
+            if m:
+                device_log_file = m.group(1)
+                if device_log_file == "webserver":
+                    tail_android_file("/sdcard/webserver.log")
+                else:
+                    tail_android_file(device_log_file)
+            else:
+                tail_android_file("/sdcard/webserver.log")
             return True
         elif cmd == "r0capture":
             r0capture()
@@ -1936,8 +1983,10 @@ def entry_debug_mode():
         ("pull", "quickly pull a file to the local application's working directory with a filepath or so filename. For example: pull libmsaoaidsec.so"),
         ("push",
          "quickly push a file to mobile storage with specify path. eg: push example-patch.dex"),
-        ("httpserver",
-         "quickly start a httpserver with a jar file developed by radar4hooker"),
+        ("webserver",
+         "quickly start a webserver with a jar file developed by radar4hooker"),
+        ("viewlog",
+         "Read the logs on Android devices to help you debug the webserver"),
         ("exit", "return to the previous level"),
     ]
     def print_help_msg():

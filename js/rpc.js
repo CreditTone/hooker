@@ -208,7 +208,6 @@ rpc.exports = {
         var result = "";
         Java.perform(function() {
             if (dex_file) {
-                console.log(dex_file, allClz);
                 var DexClassLoader = Java.use("dalvik.system.DexClassLoader");
                 var ActivityThread = Java.use("android.app.ActivityThread");
                 var app = ActivityThread.currentApplication();
