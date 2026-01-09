@@ -222,7 +222,7 @@ rpc.exports = {
                     parent
                 );
                 Java.classFactory.loader = newLoader;
-                var httpServerBoot = Java.use('gz.httpserver.HookerHttpServerBoot');
+                var httpServerBoot = Java.use('gz.httpserver.HookerWebServerBoot');
                 var ArrayList = Java.use("java.util.ArrayList");
                 // JS 里分割
                 var arr = allClz.split(",");
@@ -235,7 +235,7 @@ rpc.exports = {
                 result = httpServerBoot.scanAndStartHttpServer(clzList);
             }else{
                 Java.openClassFile("/data/local/tmp/radar.dex").load();
-                var httpServerBoot2 = Java.use('gz.httpserver.HookerHttpServerBoot');
+                var httpServerBoot2 = Java.use('gz.httpserver.HookerWebServerBoot');
                 result = httpServerBoot2.startDefaultHttpServer();
             }
         });

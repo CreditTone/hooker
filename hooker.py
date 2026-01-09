@@ -1602,8 +1602,9 @@ def load_classes_and_methods_to_db(filename, dex_bytes, need_to_cache_pkg_prefix
             if already_exists:
                 loaded_count += 1
     except Exception as e:
-        print(traceback.format_exc())  
-        print(f"[!] Error processing {filename}: {e}")
+        pass
+        #print(traceback.format_exc())
+        #print(f"[!] Error processing {filename}: {e}")
 
 def convert_descriptor_to_readable(descriptor):
     def type_map(d):
@@ -1680,6 +1681,10 @@ def start_web_server(jar_file:str = None):
         rpc_start_web_server(remote_file, all_classes)
     else:
         rpc_start_web_server("", [])
+
+def stop_web_server(port=8080):
+    result = adb_device.shell(f"curl --max-time 3 http://127.0.0.1:{port}/stop")
+    info(result)
 
 def tail_android_file(filepath: str):
     """
@@ -1770,7 +1775,10 @@ class ClassNameCompleter(Completer):
             'pid': None,
             'uid': None,
             'pull': None,
-            'webserver': jar_files,
+            'webserver': {
+                "start": jar_files,
+                "stop": None,
+            },
             'viewlog': viewlog,
             'exit': None,
         }
@@ -1797,7 +1805,10 @@ class ClassNameCompleter(Completer):
         self.nested_dict["spawn"] = js_files
         self.nested_dict["fridaf"] = js_files
         self.nested_dict["push"] = pushable_files
-        self.nested_dict["httpserver"] = jar_files
+        self.nested_dict["webserver"] = {
+            "start": jar_files,
+            "stop": None,
+        }
         self.debug_completer = NestedCompleter.from_nested_dict(self.nested_dict)
         
     def get_completions(self, document, complete_event):
@@ -1896,13 +1907,21 @@ def entry_debug_mode():
                 else:
                     push_file_to_device_with_chmod(local_file)
             return True
-        elif cmd.startswith("webserver") or re.search(r"webserver\s+([^\s]+\.jar)", cmd):
-            m = re.search(r"webserver\s+([^\s]+\.jar)", cmd)
+        elif re.search(r"webserver\s+start", cmd):
+            m = re.search(r"webserver\s+start\s+([^\s]+\.jar)", cmd)
             if m:
                 jar_file = m.group(1)
                 start_web_server(jar_file)
             else:
                 start_web_server()
+            return True
+        elif re.search(r"webserver\s+stop", cmd):
+            m = re.search(r"webserver\s+stop\s+([^\d]+)", cmd)
+            if m:
+                port = m.group(1)
+                stop_web_server(int(port))
+            else:
+                stop_web_server()
             return True
         elif cmd.startswith("viewlog") or re.search(r"viewlog\s+([^\s]+)", cmd):
             m = re.search(r"webserver\s+([^\s]+)", cmd)
@@ -1983,10 +2002,8 @@ def entry_debug_mode():
         ("pull", "quickly pull a file to the local application's working directory with a filepath or so filename. For example: pull libmsaoaidsec.so"),
         ("push",
          "quickly push a file to mobile storage with specify path. eg: push example-patch.dex"),
-        ("webserver",
-         "quickly start a webserver with a jar file developed by radar4hooker"),
-        ("viewlog",
-         "Read the logs on Android devices to help you debug the webserver"),
+        ("webserver [start/stop] [controller.jar/8080]",
+         "quickly start or atop a webserver with a jar file developed by radar4hooker eg: webserver start"),
         ("exit", "return to the previous level"),
     ]
     def print_help_msg():
