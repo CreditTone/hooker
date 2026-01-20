@@ -1,5 +1,5 @@
 frida==16.7.19
-frida-tools
+frida-tools==13.7.1
 adbutils==1.2.11
 androguard==3.3.5
 jsbeautifier==1.15.4

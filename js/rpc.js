@@ -201,7 +201,6 @@ function class_exists(className) {
     return exists;
 };
 
-
 //可能会超时 为了防止这个发生，可以在函数 setImmediate 中给你的脚本添加一层包装
 rpc.exports = {
     starthttpserver: function (dex_file, allClz) {

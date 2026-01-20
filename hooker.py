@@ -535,7 +535,7 @@ def restart_app(package_name):
 def ensure_app_in_foreground(package_name):
     uid = None
     shell_result = adb_device.shell(f"dumpsys package {package_name}").strip()
-    matchx = re.search(r"(userId|uid)=(\d+)", shell_result)
+    matchx = re.search(r"(userId|uid|appId)=(\d+)", shell_result)
     if matchx:
         uid = int(matchx.group(2))
     else:
@@ -2051,8 +2051,23 @@ def pad_display(text, width):
     padding = width - wcswidth(text)
     return text + ' ' * max(padding, 0)
 
+
+def is_magisk_root() -> bool:
+    out = run_su_command("su -c id")
+    if "uid=0" not in out:
+        return False
+    # 有些设备不一定带 context 字段，但你这台带了，带了就几乎 100% 是 Magisk
+    if "context=u:r:magisk:s0" in out:
+        return True
+    # 没有 context 也可能是 root（或别的 su），再加个 Magisk 文件特征判断更保险
+    magisk_marker = run_su_command("ls /data/adb/magisk.db 2>/dev/null")
+    return bool(magisk_marker)
+
 def list_third_party_apps():
     identifier_list = []
+    if is_magisk_root():
+        info("under magisk root environment using hooker is very dangerous")
+        run_su_command("setenforce 0")  # 设置SELinux宽松模式，解决magisk手机崩溃问题
     apps = frida_device.enumerate_applications()
     print(f"{pad_display('PID', 6)}\t{pad_display('APP', 20)}\t{pad_display('IDENTIFIER', 35)}\tEXIST_REVERSE_DIRECTORY")
     for app in sorted(apps, key=lambda x: x.pid or 0):
