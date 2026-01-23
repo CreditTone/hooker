@@ -41,17 +41,18 @@ import signal
 import socket
 import struct
 import binascii
+from git import Repo
 from pathlib import Path
 from loguru import logger
-from git import Repo
 from datetime import datetime
 from collections import Counter
+from dataclasses import dataclass
+from androguard.core import androconf
 from androguard.core.bytecodes import apk
 from androguard.core.bytecodes import dvm
 from androguard.core.analysis.analysis import MethodAnalysis
-from androguard.core import androconf
 
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict
 from adbutils.errors import AdbError
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
@@ -261,6 +262,7 @@ adb_device = None
 def _init_adb_device():
     global adb_device
     adb_device = adbutils.adb.device()
+
 _init_adb_device()
 
 def run_su_command(cmd, not_read=False):
@@ -277,6 +279,21 @@ def run_su_command(cmd, not_read=False):
             conn.close()
         except Exception as e:
             pass
+
+
+def get_is_magisk_root() -> bool:
+    out = run_su_command("su -c id")
+    if "uid=0" not in out:
+        return False
+    # 有些设备不一定带 context 字段，但你这台带了，带了就几乎 100% 是 Magisk
+    if "context=u:r:magisk:s0" in out:
+        return True
+    # 没有 context 也可能是 root（或别的 su），再加个 Magisk 文件特征判断更保险
+    magisk_marker = run_su_command("ls /data/adb/magisk.db 2>/dev/null")
+    return bool(magisk_marker)
+
+is_magisk_root = get_is_magisk_root()
+
 
 #初始化frida运行环境
 def is_frida_working_via_attach(target_package="com.android.systemui"):
@@ -503,6 +520,98 @@ def _init_frida_device():
 
 _init_frida_device()
 
+@dataclass
+class AppInfo:
+    name: str               # 应用名（label，拿不到时用包名代替）
+    identifier: str         # 包名
+    pid: Optional[int]      # 运行中才有 pid，否则 None
+
+def _list_third_party_packages() -> List[str]:
+    """
+    第三方包（-3）最稳定。
+    输出行形如：package:com.xxx.yyy
+    """
+    out = run_su_command("pm list packages -3")
+    pkgs = []
+    for line in out.splitlines():
+        line = line.strip()
+        if line.startswith("package:"):
+            pkgs.append(line.split("package:", 1)[1])
+    return pkgs
+
+
+def _get_pid_map() -> Dict[str, int]:
+    """
+    获取运行中进程的 pid 映射：package -> pid
+    优先 pidof（快），不行再回退 ps。
+    """
+    pid_map: Dict[str, int] = {}
+    # 方案 A：pidof（Android 8+ 大多支持）
+    # pidof 可能返回多个 pid（多进程），这里取第一个
+    # 但我们需要逐包调用 pidof，太慢，所以改用 ps 做一次性扫描更划算。
+    # 因此优先方案 B：ps -A 解析。
+    ps_out = run_su_command("ps -A -o PID,NAME")
+    # 输出示例：
+    # PID NAME
+    #  123 com.xxx.yyy
+    for line in ps_out.splitlines()[1:]:
+        line = line.strip()
+        if not line:
+            continue
+        parts = re.split(r"\s+", line, maxsplit=1)
+        if len(parts) != 2:
+            continue
+        pid_s, name = parts
+        if name.startswith("com."):  # 简单过滤：只收集 app 进程
+            try:
+                pid_map[name] = int(pid_s)
+            except ValueError:
+                pass
+    return pid_map
+
+
+def _get_app_label_fast(pkg: str) -> Optional[str]:
+    """
+    尝试快速拿 label（不保证所有 ROM 都能拿到）。
+    方法：cmd package dump + grep
+    失败就返回 None（用包名代替）。
+    """
+    # 有些系统支持：cmd package resolve-activity / dumpsys package
+    # 但 label 不一定直接给；dumpsys package <pkg> 里通常能找到 "application-label:"
+    out = run_su_command(f"dumpsys package {pkg} | grep -m 1 -E 'application-label:'")
+    m = re.search(r"application-label:'(.*)'", out)
+    if m:
+        return m.group(1).strip()
+    return pkg
+
+
+def enumerate_applications_adbutils(third_party_only: bool = True, include_label: bool = False) -> List[AppInfo]:
+    """
+    用 adbutils 实现一个“类 enumerate_applications”的方法：
+    - identifier: 包名
+    - pid: 运行中的进程 pid（取主进程名 == 包名的情况）
+    - name: 可选，从 dumpsys 拿 label；默认用包名代替（快很多）
+    """
+    info(f"is_magisk_root:{is_magisk_root}")
+    if not is_magisk_root:
+        return frida_device.enumerate_applications()
+
+    pkgs = _list_third_party_packages() if third_party_only else [
+        line.split("package:", 1)[1]
+        for line in run_su_command("pm list packages").splitlines()
+        if line.startswith("package:")
+    ]
+    pid_map = _get_pid_map()
+    apps: List[AppInfo] = []
+    for pkg in pkgs:
+        pid = pid_map.get(pkg, 0)  # 只有“进程名==包名”的主进程才会命中
+        if include_label:
+            label = _get_app_label_fast(pkg) or pkg
+        else:
+            label = pkg
+        apps.append(AppInfo(name=label, identifier=pkg, pid=pid))
+    return apps
+
 def start_app(package_name):
     global current_identifier_pid
     shell_result = adb_device.shell(f"dumpsys package {package_name} | grep -A 1 MAIN | grep {package_name}").strip()
@@ -517,7 +626,7 @@ def start_app(package_name):
         time.sleep(0.5)
         if package_name in adb_device.shell("dumpsys activity activities | grep mResumedActivity"):
             break
-    apps = frida_device.enumerate_applications()
+    apps = enumerate_applications_adbutils(third_party_only=True, include_label=True)
     for app in sorted(apps, key=lambda x: x.pid or 0):
         if app.pid != 0 and app.identifier == package_name:
             current_identifier_pid = app.pid
@@ -558,7 +667,7 @@ def ensure_app_in_foreground(package_name):
         version_name = appinfo["version_name"]
     # 获取当前正在运行的所有进程
     proc_map = {}
-    apps = frida_device.enumerate_applications()
+    apps = enumerate_applications_adbutils(third_party_only=True, include_label=True)
     for app in sorted(apps, key=lambda x: x.pid or 0):
         if app.pid != 0:  # 只列出运行中的
             proc_map[app.identifier] = (app.pid, app.name)
@@ -2052,23 +2161,9 @@ def pad_display(text, width):
     return text + ' ' * max(padding, 0)
 
 
-def is_magisk_root() -> bool:
-    out = run_su_command("su -c id")
-    if "uid=0" not in out:
-        return False
-    # 有些设备不一定带 context 字段，但你这台带了，带了就几乎 100% 是 Magisk
-    if "context=u:r:magisk:s0" in out:
-        return True
-    # 没有 context 也可能是 root（或别的 su），再加个 Magisk 文件特征判断更保险
-    magisk_marker = run_su_command("ls /data/adb/magisk.db 2>/dev/null")
-    return bool(magisk_marker)
-
 def list_third_party_apps():
     identifier_list = []
-    if is_magisk_root():
-        info("under magisk root environment using hooker is very dangerous")
-        run_su_command("setenforce 0")  # 设置SELinux宽松模式，解决magisk手机崩溃问题
-    apps = frida_device.enumerate_applications()
+    apps = enumerate_applications_adbutils(True, True)
     print(f"{pad_display('PID', 6)}\t{pad_display('APP', 20)}\t{pad_display('IDENTIFIER', 35)}\tEXIST_REVERSE_DIRECTORY")
     for app in sorted(apps, key=lambda x: x.pid or 0):
         if app.pid is not None:  # 只列出运行中的
