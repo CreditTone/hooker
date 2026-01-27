@@ -304,6 +304,7 @@ def is_frida_working_via_attach(target_package="com.android.systemui"):
         _session.detach()
         return True
     except frida.ServerNotRunningError:
+        #info("其他异常: ServerNotRunningError")
         return False
     except frida.ProcessNotFoundError:
         #info("⚠️ 找不到进程，说明包名可能错误，但 frida 正常")
@@ -312,7 +313,7 @@ def is_frida_working_via_attach(target_package="com.android.systemui"):
         #info("❌ 连接超时，frida-server 可能未运行或设备未连接")
         return False
     except Exception as e:
-        #print("其他异常:", e)
+        #info(f"其他异常: {e}")
         return False
 
 def check_remote_file_exists(path):
@@ -366,7 +367,8 @@ def push_file_to_remote(local_path, remote_path, is_debug=True):
         info(f"push {local_path} to {remote_path} successful")
     
 def is_root():
-    return "system" in run_su_command("ls /data/")
+    output = run_su_command("ls /data/")
+    return "cache" in output and "user" in output
 
 def ensure_root():
     if is_root():
@@ -378,7 +380,7 @@ def ensure_root():
                 info("Switched to root successfully ✅")
                 return True
             else:
-                info("❌ Failed to switch: device does not support root")
+                info("❌ Device is not rooted")
                 return False
         except Exception as e:
             info(f"❌ Failed to switch to root: {e}")
@@ -388,7 +390,10 @@ def ensure_root():
 # 自动化部署frida-server    
 if not is_frida_working_via_attach():
     if not ensure_root():
-        info("❌ Cannot auto-deploy frida-server. Please start frida-server manually and try again.")
+        info("❌ Cannot deploy frida-server automatically. Please start frida-server manually and try again.")
+        sys.exit(2)
+    elif is_magisk_root:
+        info("❌ Cannot deploy frida-server automatically on the Magisk devices. Please start frida-server manually and try again.")
         sys.exit(2)
     frida_server_file = choose_frida_server()
     remote_frida_server_file = f"/data/mobile-deploy/{frida_server_file}"
@@ -398,6 +403,7 @@ if not is_frida_working_via_attach():
         push_file_to_remote(f"mobile-deploy/{frida_server_file}", "/sdcard/")
         run_su_command(f"mv /sdcard/{frida_server_file} {remote_frida_server_file}")
         run_su_command(f"chmod +x {remote_frida_server_file}")
+    run_su_command("setenforce 0")
     run_su_command(f"cd /data/mobile-deploy/ && ./{choose_frida_server()} > /sdcard/f_server.log 2>&1 &", True)
     success = False
     for index in range(20):
@@ -592,24 +598,24 @@ def enumerate_applications_adbutils(third_party_only: bool = True, include_label
     - pid: 运行中的进程 pid（取主进程名 == 包名的情况）
     - name: 可选，从 dumpsys 拿 label；默认用包名代替（快很多）
     """
+    apps: List[AppInfo] = []
     info(f"is_magisk_root:{is_magisk_root}")
     if not is_magisk_root:
         return frida_device.enumerate_applications()
 
-    pkgs = _list_third_party_packages() if third_party_only else [
-        line.split("package:", 1)[1]
-        for line in run_su_command("pm list packages").splitlines()
-        if line.startswith("package:")
-    ]
+    pkgs = _list_third_party_packages()
+    info(f"pkgs: {pkgs}")
     pid_map = _get_pid_map()
-    apps: List[AppInfo] = []
+    info(f"is_magisk_root3:{is_magisk_root}")
     for pkg in pkgs:
         pid = pid_map.get(pkg, 0)  # 只有“进程名==包名”的主进程才会命中
         if include_label:
+            info(f"_get_app_label_fast:{pkg}")
             label = _get_app_label_fast(pkg) or pkg
         else:
             label = pkg
         apps.append(AppInfo(name=label, identifier=pkg, pid=pid))
+    info(f"enumerate_applications_adbutils: {apps}")
     return apps
 
 def start_app(package_name):
@@ -2163,7 +2169,7 @@ def pad_display(text, width):
 
 def list_third_party_apps():
     identifier_list = []
-    apps = enumerate_applications_adbutils(True, True)
+    apps = enumerate_applications_adbutils(False, True)
     print(f"{pad_display('PID', 6)}\t{pad_display('APP', 20)}\t{pad_display('IDENTIFIER', 35)}\tEXIST_REVERSE_DIRECTORY")
     for app in sorted(apps, key=lambda x: x.pid or 0):
         if app.pid is not None:  # 只列出运行中的
