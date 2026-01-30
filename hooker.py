@@ -599,24 +599,24 @@ def enumerate_applications_adbutils(third_party_only: bool = True, include_label
     - name: 可选，从 dumpsys 拿 label；默认用包名代替（快很多）
     """
     apps: List[AppInfo] = []
-    info(f"is_magisk_root:{is_magisk_root}")
+    # info(f"is_magisk_root:{is_magisk_root}")
     if not is_magisk_root:
         return frida_device.enumerate_applications()
 
-    pkgs = _list_third_party_packages()
-    info(f"pkgs: {pkgs}")
-    pid_map = _get_pid_map()
-    info(f"is_magisk_root3:{is_magisk_root}")
-    for pkg in pkgs:
-        pid = pid_map.get(pkg, 0)  # 只有“进程名==包名”的主进程才会命中
-        if include_label:
-            info(f"_get_app_label_fast:{pkg}")
-            label = _get_app_label_fast(pkg) or pkg
-        else:
-            label = pkg
-        apps.append(AppInfo(name=label, identifier=pkg, pid=pid))
-    info(f"enumerate_applications_adbutils: {apps}")
-    return apps
+    # pkgs = _list_third_party_packages()
+    # info(f"pkgs: {pkgs}")
+    # pid_map = _get_pid_map()
+    # info(f"is_magisk_root3:{is_magisk_root}")
+    # for pkg in pkgs:
+    #     pid = pid_map.get(pkg, 0)  # 只有“进程名==包名”的主进程才会命中
+    #     if include_label:
+    #         info(f"_get_app_label_fast:{pkg}")
+    #         label = _get_app_label_fast(pkg) or pkg
+    #     else:
+    #         label = pkg
+    #     apps.append(AppInfo(name=label, identifier=pkg, pid=pid))
+    # info(f"enumerate_applications_adbutils: {apps}")
+    return frida_device.enumerate_applications()
 
 def start_app(package_name):
     global current_identifier_pid
