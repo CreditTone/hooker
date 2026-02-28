@@ -1051,15 +1051,18 @@ def print_view(viewId):
         detach(online_session, online_script)
 
 def rpc_start_web_server(dex_file, all_class):
+    global webserver_url
     online_session = None
     online_script = None
     try:
         online_session, online_script = attach_rpc();
         text = online_script.exports_sync.starthttpserver(dex_file, ",".join(all_class))
         info(text)
-        m = re.search("http:[^s]+", text)
+        m = re.search("http:[^s]+:[\d]+", text)
         if m:
             webserver_url = m.group(0)
+        else:
+            info("找不到webserver" + text)
     except Exception:
         print(traceback.format_exc())
     finally:
@@ -1802,7 +1805,8 @@ def start_web_server(jar_file:str = None):
         rpc_start_web_server("", [])
 
 def stop_web_server():
-    result = adb_device.shell(f"curl --max-time 3 {webserver_url}/stop")
+    cmd = "curl --max-time 3 " + webserver_url + "/stop"
+    result = adb_device.shell(cmd)
     info(result)
 
 def tail_android_file(filepath: str):
