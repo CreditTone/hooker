@@ -1,4 +1,5 @@
 var loaded_radar_dex_flag = false;
+var dexfile = "/data/local/tmp/radar.dex";
 
 function newMethodBeat(text, executor) {
     var threadClz = Java.use("java.lang.Thread");
