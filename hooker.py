@@ -1801,7 +1801,8 @@ def start_web_server(jar_file:str = "", with_xposed_daemon = False):
         if len(all_classes) == 0:
             warn(f"Deploy failure. not found any class in {jar_file}")
             return
-        remote_dex_file = push_file_to_device_with_chmod(dex_file)
+        remote_file = f"/data/user/0/{current_identifier}/hooker_server.dex"
+        remote_dex_file = push_file_to_device_with_chmod(dex_file, remote_file)
     rpc_start_web_server(remote_dex_file, all_classes)
     if with_xposed_daemon:
         if not check_remote_dir_exists("/data/local/tmp/hooker_server_conf"):
