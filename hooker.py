@@ -600,10 +600,6 @@ def enumerate_applications_adbutils(third_party_only: bool = True, include_label
     - name: 可选，从 dumpsys 拿 label；默认用包名代替（快很多）
     """
     apps: List[AppInfo] = []
-    # info(f"is_magisk_root:{is_magisk_root}")
-    if not is_magisk_root:
-        return frida_device.enumerate_applications()
-
     # pkgs = _list_third_party_packages()
     # info(f"pkgs: {pkgs}")
     # pid_map = _get_pid_map()
@@ -649,6 +645,11 @@ def restart_app(package_name):
     current_identifier_pid = app_pid
 
 def ensure_app_in_foreground(package_name):
+    def get_main_pid(pkg):
+        out = adb_device.shell(f"pidof {pkg}").strip()
+        if out:
+            return int(out.split()[0])
+        return None
     uid = None
     shell_result = adb_device.shell(f"dumpsys package {package_name}").strip()
     matchx = re.search(r"(userId|uid|appId)=(\d+)", shell_result)
@@ -690,11 +691,15 @@ def ensure_app_in_foreground(package_name):
             # 通过 am 启动主 Activity，会自动 bring 到前台
             adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
             #print("proc_map[package_name][1]", proc_map[package_name][1])
-        return proc_map[package_name][0], proc_map[package_name][1], version_name, appinstall_path, appinstall_path_apkfilename, uid
+        main_pid = get_main_pid(package_name)
+        app_pid = main_pid if main_pid is not None else proc_map[package_name][0]
+        return app_pid, proc_map[package_name][1], version_name, appinstall_path, appinstall_path_apkfilename, uid
     else:
         info(f"🚀 App {package_name} is not running, starting it now...")
         #adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
         app_pid, app_name = start_app(package_name)
+        main_pid = get_main_pid(package_name)
+        app_pid = main_pid if main_pid is not None else app_pid
         return app_pid, app_name, version_name, appinstall_path, appinstall_path_apkfilename, uid
 
 def get_remote_file_md5(file_path):
@@ -1804,22 +1809,6 @@ def start_web_server(jar_file:str = "", with_xposed_daemon = False):
         remote_file = f"/data/user/0/{current_identifier}/hooker_server.dex"
         remote_dex_file = push_file_to_device_with_chmod(dex_file, remote_file)
     rpc_start_web_server(remote_dex_file, all_classes)
-    if with_xposed_daemon:
-        if not check_remote_dir_exists("/data/local/tmp/hooker_server_conf"):
-            run_su_command("mkdir /data/local/tmp/hooker_server_conf && chmod 755 /data/local/tmp/hooker_server_conf")
-        config = (
-            "hooker_server {\n"
-            f"   controller_dex = {remote_dex_file};\n"
-            f"   controller_class = {','.join(all_classes)};\n"
-            "}"
-        )
-        adb_device.shell(f"rm -f /data/local/tmp/hooker_server_conf/{current_identifier}.conf")
-        adb_device.shell(f"echo '{config}' > /data/local/tmp/hooker_server_conf/{current_identifier}.conf")
-        if not check_remote_file_exists("/data/local/tmp/daemon_app.sh"):
-            push_file_to_remote("mobile-deploy/daemon_app.sh", "/data/local/tmp/daemon_app.sh")
-            run_su_command("chmod 755 /data/local/tmp/daemon_app.sh")
-        run_su_command("pkill daemon_app")
-        run_su_command(f"nohup /data/local/tmp/daemon_app.sh {current_identifier} > /data/local/tmp/daemon_{current_identifier}.log 2>&1 &")
 
 def stop_web_server():
     cmd = "curl --max-time 3 " + webserver_url + "/stop"
@@ -1917,7 +1906,6 @@ class ClassNameCompleter(Completer):
             'pull': None,
             'webserver': {
                 "start": jar_files,
-                "start_with_xposed_daemon": jar_files,
                 "stop": None,
             },
             'viewlog': viewlog,
@@ -1948,7 +1936,6 @@ class ClassNameCompleter(Completer):
         self.nested_dict["push"] = pushable_files
         self.nested_dict["webserver"] = {
             "start": jar_files,
-            "start_with_xposed_daemon": jar_files,
             "stop": None,
         }
         self.debug_completer = NestedCompleter.from_nested_dict(self.nested_dict)
@@ -2049,21 +2036,13 @@ def entry_debug_mode():
                 else:
                     push_file_to_device_with_chmod(local_file)
             return True
-        elif re.search(r"webserver\s+start\s+", cmd):
+        elif re.search(r"webserver\s+start", cmd):
             m = re.search(r"webserver\s+start\s+([^\s]+\.jar)", cmd)
             if m:
                 jar_file = m.group(1)
                 start_web_server(jar_file)
             else:
                 start_web_server()
-            return True
-        elif re.search(r"webserver\s+start_with_xposed_daemon", cmd):
-            m = re.search(r"webserver\s+start_with_xposed_daemon\s+([^\s]+\.jar)", cmd)
-            if m:
-                jar_file = m.group(1)
-                start_web_server(jar_file, True)
-            else:
-                start_web_server("", True)
             return True
         elif re.search(r"webserver\s+stop", cmd):
             m = re.search(r"webserver\s+stop\s+([^\d]+)", cmd)
@@ -2201,7 +2180,6 @@ def pad_display(text, width):
     padding = width - wcswidth(text)
     return text + ' ' * max(padding, 0)
 
-
 def list_third_party_apps():
     identifier_list = []
     apps = enumerate_applications_adbutils(False, True)
@@ -2275,7 +2253,7 @@ while True:
         first_command_list.append("quit")
         first_command_list.append("upgrade")
         print("Please enter the identifier that needs to be reversed")
-        identifier = cmd_session.prompt('hooker(Identifier): ', completer=WordCompleter(first_command_list, ignore_case=False, match_middle=True, WORD=True)) 
+        identifier = cmd_session.prompt('hooker(Identifier): ', completer=WordCompleter(first_command_list, ignore_case=False, match_middle=True, WORD=True))
         identifier = identifier.strip()
         if identifier == 'exit' or identifier == 'exit()' or identifier == 'quit':
             info('ByeBye!')
