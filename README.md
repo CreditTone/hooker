@@ -246,160 +246,27 @@ exit                                         return to the previous level
 
 
 
-# 启动hooker webserver
+### 启动webserver
 
-这里预留给后续补充 `hooker webserver` 的启动方式、部署方式和访问方法。
+hooker支持在手机中注入一个轻量级 webserver。启动后会在目标 App 进程内开启一个 HTTP 服务，默认端口是 `8080`，既可以直接暴露 patch 项目里自定义的 controller，也会自动挂载一组内置调试接口。
 
-TODO: 这里由作者补充。
+```shell
+某音火山版 > webserver start
+Http server port: 8080
+Http server: http://10.112.101.249:8080
+```
 
-***
+浏览器打开首页后可以看到当前已注册的 API 列表，常用能力包括：
 
-# 开发手机API接口
+- 服务管理：`/` 查看欢迎页和接口清单，`/stop` 停止当前 webserver。
+- UI 自动化：`/hooker/ui/...` 提供点击控件、按文本点击、按坐标点击、设置输入框文本、触发返回/Home、启动 Activity、获取屏幕信息、翻页、滚动 RecyclerView、尝试关闭弹窗等能力，适合做半自动化操作和页面联调。
+- 页面结构导出：`/hooker/uiauto/dump`、`/hooker/uiauto/window_dump.xml`、`/hooker/uiauto/window_dump.json` 可以导出当前窗口层级，方便定位控件和分析页面结构。
+- 截图能力：`/hooker/screencap/screenshot` 可直接调用系统 `screencap` 截图；`/hooker/mediaprojection/...` 支持申请 MediaProjection 权限并抓取整屏 PNG，更适合做远程观察和自动化闭环。
+- App 信息读取：`/hooker/appinfo` 可读取包名、版本、组件、权限、签名和目录信息；`/hooker/appinfo/shared_prefs`、`/hooker/appinfo/databases`、`/hooker/appinfo/read_table` 可以直接查看 `shared_prefs`、数据库结构和表数据。
+- 类/对象辅助调用：`/hooker/classhelper/invoke_static_method`、`/hooker/classhelper/invoke_method` 支持通过 HTTP 直接调用静态方法或已缓存对象的方法，便于快速验证算法、补环境或调试业务逻辑。
+- 文件回传：`/file?filename=...` 可以把绝对路径文件或 webserver 缓存目录里的文件直接通过 HTTP 返回。
+- MCP 风格 UI 工具：`/hooker/mcp/ui/tools` 和 `/hooker/mcp/ui/call` 把常用 UI 操作封装成统一工具接口，便于外部脚本或 Agent 通过 HTTP 驱动当前 App。
 
-如果你希望把某个 App 的页面能力、业务能力或内置网络能力封装成可远程调用的 HTTP API，推荐单独创建 patch 工程来开发，而不是把具体 App 逻辑直接写进 `hooker` 主仓库。
-
-当前可以参考这些工程：
-
-- `/Users/stephen256/eclipse-workspace2/gifshow-patch`
-- `/Users/stephen256/eclipse-workspace2/douyin-huozhan-34.1.0`
-- `/Users/stephen256/eclipse-workspace2/taobao-10.59.10-patch`
-
-从这几个工程里可以总结出一套比较稳定的开发方式。
-
-### 1. 每个 App 单独建一个 patch 工程
-
-共同点很明显：
-
-- 都是老式 `src + libs` 的 Java 工程
-- `libs/` 里放目标 App 的 dex2jar 依赖和 `xradar.jar`
-- `src/` 里只放少量你自己写的 controller 代码
-- 一个工程只服务一个 App 或一个版本段，避免互相污染
-
-这样做的好处是：
-
-- 依赖隔离，定位类更直接
-- 针对具体 App 升级时更容易维护
-- 不会把业务 API 和 `hooker` 通用能力混在一起
-
-### 2. 用 Controller 暴露 HTTP 接口
-
-这三个工程都采用同一种组织方式：
-
-- 用 `@HookerWebServerConfiguration(port = 2026)` 指定端口
-- 用 `@HookerController("/xxx")` 定义业务前缀
-- 用 `@HookerRequestMapping(path = "/xxx")` 暴露接口
-- 用 `@HookerRequestParam` 接收查询参数
-
-也就是说，patch 工程的核心不是写 Frida 脚本，而是写“运行在目标进程里的业务 Controller”。
-
-### 3. 优先复用目标 App 自己的能力
-
-这几个 patch 工程最重要的共同点是：它们不是自己重新造请求，而是尽量直接调用目标 App 内部已经存在的对象、API、Presenter、网络层或页面能力。
-
-例如：
-
-- `gifshow-patch` 直接调用快手内部 API / RxJava Observable
-- `douyin-huozhan-34.1.0` 直接调用抖音内部的 Profile、Search、Comment 能力
-- `taobao-10.59.10-patch` 直接走淘宝详情页内部请求链路
-
-这类开发方式比“自己抓包重写协议”更稳，因为：
-
-- 登录态、签名、环境参数通常已经在 App 内部准备好了
-- 目标 App 升级后，只需要修补调用路径，不必重造整套协议
-- 你用的是 App 自己的网络栈和页面对象，更接近真实行为
-
-### 4. 异步结果统一转同步返回
-
-三个工程都用了相似套路把异步回调结果变成 HTTP 同步返回：
-
-- `CountDownLatch`
-- `AtomicReference`
-- 在回调里 `set(result)` 然后 `countDown()`
-- 接口线程里 `await()` 后再返回 JSON
-
-这基本可以作为 patch 接口的标准模板。
-
-适用场景：
-
-- RxJava Observable
-- Kotlin Continuation / Future
-- Task / Callback / Listener
-- 页面异步加载结果
-
-### 5. 先跑通最小接口，再逐步补参数
-
-这三个工程还有一个共同开发习惯：
-
-- 先把最小可调用链路打通
-- 再逐步补真实参数、埋点参数、分页参数、上下文参数
-
-尤其像搜索、评论、详情这种接口，很多字段一开始可以先写死或从真实请求抄一份，等确认可用后再抽成参数。
-
-这比一开始就追求“参数完美抽象”更高效。
-
-### 6. 开发手机 API 的推荐顺序
-
-推荐按下面顺序开发：
-
-1. 先用 `hooker` 自带能力确认页面、类、对象、控件和入口
-2. 建一个独立 patch 工程，把目标 App 的 dex2jar 和 `xradar.jar` 放进 `libs/`
-3. 写一个最小 `Controller`，先暴露一个能返回固定结果的测试接口
-4. 再把目标 App 的内部对象或内部网络能力接进来
-5. 用 `CountDownLatch + AtomicReference` 把异步结果收敛成同步 HTTP 返回
-6. 最后再补分页、搜索词、用户 id、aweme_id、itemId 等业务参数
-
-### 7. 哪些能力适合做成手机 API
-
-从这几个工程和当前 `radar4hooker` 的实践看，下面这些最适合抽象成手机 API：
-
-- 用户资料、评论、搜索建议、搜索结果、详情页数据
-- 当前页面 inspect
-- 查找视频播放控件、翻页容器、输入框、按钮
-- 点击 `TextView`、`ImageView`、按钮
-- 给 `EditText` 填值并触发搜索
-- 针对短视频 App 封装上下滑、切 Tab、打开评论区
-- 针对电商 App 封装详情打开、SKU 读取、商品信息抓取
-
-### 8. 什么时候写进 hooker，什么时候单独做 patch
-
-建议规则很简单：
-
-写进 `hooker` 主仓库的内容：
-
-- 通用能力
-- 跟具体 App 无关的操作
-- inspect、click、set_text、classhelper 这类基础设施
-
-写进独立 patch 工程的内容：
-
-- 具体 App 的页面逻辑
-- 具体 App 的内部类调用
-- 具体 App 的搜索、评论、详情、翻页等业务动作
-- 高度依赖某个版本号的实现
-
-这样维护成本最低。
-
-***
-
-# hooker原生提供的操作API
-
-除了 patch 工程里自定义的业务 API，`hooker` 本身已经提供了一批通用操作能力，这些能力更适合作为调试基础设施和开发手机 API 的前置工具。
-
-典型能力包括：
-
-- 查看 Activity / Service 栈
-- 查看对象信息和 View 信息
-- inspect 当前页面控件
-- 自动生成 Frida Hook 脚本
-- attach / spawn 执行脚本
-- 快速启用 SSL Unpinning
-- 快速设置代理、取消代理、重启 App
-- 获取 PID / UID、pull 文件
-
-实际工作流通常是：
-
-- 先用 `hooker` 原生能力探路
-- 再把稳定、可复用的动作沉淀到 patch 工程的 HTTP API 中
 
 ***
 
