@@ -269,7 +269,7 @@ Http server: http://10.112.101.249:8080
 - MCP 风格 UI 工具：`/hooker/mcp/ui/tools` 和 `/hooker/mcp/ui/call` 把常用 UI 操作封装成统一工具接口，便于外部脚本或 Agent 通过 HTTP 驱动当前 App。
 
 
-- 启动自定义 webserver
+- 7.1 启动自定义 webserver
 
 给定一个patch工程的jar包，将爬虫接口启动为webserver。
 
@@ -284,7 +284,7 @@ Http server: http://10.112.101.249:2026
 
 这里的 `taxbax-patch.jar` 可以理解成“运行在目标 App 进程里的业务插件”。`hooker` 会先把 jar 转成 dex，再注入到目标进程中，扫描其中带注解的类，然后把这些类注册成 HTTP 路由。
 
-自定义 webserver 适合做这类事情：
+- 7.2 自定义 webserver 适合做这类事情：
 
 - 暴露目标 App 内部已经存在的业务能力，比如搜索、评论、详情页、签名、加解密、用户资料、直播接口等。
 - 直接复用目标 App 自己的登录态、网络栈、环境参数和对象实例，避免在外部重复补协议。
@@ -301,7 +301,7 @@ Http server: http://10.112.101.249:2026
 具体开发文档，将在https://github.com/CreditTone/radar4hooker详细介绍
 
 
-- webserver 持久化
+- 7.3 webserver 持久化
 
 如果你已经为某个 App 开发好了 patch 工程，并且需要在多台设备上长期部署，那么 `frida + hooker` 的临时注入方式会比较重。针对这种场景，作者提供了 Xposed 插件 `HookerServer`：
 
