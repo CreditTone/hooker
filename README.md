@@ -23,9 +23,7 @@ hooker是一个基于frida实现的逆向工具包。旨在为安卓逆向开发
 =================
 * [1. frida版JustTrustMe，通杀全网APP，且作者一直在持续维护升级](#12-frida版JustTrustMe包括boringgssl)
 * [2. 嵌入式webserver支持把App内部能力快速暴露成HTTP接口，便于做自动化和接口化](#7-嵌入式webserver)
-* [3. 自动化生成frida脚本，1秒钟生成一个脚本，脚本备注详细可扩展性强](#8-自动化生成frida脚本)
-* [4. 快捷设置socks5代理，无需额外安装socksdroid等三方app实现无感知代理](#11-快捷设置socks5无感代理)
-* [5. 整个使用过程非常舒适的命令行提示，让你享受逆向的过程](#8-自动化生成frida脚本)
+* [3. 快捷设置socks5代理，无需额外安装socksdroid等三方app实现无感知代理](#11-快捷设置socks5无感代理)
 
 <img src="https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg" width="1000">
 
@@ -273,6 +271,8 @@ Http server: http://10.112.101.249:8080
 
 - 启动自定义 webserver
 
+给定一个patch工程的jar包，将爬虫接口启动为webserver。
+
 ```shell
 某宝 > webserver start taxbax-patch.jar
 Converting taxbax-patch.jar to taxbax-patch.dex...
@@ -290,7 +290,7 @@ Http server: http://10.112.101.249:2026
 - 直接复用目标 App 自己的登录态、网络栈、环境参数和对象实例，避免在外部重复补协议。
 - 把异步回调、Observable、Listener、页面对象调用收敛成一个同步 HTTP 接口，对外统一返回 JSON 或文本。
 
-通常在 patch 工程里这样定义接口：
+你可以像开发springboot一样优雅的开发嵌入式的httpserver，并调用目标app的任何java代码而无需像有些xposed插件一样TMD的反射、反射、再反射，跟SB一样😊
 
 - 用 `@HookerWebServerConfiguration(port = 2026)` 指定端口，不写时默认走 `8080`。
 - 用 `@HookerController("/taobao")`、`@HookerController("/douyin")` 这类注解定义业务前缀。
@@ -298,7 +298,7 @@ Http server: http://10.112.101.249:2026
 - 用 `@HookerRequestParam`、`@HookerRequestPostJson` 接收查询参数和 POST JSON。
 
 
-这也是 hooker 推荐的手机 API 开发方式：把通用调试能力留在主仓库，把具体 App 的业务逻辑单独放到 patch 工程里，再通过 webserver 暴露成 HTTP 接口。
+具体开发文档，将在https://github.com/CreditTone/radar4hooker详细介绍
 
 
 - webserver 持久化
@@ -621,7 +621,7 @@ com.android.okhttp.Request.Builder.build()
 
 ### 11. 快捷设置socks5无感代理
 
-通过iptables链路层转发包实现一键设置代理，优势是APP完全无感知被代理。推荐使用charles的socks5性能更高。
+通过iptables链路层转发包实现一键设置代理，优势是APP完全无感知被代理。推荐使用charles的socks5
 
 设置代理后必须主动去[关闭代理](#14-取消代理设置)，代理不会自动取消
 

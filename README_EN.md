@@ -32,6 +32,12 @@ Global app support for boringssl unpinning
 One picture to prove why you need Hooker:
 ![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
 
+- 1. A Frida-based implementation of JustTrustMe for universal SSL pinning bypass, with ongoing maintenance.
+- 2. An embedded webserver that can quickly expose in-app capabilities as HTTP endpoints for automation and API-style workflows.
+- 3. Automated Frida hook script generation with detailed, extensible templates.
+- 4. One-click SOCKS5 proxy setup without requiring third-party apps such as SocksDroid.
+- 5. A highly streamlined command-line workflow that makes daily reversing much more comfortable.
+
 ## 📚 Table of Contents
 
 - [Quick Start](#quick-start)
@@ -41,15 +47,16 @@ One picture to prove why you need Hooker:
   - [4. Launch Hooker](#4-launch-hooker)
   - [5. Enter the package name of the target app](#5-enter-the-package-name-of-the-target-app)
   - [6. View help information](#6-view-help-information)
-  - [7. Generate Frida hook scripts for a specific class and method](#7-generate-frida-hook-scripts-for-a-specific-class-and-method)
-  - [8. List all available Frida scripts](#8-list-all-available-frida-scripts)
-  - [9. Attach and execute a specific Frida script](#9-attach-and-execute-a-specific-frida-script)
-  - [10. Set a SOCKS5 proxy for the app](#10-set-a-socks5-proxy-for-the-app)
-  - [11. Run JustTrustMe to disable all SSL pinning (including boringssl)](#11-run-justtrustme-to-disable-all-ssl-pinning-including-boringssl)
-  - [12. Spawn the app and execute a specific Frida script](#12-spawn-the-app-and-execute-a-specific-frida-script)
-  - [13. Clear the proxy settings](#13-clear-the-proxy-settings)
-  - [14. Restart the app](#14-restart-the-app)
-  - [15. Get the app's UID and PID](#15-get-uid-and-pid)
+  - [7. Embedded webserver](#7-embedded-webserver)
+  - [8. Generate Frida hook scripts for a specific class and method](#8-generate-frida-hook-scripts-for-a-specific-class-and-method)
+  - [9. List all available Frida scripts](#9-list-all-available-frida-scripts)
+  - [10. Attach and execute a specific Frida script](#10-attach-and-execute-a-specific-frida-script)
+  - [11. Set a SOCKS5 proxy for the app](#11-set-a-socks5-proxy-for-the-app)
+  - [12. Run JustTrustMe to disable all SSL pinning (including boringssl)](#12-run-justtrustme-to-disable-all-ssl-pinning-including-boringssl)
+  - [13. Spawn the app and execute a specific Frida script](#13-spawn-the-app-and-execute-a-specific-frida-script)
+  - [14. Clear the proxy settings](#14-clear-the-proxy-settings)
+  - [15. Restart the app](#15-restart-the-app)
+  - [16. Get the app's UID and PID](#16-get-uid-and-pid)
 
 
 # 🚀 Quick Start
@@ -182,14 +189,84 @@ exit                                         return to the previous level
 ***
 
 
-### 7. Generate Frida hook scripts for a specific class and method
+### 7. Embedded webserver
+
+Hooker can inject a lightweight webserver into the target app process. Once started, it launches an HTTP service inside the app. The default port is `8080`. This service can expose both your custom patch controllers and a built-in set of debugging endpoints.
+
+- Start the built-in webserver
+
+```shell
+某音火山版 > webserver start
+Http server port: 8080
+Http server: http://10.112.101.249:8080
+```
+
+After the built-in webserver starts, open the root page in a browser to see all registered APIs. Common built-in capabilities include:
+
+- Service management: `/` shows the welcome page and API list, and `/stop` stops the current webserver.
+- UI automation: `/hooker/ui/...` provides view clicking, text-based clicking, coordinate tapping, setting EditText values, triggering Back/Home, launching activities, querying screen info, swiping pagers, scrolling RecyclerView, and dismissing dialogs.
+- UI hierarchy export: `/hooker/uiauto/dump`, `/hooker/uiauto/window_dump.xml`, and `/hooker/uiauto/window_dump.json` export the current window hierarchy for inspection and control discovery.
+- Screenshot capture: `/hooker/screencap/screenshot` uses the system `screencap` command, while `/hooker/mediaprojection/...` supports MediaProjection permission flow and full-screen PNG capture.
+- App information: `/hooker/appinfo`, `/hooker/appinfo/shared_prefs`, `/hooker/appinfo/databases`, and `/hooker/appinfo/read_table` let you inspect package metadata, permissions, signatures, shared preferences, database schemas, and table rows.
+- Class and object helpers: `/hooker/classhelper/invoke_static_method` and `/hooker/classhelper/invoke_method` let you invoke static methods or stored object methods over HTTP.
+- File serving: `/file?filename=...` returns an absolute-path file or a file generated in the webserver cache directory.
+- MCP-style UI tools: `/hooker/mcp/ui/tools` and `/hooker/mcp/ui/call` package common UI actions into a consistent tool interface for external scripts or agents.
+
+- Start a custom webserver
+
+```shell
+某宝 > webserver start taxbax-patch.jar
+Converting taxbax-patch.jar to taxbax-patch.dex...
+Successfully converted to taxbax-patch.dex (7160 bytes)
+push file OK /data/user/0/com.taxbax.taxbax/hooker_server.dex
+Http server port: 2026
+Http server: http://10.112.101.249:2026
+```
+
+Here `taxbax-patch.jar` is essentially a business plugin running inside the target app process. Hooker converts the jar to dex, injects it into the app, scans annotated classes, and registers them as HTTP routes.
+
+Custom webservers are useful for:
+
+- Exposing app-internal business capabilities such as search, comments, product details, signatures, encryption/decryption, user profiles, or live-stream APIs.
+- Reusing the target app's own login state, networking stack, environment values, and in-memory objects instead of rebuilding protocol details externally.
+- Wrapping asynchronous callbacks, observables, listeners, or page-object calls into synchronous HTTP endpoints that return JSON or plain text.
+
+Patch projects typically define endpoints like this:
+
+- Use `@HookerWebServerConfiguration(port = 2026)` to specify the port. If omitted, the default is `8080`.
+- Use `@HookerController("/taobao")` or `@HookerController("/douyin")` to define the route prefix.
+- Use `@HookerRequestMapping(path = "/getProductDetail")` to expose concrete endpoints.
+- Use `@HookerRequestParam` and `@HookerRequestPostJson` to receive query parameters and POST JSON.
+
+This is also the recommended way to build mobile-facing APIs with Hooker: keep generic debugging features in the main repository, keep app-specific business logic in patch projects, and expose those capabilities through the embedded webserver.
+
+- Webserver persistence
+
+If you already have a patch project for an app and need to deploy it at scale, the temporary `frida + hooker` injection model can become heavy. For this scenario, the author provides an Xposed plugin named `HookerServer`:
+
+`https://github.com/CreditTone/HookerServer`
+
+If the device supports Xposed/LSPosed, you can use this plugin to persist the webserver inside the target app.
+
+Steps:
+
+1. Download the latest APK from `https://github.com/CreditTone/HookerServer/releases`.
+2. Push `patch.dex` to `/data/user/0/{package}/hooker_server.dex`.
+3. Enable `HookerServer` for the target app in Xposed/LSPosed.
+4. Restart the app, and the webserver will start automatically.
+
+The `patch.dex` file becomes available after the first time you deploy `patch.jar`; Hooker automatically converts the jar to dex and places the output in the target app's working directory.
+***
+
+
+### 8. Generate Frida hook scripts for a specific class and method
 
 ![gs_show.jpg](https://raw.githubusercontent.com/CreditTone/img_resources/main/gs_show.jpg)
 
 - Command Syntax：gs, generatescript [class_name:method_name]
 
 
-- 7.1 Generate a Frida hook script for a specific method:
+- 8.1 Generate a Frida hook script for a specific method:
 gs okhttp3.Request$Builder:addHeader — the parameter part (String, String) is not required.
 
 ```shell
@@ -219,7 +296,7 @@ Java.perform(function() {
 
 
 
-- 7.2 Generate a Frida hook script for all member methods of a specified class:
+- 8.2 Generate a Frida hook script for all member methods of a specified class:
 gs okhttp3.Request$Builder
 
 ```shell
@@ -348,7 +425,7 @@ Java.perform(function() {
 
 
 
-- 7.3 Generate a Frida hook script for the constructor(s) of a specified class:
+- 8.3 Generate a Frida hook script for the constructor(s) of a specified class:
 gs okhttp3.Request$Builder:_ or gs okhttp3.Request$Builder:\<init\>
 
 ```shell
@@ -384,7 +461,7 @@ Java.perform(function() {
 ```
 ***
 
-### 8. List all available Frida scripts
+### 9. List all available Frida scripts
 ```shell
 某皮 > ls
 just_trust_me.js                                 empty.js                                         keystore_dump.js
@@ -399,7 +476,7 @@ just_trust_me_okhttp_hook_finder_for_android.js  text_view.js                   
 ```
 ***
 
-### 9. Attach and execute a specific Frida script
+### 10. Attach and execute a specific Frida script
 ```shell
 某信拍 > attach url.js
 ------------startFlag:0755liv1,objectHash:-915348569,thread(id:810,name:Wmda.EventUploadThread),timestamp:1747836814835---------------
@@ -465,7 +542,7 @@ com.android.okhttp.Request.Builder.build()
 ```
 ***
 
-### 10. Set a SOCKS5 proxy for the app
+### 11. Set a SOCKS5 proxy for the app
 ```shell
 某音 > proxy socks5://10.112.99.11:9998
 proxy socks5://10.112.99.11:9998 OK
@@ -474,7 +551,7 @@ proxy socks5://10.112.99.11:9998 OK
 ***
 
 
-### 11. Run JustTrustMe to disable all SSL pinning (including boringssl)
+### 12. Run JustTrustMe to disable all SSL pinning (including boringssl)
 
 ```shell
 某音 > justtrustme
@@ -516,7 +593,7 @@ okhttp3.CertificatePinner.check('java.lang.String', 'java.util.List') was hooked
 ***
 
 
-### 12. Spawn the app and execute a specific Frida script
+### 13. Spawn the app and execute a specific Frida script
 ```shell
 某信拍 > spawn just_trust_me.js
 Package name: com.xxx.buyxxphone
@@ -528,7 +605,7 @@ javax.net.ssl.SSLContext.init('[Ljavax.net.ssl.KeyManager;', '[Ljavax.net.ssl.Tr
 ***
 
 
-### 13. Clear the proxy settings
+### 14. Clear the proxy settings
 ```shell
 某音 > unproxy
 unproxy OK
@@ -538,7 +615,7 @@ unproxy OK
 
 
 
-### 14. Restart the app
+### 15. Restart the app
 
 ```shell
 某信拍 > restart
@@ -547,7 +624,7 @@ restarts com.xxx.buyxxphone
 ***
 
 
-### 15. Get UID and PID
+### 16. Get UID and PID
 ```shell
 某信拍 > uid
 10189
@@ -555,4 +632,3 @@ restarts com.xxx.buyxxphone
 3509
 ```
 ***
-
