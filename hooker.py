@@ -758,38 +758,15 @@ def compara_and_update_file(local_file, remote_file):
         #info(f"update file {local_filename} to {remote_file}")
         run_su_command(f"cp /sdcard/{local_filename} {remote_file}", True)
         run_su_command(f"chmod 555 {remote_file}", True)
-        
 
-_frida_log_fh = None
 
 def on_message(message, data):
-    global _frida_log_fh
     if message['type'] == 'send':
-        line = "[*] {0}".format(message['payload'])
-        print(line)
-        if _frida_log_fh:
-            print("[DEBUG] writing send to log")
-            _frida_log_fh.write(line + '\n')
-            _frida_log_fh.flush()
-        else:
-            print("[DEBUG] _frida_log_fh is None on send")
+        print("[*] {0}".format(message['payload']))
     elif message['type'] == 'error':
-        line = "[!] {0}".format(message['stack'])
-        warn(line)
-        if _frida_log_fh:
-            print("[DEBUG] writing error to log")
-            _frida_log_fh.write(line + '\n')
-            _frida_log_fh.flush()
-        else:
-            print("[DEBUG] _frida_log_fh is None on error")
+        warn("[!] {0}".format(message['stack']))
     else:
         print(message)
-        if _frida_log_fh:
-            print("[DEBUG] writing other to log")
-            _frida_log_fh.write(str(message) + '\n')
-            _frida_log_fh.flush()
-        else:
-            print("[DEBUG] _frida_log_fh is None on other")
         
 def attach_rpc(use_v8=False):
     global frida_device
@@ -1110,13 +1087,36 @@ def execute_script(script_file, is_spawn=False):
         return
     online_session = None
     online_script = None
-    global _frida_log_fh
+    log_fh = None
+    saved_fd = None
+    pipe_r = None
+    pipe_w = None
+    tee_thread = None
     use_v8 = "just_trust_me.js" in script_file
     try:
         log_filename = script_file.rsplit('.', 1)[0] + '.log'
         log_filepath = f"{current_identifier}/{log_filename}"
-        _frida_log_fh = open(log_filepath, 'w', encoding='utf-8')
-        print(f"[DEBUG] opened log file: {log_filepath}, fh={_frida_log_fh}")
+        log_fh = open(log_filepath, 'w', encoding='utf-8')
+        # fd 级别重定向，捕获所有 C 层写 stdout 的输出
+        pipe_r, pipe_w = os.pipe()
+        saved_fd = os.dup(1)
+        os.dup2(pipe_w, 1)
+        os.close(pipe_w)
+        pipe_w = None
+        stop_event = threading.Event()
+        def tee_reader():
+            while not stop_event.is_set():
+                try:
+                    data = os.read(pipe_r, 8192)
+                    if not data:
+                        break
+                    os.write(saved_fd, data)
+                    log_fh.write(data.decode('utf-8', errors='replace'))
+                    log_fh.flush()
+                except Exception:
+                    break
+        tee_thread = threading.Thread(target=tee_reader, daemon=True)
+        tee_thread.start()
         if is_spawn:
             online_session, online_script = spawn(f"{current_identifier}/{script_file}", use_v8)
         else:
@@ -1136,9 +1136,16 @@ def execute_script(script_file, is_spawn=False):
         print(traceback.format_exc())
     finally:
         detach(online_session, online_script)
-        if _frida_log_fh:
-            _frida_log_fh.close()
-            _frida_log_fh = None
+        # 恢复 fd 1
+        if saved_fd is not None:
+            os.dup2(saved_fd, 1)
+            os.close(saved_fd)
+        if pipe_r is not None:
+            os.close(pipe_r)
+        if tee_thread is not None:
+            stop_event.set()
+        if log_fh is not None:
+            log_fh.close()
         info(f"{script_file} detach successful")
         if is_spawn:
             restart_app(current_identifier)
