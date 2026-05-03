@@ -763,23 +763,33 @@ def compara_and_update_file(local_file, remote_file):
 _frida_log_fh = None
 
 def on_message(message, data):
+    global _frida_log_fh
     if message['type'] == 'send':
         line = "[*] {0}".format(message['payload'])
         print(line)
         if _frida_log_fh:
+            print("[DEBUG] writing send to log")
             _frida_log_fh.write(line + '\n')
             _frida_log_fh.flush()
+        else:
+            print("[DEBUG] _frida_log_fh is None on send")
     elif message['type'] == 'error':
         line = "[!] {0}".format(message['stack'])
         warn(line)
         if _frida_log_fh:
+            print("[DEBUG] writing error to log")
             _frida_log_fh.write(line + '\n')
             _frida_log_fh.flush()
+        else:
+            print("[DEBUG] _frida_log_fh is None on error")
     else:
         print(message)
         if _frida_log_fh:
+            print("[DEBUG] writing other to log")
             _frida_log_fh.write(str(message) + '\n')
             _frida_log_fh.flush()
+        else:
+            print("[DEBUG] _frida_log_fh is None on other")
         
 def attach_rpc(use_v8=False):
     global frida_device
@@ -1106,6 +1116,7 @@ def execute_script(script_file, is_spawn=False):
         log_filename = script_file.rsplit('.', 1)[0] + '.log'
         log_filepath = f"{current_identifier}/{log_filename}"
         _frida_log_fh = open(log_filepath, 'w', encoding='utf-8')
+        print(f"[DEBUG] opened log file: {log_filepath}, fh={_frida_log_fh}")
         if is_spawn:
             online_session, online_script = spawn(f"{current_identifier}/{script_file}", use_v8)
         else:
