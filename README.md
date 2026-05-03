@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/credittone-hooker-badge.png)](https://mseep.ai/app/credittone-hooker)
+
 免责声明
 本项目的所有内容仅供学习与技术交流使用，旨在帮助开发者理解移动应用的结构和工作原理。
 
