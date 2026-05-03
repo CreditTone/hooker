@@ -32,6 +32,7 @@ import queue
 import sqlite3
 import itertools
 import jsbeautifier
+import logging
 import subprocess
 import filecmp
 import argparse
@@ -1611,6 +1612,7 @@ def query_class_name_by_prefix(class_name_prefix, class_name, limit=15):
 def get_need_to_cache_pkg_prefix():
     results = {"okhttp3", "retrofit2", "javax.crypto", "java.security"}
     try:
+        logging.getLogger("androguard.core.api_specific_resources").setLevel(logging.ERROR)
         a = apk.APK(current_local_apk_path)
         activities = a.get_activities()
         # 取每个activity包名前两段
