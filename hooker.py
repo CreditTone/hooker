@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/Users/stephen/hooker/.venv/bin/python3
 
 '''
 Created on 2020年3月23日
@@ -619,19 +619,15 @@ def start_app(package_name):
     m = re.search(r"\s+([^\s]+)\s+filter", shell_result)
     if m:
         main_activity = m.group(1)
-        #print(f"am start -n {main_activity}")
         adb_device.shell(f"am start -n {main_activity}")
     else:
         adb_device.shell(f"monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
-    for j in range(100):
+    for j in range(20):
         time.sleep(0.5)
-        if package_name in adb_device.shell("dumpsys activity activities | grep mResumedActivity"):
-            break
-    apps = enumerate_applications_adbutils(third_party_only=True, include_label=True)
-    for app in sorted(apps, key=lambda x: x.pid or 0):
-        if app.pid != 0 and app.identifier == package_name:
-            current_identifier_pid = app.pid
-            return app.pid, app.name
+        out = adb_device.shell(f"pidof {package_name}").strip()
+        if out and out.isdigit():
+            current_identifier_pid = int(out)
+            return current_identifier_pid, current_identifier_name
     return None, None
 
 def restart_app(package_name):
@@ -1061,7 +1057,7 @@ def rpc_start_web_server(dex_file, all_class):
         online_session, online_script = attach_rpc();
         text = online_script.exports_sync.starthttpserver(dex_file, ",".join(all_class))
         info(text)
-        m = re.search("http:[^s]+:[\d]+", text)
+        m = re.search(r"http:[^s]+:[\d]+", text)
         if m:
             webserver_url = m.group(0)
         else:
