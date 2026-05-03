@@ -392,9 +392,6 @@ if not is_frida_working_via_attach():
     if not ensure_root():
         info("❌ Cannot deploy frida-server automatically. Please start frida-server manually and try again.")
         sys.exit(2)
-    elif is_magisk_root:
-        info("❌ Cannot deploy frida-server automatically on the Magisk devices. Please start frida-server manually and try again.")
-        sys.exit(2)
     frida_server_file = choose_frida_server()
     remote_frida_server_file = f"/data/mobile-deploy/{frida_server_file}"
     if not check_remote_dir_exists("/data/mobile-deploy/"):
@@ -404,7 +401,7 @@ if not is_frida_working_via_attach():
         run_su_command(f"mv /sdcard/{frida_server_file} {remote_frida_server_file}")
         run_su_command(f"chmod +x {remote_frida_server_file}")
     run_su_command("setenforce 0")
-    run_su_command(f"cd /data/mobile-deploy/ && ./{choose_frida_server()} > /sdcard/f_server.log 2>&1 &", True)
+    run_su_command(f"nohup /data/mobile-deploy/{choose_frida_server()} > /sdcard/f_server.log 2>&1 &", True)
     success = False
     for index in range(20):
         if is_frida_working_via_attach():
