@@ -760,13 +760,26 @@ def compara_and_update_file(local_file, remote_file):
         run_su_command(f"chmod 555 {remote_file}", True)
         
 
+_frida_log_fh = None
+
 def on_message(message, data):
     if message['type'] == 'send':
-        print("[*] {0}".format(message['payload']))
+        line = "[*] {0}".format(message['payload'])
+        print(line)
+        if _frida_log_fh:
+            _frida_log_fh.write(line + '\n')
+            _frida_log_fh.flush()
     elif message['type'] == 'error':
-        warn("[!] {0}".format(message['stack']))
+        line = "[!] {0}".format(message['stack'])
+        warn(line)
+        if _frida_log_fh:
+            _frida_log_fh.write(line + '\n')
+            _frida_log_fh.flush()
     else:
         print(message)
+        if _frida_log_fh:
+            _frida_log_fh.write(str(message) + '\n')
+            _frida_log_fh.flush()
         
 def attach_rpc(use_v8=False):
     global frida_device
@@ -1087,32 +1100,16 @@ def execute_script(script_file, is_spawn=False):
         return
     online_session = None
     online_script = None
-    log_fh = None
+    global _frida_log_fh
     use_v8 = "just_trust_me.js" in script_file
     try:
         log_filename = script_file.rsplit('.', 1)[0] + '.log'
         log_filepath = f"{current_identifier}/{log_filename}"
-        log_fh = open(log_filepath, 'w', encoding='utf-8')
-        def frida_on_message(message, data):
-            if message['type'] == 'send':
-                line = "[*] {0}".format(message['payload'])
-                print(line)
-                log_fh.write(line + '\n')
-                log_fh.flush()
-            elif message['type'] == 'error':
-                line = "[!] {0}".format(message['stack'])
-                warn(line)
-                log_fh.write(line + '\n')
-                log_fh.flush()
-            else:
-                print(message)
-                log_fh.write(str(message) + '\n')
-                log_fh.flush()
+        _frida_log_fh = open(log_filepath, 'w', encoding='utf-8')
         if is_spawn:
             online_session, online_script = spawn(f"{current_identifier}/{script_file}", use_v8)
         else:
             online_session, online_script = attach(f"{current_identifier}/{script_file}", use_v8)
-        online_script.on('message', frida_on_message)
         info(f"Frida output logging -> {log_filepath}")
         while online_session != None:
             try:
@@ -1128,8 +1125,9 @@ def execute_script(script_file, is_spawn=False):
         print(traceback.format_exc())
     finally:
         detach(online_session, online_script)
-        if log_fh:
-            log_fh.close()
+        if _frida_log_fh:
+            _frida_log_fh.close()
+            _frida_log_fh = None
         info(f"{script_file} detach successful")
         if is_spawn:
             restart_app(current_identifier)
