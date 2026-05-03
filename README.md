@@ -554,8 +554,11 @@ just_trust_me_okhttp_hook_finder_for_android.js  text_view.js                   
 在hooker下执行frida脚本，您只需要输入attach【空格】脚本名称会自动弹出提示。上下选择需要的脚本按tab键即可自动输入全名称。
 这是hooker在追求极致的工匠精神，帮助您从开波音737到开空客320的跳跃。
 
+> **日志同步**：`attach` / `frida` 执行脚本时，Frida 脚本的 `send()` 输出会自动同步保存到应用工作目录下的同名 `.log` 文件。例如 `attach url.js` 会生成 `url.log`，方便喂给 AI 分析。
+
 ```shell
 某信拍 > attach url.js
+Frida output logging -> com.uxin.buyerphone/url.log
 ------------startFlag:0755liv1,objectHash:-915348569,thread(id:810,name:Wmda.EventUploadThread),timestamp:1747836814835---------------
 url:https://apiwmxx.xxx.com.cn/report/c?api_v=3&sdk_v=1.7.0.0&timestamp=1747836814832&appid=17591177894321&p=2&uuid=248056262e0030b7bb56c0f9237f846d
 public java.net.URL(String)
@@ -679,8 +682,12 @@ okhttp3.CertificatePinner.check('java.lang.String', 'java.util.List') was hooked
 
 
 ### 13. spawn执行frida脚本
+
+> **日志同步**：`spawn` / `fridaf` 执行脚本时，Frida 脚本的 `send()` 输出同样会自动同步保存到同名 `.log` 文件。例如 `spawn just_trust_me.js` 会生成 `just_trust_me.log`。
+
 ```shell
 某信拍 > spawn just_trust_me.js
+Frida output logging -> com.uxin.buyerphone/just_trust_me.log
 Package name: com.xxx.buyxxphone
 javax.net.ssl.SSLContext.init('[Ljavax.net.ssl.KeyManager;', '[Ljavax.net.ssl.TrustManager;', 'java.security.SecureRandom') was hooked!
 javax.net.ssl.TrustManagerFactory.getTrustManagers() was hooked!

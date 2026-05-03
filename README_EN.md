@@ -477,8 +477,12 @@ just_trust_me_okhttp_hook_finder_for_android.js  text_view.js                   
 ***
 
 ### 10. Attach and execute a specific Frida script
+
+> **Auto-logging**: When executing scripts via `attach` / `frida`, Frida `send()` output is automatically saved to a `.log` file with the same name in the app working directory. e.g., `attach url.js` generates `url.log`, making it easy to feed into AI for analysis.
+
 ```shell
 某信拍 > attach url.js
+Frida output logging -> com.uxin.buyerphone/url.log
 ------------startFlag:0755liv1,objectHash:-915348569,thread(id:810,name:Wmda.EventUploadThread),timestamp:1747836814835---------------
 url:https://apiwmxx.xxx.com.cn/report/c?api_v=3&sdk_v=1.7.0.0&timestamp=1747836814832&appid=17591177894321&p=2&uuid=248056262e0030b7bb56c0f9237f846d
 public java.net.URL(String)
@@ -594,8 +598,12 @@ okhttp3.CertificatePinner.check('java.lang.String', 'java.util.List') was hooked
 
 
 ### 13. Spawn the app and execute a specific Frida script
+
+> **Auto-logging**: `spawn` / `fridaf` also auto-saves Frida `send()` output to a `.log` file with the same name. e.g., `spawn just_trust_me.js` generates `just_trust_me.log`.
+
 ```shell
 某信拍 > spawn just_trust_me.js
+Frida output logging -> com.uxin.buyerphone/just_trust_me.log
 Package name: com.xxx.buyxxphone
 javax.net.ssl.SSLContext.init('[Ljavax.net.ssl.KeyManager;', '[Ljavax.net.ssl.TrustManager;', 'java.security.SecureRandom') was hooked!
 javax.net.ssl.TrustManagerFactory.getTrustManagers() was hooked!
