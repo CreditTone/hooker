@@ -414,7 +414,7 @@ if not is_frida_working_via_attach():
         run_su_command(f"mv /sdcard/{frida_server_file} {remote_frida_server_file}")
         run_su_command(f"chmod +x {remote_frida_server_file}")
     run_su_command("setenforce 0")
-    run_su_command(f"/data/mobile-deploy/{choose_frida_server()} -D > /sdcard/f_server.log 2>&1", True)
+    run_su_command(f"/data/mobile-deploy/{choose_frida_server()} -D > /sdcard/f_server.log 2>&1", False)
     success = False
     for index in range(20):
         if is_frida_working_via_attach():
