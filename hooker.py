@@ -922,7 +922,7 @@ def create_working_dir_enverment():
             "trace_init_proc.js",
             "hook_artmethod_register.js",
             "find_anit_frida_so.js",
-            "hook_jni_method_trace.js",
+            "jni_method_trace.js",
             "replace_dlsym_get_pthread_create.js",
             "find_boringssl_custom_verify_func.js",
             "get_device_info.js",

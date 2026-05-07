@@ -151,7 +151,7 @@ ssl_log.js                                       hook_register_natives.js       
 get_device_info.js                               apk_shell_scanner.js                             dump_dex.js
 object_store.js                                  hook_artmethod_register.js                       replace_dlsym_get_pthread_create.js
 just_trust_me_for_ios.js                         trace_initproc.js                                android_ui.js
-hook_jni_method_trace.js                         url.js                                           just_trust_me_okhttp_hook_finder_for_android.js
+jni_method_trace.js                         url.js                                           just_trust_me_okhttp_hook_finder_for_android.js
 text_view.js                                     find_anit_frida_so.js
 某皮 > 
 ```
@@ -470,7 +470,7 @@ find_boringssl_custom_verify_func.js             ssl_log.js                     
 click.js                                         get_device_info.js                               apk_shell_scanner.js
 dump_dex.js                                      object_store.js                                  hook_artmethod_register.js
 replace_dlsym_get_pthread_create.js              just_trust_me_for_ios.js                         trace_initproc.js
-android_ui.js                                    hook_jni_method_trace.js                         url.js
+android_ui.js                                    jni_method_trace.js                         url.js
 just_trust_me_okhttp_hook_finder_for_android.js  text_view.js                                     find_anit_frida_so.js
 某皮 >
 ```
