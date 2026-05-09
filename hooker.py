@@ -457,7 +457,7 @@ def _init_resource_jscode():
 
 _init_resource_jscode()
 
-def convert_jar_to_dex(jarfile: str) -> bool:
+def convert_jar_to_dex(jarfile: str) -> Optional[str]:
     """
     将 JAR 文件转换为 DEX 文件
 
@@ -483,6 +483,7 @@ def convert_jar_to_dex(jarfile: str) -> bool:
     else:
         dexfile = jarfile + '.dex'
     out_put_dex_file = f'{current_identifier}/{dexfile}'
+    d8_default_output_file = f'{current_identifier}/classes.dex'
     try:
         if dx_file:
             # 使用 dx 命令
@@ -491,6 +492,10 @@ def convert_jar_to_dex(jarfile: str) -> bool:
             # 使用 d8 命令
             cmd = [d8_file, '--output', current_identifier, f'{current_identifier}/{jarfile}']
         info(f"Converting {jarfile} to {dexfile}...")
+        if os.path.exists(out_put_dex_file):
+            os.remove(out_put_dex_file)
+        if d8_file and os.path.exists(d8_default_output_file):
+            os.remove(d8_default_output_file)
         # 执行转换
         result = subprocess.run(
             cmd,
@@ -498,6 +503,8 @@ def convert_jar_to_dex(jarfile: str) -> bool:
             text=True,
             check=True
         )
+        if d8_file and os.path.exists(d8_default_output_file) and d8_default_output_file != out_put_dex_file:
+            shutil.move(d8_default_output_file, out_put_dex_file)
         # 检查输出文件
         if os.path.exists(out_put_dex_file):
             file_size = os.path.getsize(out_put_dex_file)
@@ -505,6 +512,8 @@ def convert_jar_to_dex(jarfile: str) -> bool:
             return dexfile
         else:
             info(f"error: Conversion failed, output file not created")
+            if result.stdout:
+                info(f"Command output: {result.stdout}")
             if result.stderr:
                 info(f"Error output: {result.stderr}")
             return None
@@ -754,18 +763,21 @@ def check_dependency_files():
 def compara_and_update_file(local_file, remote_file):
     local_md5 = get_local_file_md5(local_file)
     local_filename = local_file.split("/")[-1]
-    filename = remote_file.split("/")[-1]
-    #print("filename:", filename)
     sdcard_remote_md5 = get_remote_file_md5(f"/sdcard/{local_filename}")
     #先把radar.dex拷贝到sdcard，后期更新radar.dex直接从sdcard拷过去
     if local_md5 != sdcard_remote_md5:
         push_file_to_remote(local_file, "/sdcard/", False)
     remote_md5 = get_remote_file_md5(remote_file)
-    #print(f"local_md5:{local_md5} remote_md5:{remote_md5}")
     if local_md5 != remote_md5:
-        #info(f"update file {local_filename} to {remote_file}")
-        run_su_command(f"cp /sdcard/{local_filename} {remote_file}", True)
-        run_su_command(f"chmod 555 {remote_file}", True)
+        remote_dir = os.path.dirname(remote_file)
+        run_su_command(f"mkdir -p '{remote_dir}'")
+        run_su_command(f"cp '/sdcard/{local_filename}' '{remote_file}'")
+        run_su_command(f"chmod 555 '{remote_file}'")
+        remote_md5 = get_remote_file_md5(remote_file)
+        if local_md5 != remote_md5:
+            warn(f"push file failed: {remote_file}")
+            return False
+    return True
 
 
 def on_message(message, data):
@@ -1826,7 +1838,8 @@ def push_file_to_device_with_chmod(local_file, remote_file = None):
     filename = local_file.split("/")[-1]
     if remote_file == None:
         remote_file = f"/data/user/0/{current_identifier}/{filename}"
-    compara_and_update_file(f"{current_identifier}/{local_file}", remote_file)
+    if not compara_and_update_file(f"{current_identifier}/{local_file}", remote_file):
+        raise RuntimeError(f"failed to push file to device: {remote_file}")
     user_group_id = f"u0_a{(int(current_identifier_uid) - 10000)}"
     run_su_command(f"chown {user_group_id}:{user_group_id} {remote_file}")
     run_su_command(f"chmod 777 {remote_file}")
@@ -1838,6 +1851,9 @@ def start_web_server(jar_file:str = "", with_xposed_daemon = False):
     all_classes = []
     if jar_file:
         dex_file = convert_jar_to_dex(jar_file)
+        if not dex_file:
+            warn(f"Deploy failure. unable to convert {jar_file} to dex")
+            return
         with open(f"{current_identifier}/{dex_file}", "rb") as f:
             dex = dvm.DalvikVMFormat(f.read())
         all_classes = []
@@ -2337,4 +2353,3 @@ while True:
     except (EOFError, KeyboardInterrupt):
         sys.exit(2);
     
-
