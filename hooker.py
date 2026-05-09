@@ -292,6 +292,21 @@ def run_su_command(cmd, not_read=False):
             conn.close()
         except Exception as e:
             pass
+    try:
+        conn = _shell(["su", "0", "sh", "-c", cmd], stream=True)
+        try:
+            if not_read:
+                time.sleep(1)
+                return
+            output = conn.read_until_close()
+            return output.strip()
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 
 def get_is_magisk_root() -> bool:
@@ -1838,11 +1853,20 @@ def push_file_to_device_with_chmod(local_file, remote_file = None):
     filename = local_file.split("/")[-1]
     if remote_file == None:
         remote_file = f"/data/user/0/{current_identifier}/{filename}"
-    if not compara_and_update_file(f"{current_identifier}/{local_file}", remote_file):
-        raise RuntimeError(f"failed to push file to device: {remote_file}")
+    local_path = f"{current_identifier}/{local_file}"
+    if not compara_and_update_file(local_path, remote_file):
+        temp_remote_file = f"/sdcard/{filename}"
+        try:
+            push_file_to_remote(local_path, temp_remote_file, False)
+            run_su_command(f"su 0 sh -c 'cp \"{temp_remote_file}\" \"{remote_file}\"'")
+        except Exception:
+            pass
+        exists = run_su_command(f"su 0 sh -c 'test -f \"{remote_file}\" && echo exists || echo missing'")
+        if exists != "exists":
+            raise RuntimeError(f"failed to push file to device: {remote_file}")
     user_group_id = f"u0_a{(int(current_identifier_uid) - 10000)}"
-    run_su_command(f"chown {user_group_id}:{user_group_id} {remote_file}")
-    run_su_command(f"chmod 777 {remote_file}")
+    run_su_command(f"su 0 sh -c 'chown {user_group_id}:{user_group_id} \"{remote_file}\" || true'")
+    run_su_command(f"su 0 sh -c 'chmod 644 \"{remote_file}\"'")
     info(f"push file OK {remote_file}")
     return remote_file
 
